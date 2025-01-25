@@ -58,8 +58,8 @@ Bubble es una aplicación moderna y minimalista desarrollada en **SwiftUI**, dis
 
 ## Contribuidores
 
-- **Esteban** - [@tu_usuario](https://github.com/tu_usuario)
-- **Tu compañero** - [@usuario_compañero](https://github.com/usuario_compañero)
+- ** ** - [@tu_usuario]()
+- ** ** - [@usuario_compañero]()
 
 ---
 
