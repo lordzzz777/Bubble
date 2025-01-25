@@ -78,6 +78,6 @@ Este proyecto está licenciado bajo la [MIT License](LICENSE).
 
 ## Próximos Pasos
 
-- Implementar videollamadas en tiempo real.
-- Añadir soporte para stickers y emojis personalizados.
-- Mejorar la accesibilidad y localización a varios idiomas.
+- .
+- .
+- .
