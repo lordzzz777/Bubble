@@ -20,11 +20,21 @@ struct BubbleApp: App {
     
     // register app delegate for Firebase setup
     @UIApplicationDelegateAdaptor(AppDlegate.self) var delegate
+    @AppStorage("LoginFlowState") private var loginFlowState = UserLoginState.loggedOut
+
     
     var body: some Scene {
         WindowGroup {
             NavigationStack{
-                ContentView()
+                switch loginFlowState {
+                case .loggedOut:
+                    // ... View of autentications
+                    WelcomeView()
+                case .loggedIn:
+                    // ... Destinations 
+                    ContentView()
+                        
+                }
             }
         }
     }

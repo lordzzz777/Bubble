@@ -38,7 +38,7 @@ struct ComponetButtonView: View {
 
         })
         .background{
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
                 .stroke(Color.primary, lineWidth: 2)
                 .fill(color)
                 .frame(width: width, height: height)
