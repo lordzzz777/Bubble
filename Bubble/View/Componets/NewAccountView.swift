@@ -11,12 +11,21 @@ import PhotosUI
 struct NewAccountView: View {
     @State private var selectedItem: PhotosPickerItem? = nil
     @State private var selectedImage: Image? = nil
+    @State private var nickname: String = ""
     
     var body: some View {
         NavigationStack {
-            VStack {
+            VStack(spacing: 40) {
                 //MARK: - Seleccionar avatar
                 SelectAvatarView()
+                
+                TextField("Nickname", text: $nickname)
+                    .textFieldStyle(.roundedBorder)
+                    .padding(.horizontal)
+                    .padding(.top)
+                
+                
+                Spacer()
             }
             .navigationTitle("Nueva cuenta")
         }
@@ -30,15 +39,15 @@ struct NewAccountView: View {
                     .resizable()
                     .scaledToFill()
                     .clipShape(Circle())
-                    .frame(width: 150, height: 150)
+                    .frame(width: 170, height: 170)
             } else {
                 // PhotosPicker nativo de SwiftUI
                 PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
-                    Image(systemName: "person.crop.circle.badge.plus")
+                    Image(systemName: "person.crop.circle.fill.badge.plus")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 150, height: 150)
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.black)
+                        .frame(width: 180, height: 180)
                 }
                 .onChange(of: selectedItem, { _, newItem in
                     // Cargar la imagen seleccionada
