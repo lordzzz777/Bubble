@@ -16,7 +16,6 @@ struct NewAccountView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 40) {
-                //MARK: - Seleccionar avatar
                 SelectAvatarView()
                 
                 TextField("Nickname", text: $nickname)
@@ -31,6 +30,7 @@ struct NewAccountView: View {
         }
     }
     
+    //MARK: - Seleccionar avatar
     @ViewBuilder
     func SelectAvatarView() -> some View {
         VStack {
