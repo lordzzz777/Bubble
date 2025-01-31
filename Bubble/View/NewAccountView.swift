@@ -27,6 +27,17 @@ struct NewAccountView: View {
                 Spacer()
             }
             .navigationTitle("Nueva cuenta")
+            .toolbar {
+                if !nickname.isEmpty {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            
+                        } label: {
+                            Text("Finalizar")
+                        }
+                    }
+                }
+            }
         }
     }
     
