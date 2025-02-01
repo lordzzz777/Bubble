@@ -7,8 +7,11 @@
 
 import SwiftUI
 import PhotosUI
+import FirebaseCore
+
 
 struct NewAccountView: View {
+    @State var newAccountViewModel: NewAccountViewModel = .init()
     @State private var selectedItem: PhotosPickerItem? = nil
     @State private var selectedImage: Image? = nil
     @State private var nickname: String = ""
@@ -31,7 +34,9 @@ struct NewAccountView: View {
                 if !nickname.isEmpty {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
-                            
+                            Task {
+                                await newAccountViewModel.createUser(user: UserModel(id: "", nickname: nickname, imgUrl: "", lastConnectionTimeStamp: Timestamp.init(), isOnline: true, chats: [], friends: []))
+                            }
                         } label: {
                             Text("Finalizar")
                         }
