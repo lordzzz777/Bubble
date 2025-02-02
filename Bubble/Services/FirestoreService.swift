@@ -15,6 +15,7 @@ enum FirestoreError: Error {
     case checkNicknameError
     case uploadImageError
     case updateImageURLInDatabaseError
+    case checkUserByIDError
 }
 
 actor FirestoreService {
@@ -23,7 +24,12 @@ actor FirestoreService {
     
     func createUser(user: UserModel) async throws {
         do {
-            try await database.collection("users").document(uid).setData(user.dictionary)
+            if try await checkIfUserExistsByID(userID: uid) {
+                let newUserData: [String: Any] = ["nickname": user.nickname]
+                try await database.collection("users").document(uid).updateData(newUserData)
+            } else {
+                try await database.collection("users").document(uid).setData(user.dictionary)
+            }
         } catch {
             throw FirestoreError.newAccountError
         }
@@ -39,6 +45,18 @@ actor FirestoreService {
             return userData.isEmpty
         } catch {
             throw FirestoreError.checkNicknameError
+        }
+    }
+    
+    func checkIfUserExistsByID(userID: String) async throws -> Bool {
+        do {
+            let querySnapshot = try await database.collection("users").whereField("id", isEqualTo: userID).getDocuments()
+            let documents = querySnapshot.documents
+            print("Usuario existe: \(!documents.isEmpty)")
+            return !documents.isEmpty
+        } catch {
+            print("Error: \(error)")
+            return false
         }
     }
     
@@ -72,7 +90,23 @@ actor FirestoreService {
         }
         
         do {
-            try await database.collection("users").document(uid).updateData(["imgUrl": imageURLString])
+            
+            if try await checkIfUserExistsByID(userID: uid) {
+                try await database.collection("users").document(uid).updateData(["imgUrl": imageURLString])
+            } else {
+                let newUser = UserModel(
+                    id: uid, nickname: "",
+                    imgUrl: imageURLString,
+                    lastConnectionTimeStamp: Timestamp.init(),
+                    isOnline: true,
+                    chats: [],
+                    friends: []
+                )
+                
+                try await self.createUser(user: newUser)
+            }
+            
+            
         } catch {
             print("Error: \(error.localizedDescription)")
             throw FirestoreError.updateImageURLInDatabaseError
