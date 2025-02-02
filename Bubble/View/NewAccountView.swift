@@ -68,7 +68,15 @@ struct NewAccountView: View {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
                             Task {
-                                await newAccountViewModel.createUser(user: UserModel(id: "", nickname: nickname, imgUrl: "", lastConnectionTimeStamp: Timestamp.init(), isOnline: true, chats: [], friends: []))
+                                await newAccountViewModel.createUser(
+                                    user: UserModel(
+                                        id: "",
+                                        nickname: nickname,
+                                        imgUrl: "",
+                                        lastConnectionTimeStamp: Timestamp.init(),
+                                        isOnline: true, chats: [],
+                                        friends: [])
+                                )
                             }
                         } label: {
                             Text("Finalizar")
@@ -108,6 +116,7 @@ struct NewAccountView: View {
                            let uiImage = UIImage(data: data) {
                             selectedImage = Image(uiImage: uiImage)
                             await newAccountViewModel.saveImage(image: uiImage)
+                            
                             if newAccountViewModel.showImageUploadError {
                                 selectedImage = nil
                             }

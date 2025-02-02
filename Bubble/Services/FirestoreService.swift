@@ -46,7 +46,7 @@ actor FirestoreService {
         let storage = Storage.storage()
         let storageRef = storage.reference().child("avatars/\(uid).jpg")
         
-        guard let resizedImage = image.jpegData(compressionQuality: 0.3) else {
+        guard let resizedImage = image.jpegData(compressionQuality: 0.1) else {
             print("Error: Could not resize image")
             return
         }
@@ -67,6 +67,7 @@ actor FirestoreService {
                 throw FirestoreError.updateImageURLInDatabaseError
             }
         } catch {
+            print("Error: \(error.localizedDescription)")
             throw FirestoreError.uploadImageError
         }
         
