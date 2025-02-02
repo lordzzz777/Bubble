@@ -8,12 +8,30 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var isConnected: Bool = false
+    private let networkMonitor = NetworkMonitor()
+    
     var body: some View {
         TabView{
-            HomeView()
-                .tabItem({
-                    Label("Chas", systemImage: "message.fill")
-                })
+            
+            VStack(alignment: .center, content: {
+                if isConnected {
+                    HomeView()
+                } else {
+                    Text("¡¡Sin señal de red ... !!").font(.largeTitle.bold())
+                    Image(systemName: "wifi.slash")
+                        .font(.system(size: 150).bold())
+                }
+            })
+            .task {
+                for await status in networkMonitor.connectionStatuses() {
+                    isConnected = status
+                }
+            }
+            
+            .tabItem({
+                Label("Chas", systemImage: "message.fill")
+            })
             
             Text("Pantalla 2")
                 .tabItem({
@@ -27,6 +45,7 @@ struct ContentView: View {
         }
     }
 }
+
 
 #Preview {
     ContentView()
