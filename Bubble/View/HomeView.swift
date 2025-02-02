@@ -83,6 +83,13 @@ struct HomeView: View {
                 print("📡 Cargando chats...")
                 await viewModel.loadChats()
             }
+            .alert(isPresented: $viewModel.isMessageError) {
+                Alert(title: 
+                        Text("Error al cargar los chats"),
+                      message: Text("Puede intentar nuevamente."),
+                      dismissButton: .default(Text("OK"))
+                )
+            }
             .toolbar(content: {
                 Button(action: {
                     // ... Logica

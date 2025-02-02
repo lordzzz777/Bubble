@@ -11,8 +11,10 @@ import Observation
 
 @Observable
 class ChatViewModel{
-    var chats: [ChatsModels] = []
     private let chatService = FirebaseService()
+    
+    var chats: [ChatsModels] = []
+    var isMessageError = false
     
     @MainActor
     func loadChats() async {
@@ -21,6 +23,7 @@ class ChatViewModel{
             self.chats = fetchedChats
         } catch {
             print("❌ Error al cargar los chats: \(error.localizedDescription)")
+            isMessageError = true
         }
     }
     
