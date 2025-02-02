@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct HomeView: View {
+    @State private var chatViewModel = ChatViewModel()
     // Esta es la variable que almacenará el valor seleccionado del Picker
     @State private var selectedVisibility = "privado"
     @State private var searchText = ""
@@ -35,7 +36,7 @@ struct HomeView: View {
                 .pickerStyle(.segmented)
                 .padding()
                 
-                if dataList.isEmpty{
+                if chatViewModel.chats.isEmpty{
                     Text("No tienes chats aún").font(.largeTitle.bold())
                         .padding(.bottom, 20)
                     Image(systemName: "bubble.left.and.exclamationmark.bubble.right")
@@ -44,20 +45,25 @@ struct HomeView: View {
                     
                 }else{
                     List{
-                        ForEach(dataList){ item in
+                        ForEach(chatViewModel.chats, id:\.lastMessageTimestamp){ chat in
                             NavigationLink(destination: {
                                 
                             }, label: {
-                                HStack{
-                                    Circle().frame(width: 50, height: 50, alignment: .center)
-                                        .overlay(content: {
-                                            Image(item.nameImage).resizable()
-                                                .scaledToFill()
-                                            
-                                        }).clipShape(Circle())
-                                    Text(item.nameAlias)
-                                    Spacer()
-                                    Text(item.dataTimer)
+                                VStack{
+                                    Text("Participantes: \(chat.participants.joined(separator: ", "))")
+                                        .font(.headline)
+                                    Text("Último mensaje: \(chat.lastMessage)")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+//                                    Circle().frame(width: 50, height: 50, alignment: .center)
+//                                        .overlay(content: {
+//                                            Image(item.nameImage).resizable()
+//                                                .scaledToFill()
+//                                            
+//                                        }).clipShape(Circle())
+//                                    Text(item.participants)
+//                                    Spacer()
+//                                    Text(item.dataTimer)
                                 } .swipeActions(content: {
                                     Button("borrar", systemImage: "trash.fill", role: .destructive, action: {
                                         // ... Lógica eliminar
@@ -77,6 +83,9 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("Chat")
+            .task {
+                await chatViewModel.loadChas()
+            }
             .toolbar(content: {
                 Button(action: {
                     // ... Logica

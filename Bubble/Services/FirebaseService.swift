@@ -14,26 +14,23 @@ import FirebaseFirestore
 import FirebaseAuth
 
 actor FirebaseService {
-
+    private let db = Firestore.firestore()
+    
     
     // Traerme los chas de este usuario en tiempo real
-    // Leeer documentacion de Fire Stora
-    func fetchMessages(for chatID: String, completion: @escaping([MessagesModels]) -> Void){
+    // Leer documentacion de Fire Stora
+    func fetchChat() async throws -> [ChatsModels] {
+        let chatsRef = db.collection("chats")
         
-        let db = Firestore.firestore()
-        let messageRef = db.collection("chats").document(chatID).collection("messages")
-        
-        messageRef.order(by: "timestamp", descending: false).getDocuments{ snapshot, error in
-            guard let document = snapshot?.documents, error == nil else {
-                print("error al optener Mensaje: \(error?.localizedDescription ?? "Desconocido")")
-                completion([])
-                return
+        do{
+            let snshop = try await chatsRef.getDocuments()
+            let chats = snshop.documents.compactMap { doc -> ChatsModels? in
+                try? doc.data(as: ChatsModels.self)
             }
-            let messages = document.compactMap { doc -> MessagesModels? in
-                try? doc.data(as: MessagesModels.self)
-            }
-            
-            completion(messages)
+            return chats
+        }catch{
+            print("❌ Error al obtener los chats: \(error.localizedDescription)")
+            throw error
         }
     }
 }
