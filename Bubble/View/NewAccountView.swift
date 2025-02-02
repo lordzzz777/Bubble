@@ -34,13 +34,20 @@ struct NewAccountView: View {
                                    checkingNickName = false
                                 }
                             }
-                        
-                        if checkingNickName {
-                            ProgressView()
-                        }
+                            .overlay {
+                                if checkingNickName {
+                                    HStack {
+                                        Spacer()
+                                        
+                                        ProgressView()
+                                            .scaleEffect(1.2)
+                                    }
+                                    .padding(.trailing, 4)
+                                }
+                            }
                     }
                     
-                    if !nickNameNotExists && !nickname.isEmpty {
+                    if !nickNameNotExists && !nickname.isEmpty && !checkingNickName {
                         Label {
                             Text("Este nickname ya está en uso")
                         } icon: {
