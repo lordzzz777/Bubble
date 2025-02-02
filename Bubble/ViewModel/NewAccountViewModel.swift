@@ -6,28 +6,28 @@
 //
 
 import Foundation
+import SwiftUI
 import FirebaseAuth
 
-@Observable
+@Observable @MainActor
 class NewAccountViewModel {
-    private let firebaseService: FirebaseService
+    private let firestoreService: FirestoreService
     private let uid = Auth.auth().currentUser?.uid ?? ""
     var showError: Bool
     var errorMessage: String
+    var showImageUploadError: Bool = false
     
-    init(firebaseService: FirebaseService = FirebaseService(), showError: Bool = false, errorMessage: String = "") {
-        self.firebaseService = firebaseService
+    init(firebaseService: FirestoreService = FirestoreService(), showError: Bool = false, errorMessage: String = "") {
+        self.firestoreService = firebaseService
         self.showError = showError
         self.errorMessage = errorMessage
     }
     
-
-    @MainActor
     func createUser(user: UserModel) async {
         do {
             var newUser = user
             newUser.id = uid
-            try await firebaseService.createUser(user: newUser)
+            try await firestoreService.createUser(user: newUser)
         } catch {
             errorMessage = "Error al crear usuario"
             showError = true
@@ -35,15 +35,26 @@ class NewAccountViewModel {
         }
     }
     
-    @MainActor
+
     func checkNickNameNotExists(nickName: String) async -> Bool {
         do {
-            return try await firebaseService.checkIfNicknameNotExists(nickname: nickName)
+            return try await firestoreService.checkIfNicknameNotExists(nickname: nickName)
         } catch {
             showError = true
             errorMessage = "Error al verificar nickname"
             print("Error al comprobar el nombre de usuario: \(error)")
             return false
+        }
+    }
+    
+
+    func saveImage(image: UIImage) async {
+        do {
+            try await firestoreService.saveImage(image: image)
+        } catch {
+            errorMessage = "Error al cargar la imagen en la base de datos"
+            showError = true
+            showImageUploadError = true
         }
     }
 }
