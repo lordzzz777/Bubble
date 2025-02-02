@@ -11,7 +11,14 @@ import FirebaseFirestore
 struct ChatsModels: Codable, Hashable {
     var participants: [String] = []
     var lastMessage: String
-    var lastMessageTimestamp: Timestamp
+    var lastMessageTimestamp: Date  // Convertimos de Timestamp a Date
+    
+    // Mapeo de nombres incorrectos en Firestore
+    enum CodingKeys: String, CodingKey {
+        case participants = "participats"  // Coincide con Firestore
+        case lastMessage
+        case lastMessageTimestamp = "lasttMessageTimestamp"  // Coincide con Firestore
+    }
 }
 
 struct MessagesModels: Codable, Hashable {

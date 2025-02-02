@@ -9,18 +9,19 @@ import Foundation
 import FirebaseFirestore
 import Observation
 
+@Observable
 class ChatViewModel{
     var chats: [ChatsModels] = []
     private let chatService = FirebaseService()
-
-    // 🔹 Función asíncrona para cargar la lista de chats
+    
     @MainActor
-    func loadChas() async{
-        do{
-            let fetchedChats = try await chatService.fetchChat()
+    func loadChats() async {
+        do {
+            let fetchedChats = try await chatService.fetchChats()
             self.chats = fetchedChats
-        }catch {
+        } catch {
             print("❌ Error al cargar los chats: \(error.localizedDescription)")
         }
     }
+    
 }

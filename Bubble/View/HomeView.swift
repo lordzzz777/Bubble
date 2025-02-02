@@ -6,13 +6,16 @@
 //
 
 import SwiftUI
+import FirebaseFirestore
 
 struct HomeView: View {
-    @State private var chatViewModel = ChatViewModel()
+    @State var viewModel = ChatViewModel()
+
     // Esta es la variable que almacenará el valor seleccionado del Picker
     @State private var selectedVisibility = "privado"
     @State private var searchText = ""
     @State private var isWiffi = false
+    
     // Esta es la lista de opciones para el Picker
     private let visibilityOptions = ["privado", "Publico"]
     
@@ -36,7 +39,7 @@ struct HomeView: View {
                 .pickerStyle(.segmented)
                 .padding()
                 
-                if chatViewModel.chats.isEmpty{
+                if $viewModel.chats.isEmpty{
                     Text("No tienes chats aún").font(.largeTitle.bold())
                         .padding(.bottom, 20)
                     Image(systemName: "bubble.left.and.exclamationmark.bubble.right")
@@ -44,26 +47,19 @@ struct HomeView: View {
                     Spacer()
                     
                 }else{
+                    
                     List{
-                        ForEach(chatViewModel.chats, id:\.lastMessageTimestamp){ chat in
+                        ForEach(viewModel.chats, id:\.lastMessageTimestamp.timeIntervalSince1970){ chat in
                             NavigationLink(destination: {
                                 
                             }, label: {
-                                VStack{
-                                    Text("Participantes: \(chat.participants.joined(separator: ", "))")
+                                VStack(alignment: .leading){
+                                    //Text("Participantes: \(chat.participants.joined(separator: ", "))")
+                                    Text("Nº de Participantes: \(chat.participants.count)")
                                         .font(.headline)
-                                    Text("Último mensaje: \(chat.lastMessage)")
+                                    Text("Último mensaje: \(chat.lastMessageTimestamp.formatted(date: .numeric, time: .shortened))")
                                         .font(.subheadline)
                                         .foregroundColor(.gray)
-//                                    Circle().frame(width: 50, height: 50, alignment: .center)
-//                                        .overlay(content: {
-//                                            Image(item.nameImage).resizable()
-//                                                .scaledToFill()
-//                                            
-//                                        }).clipShape(Circle())
-//                                    Text(item.participants)
-//                                    Spacer()
-//                                    Text(item.dataTimer)
                                 } .swipeActions(content: {
                                     Button("borrar", systemImage: "trash.fill", role: .destructive, action: {
                                         // ... Lógica eliminar
@@ -84,7 +80,8 @@ struct HomeView: View {
             }
             .navigationTitle("Chat")
             .task {
-                await chatViewModel.loadChas()
+                print("📡 Cargando chats...")
+                await viewModel.loadChats()
             }
             .toolbar(content: {
                 Button(action: {
@@ -94,9 +91,6 @@ struct HomeView: View {
                 })
             })
         }
-        
-        
-        
     }
 }
 
