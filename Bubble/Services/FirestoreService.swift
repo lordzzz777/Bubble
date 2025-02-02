@@ -10,6 +10,13 @@ import FirebaseFirestore
 import FirebaseAuth
 @preconcurrency import FirebaseStorage
 
+enum FirestoreError: Error {
+    case newAccountError
+    case checkNicknameError
+    case uploadImageError
+    case updateImageURLInDatabaseError
+}
+
 actor FirestoreService {
     private let database = Firestore.firestore()
     private let uid = Auth.auth().currentUser?.uid ?? ""
@@ -18,7 +25,7 @@ actor FirestoreService {
         do {
             try await database.collection("users").document(uid).setData(user.dictionary)
         } catch {
-            throw error
+            throw FirestoreError.newAccountError
         }
     }
     
@@ -31,7 +38,7 @@ actor FirestoreService {
             
             return userData.isEmpty
         } catch {
-            throw error
+            throw FirestoreError.checkNicknameError
         }
     }
     
@@ -57,17 +64,17 @@ actor FirestoreService {
                 imageURLString = "\(imageURL)"
             } catch {
                 print("Error: Could not get imageURL after saving image \(error.localizedDescription)")
-                throw error
+                throw FirestoreError.updateImageURLInDatabaseError
             }
         } catch {
-            throw error
+            throw FirestoreError.uploadImageError
         }
         
         do {
             try await database.collection("users").document(uid).updateData(["imgUrl": imageURLString])
         } catch {
             print("Error: \(error.localizedDescription)")
-            throw error
+            throw FirestoreError.updateImageURLInDatabaseError
         }
     }
 }

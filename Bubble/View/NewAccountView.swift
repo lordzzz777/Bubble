@@ -77,7 +77,7 @@ struct NewAccountView: View {
                 }
             }
             .alert(isPresented: $newAccountViewModel.showError) {
-                Alert(title: Text(newAccountViewModel.errorMessage), message: Text("No se pudo crear la cuenta. Vuelve a intentarlo nuevamente"), dismissButton: .default(Text("Aceptar")))
+                Alert(title: Text(newAccountViewModel.errorTitle), message: Text(newAccountViewModel.errorDescription), dismissButton: .default(Text("Aceptar")))
             }
         }
     }

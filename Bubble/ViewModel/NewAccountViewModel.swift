@@ -14,13 +14,16 @@ class NewAccountViewModel {
     private let firestoreService: FirestoreService
     private let uid = Auth.auth().currentUser?.uid ?? ""
     var showError: Bool
-    var errorMessage: String
-    var showImageUploadError: Bool = false
+    var errorTitle: String
+    var errorDescription: String
+    var showImageUploadError: Bool
     
-    init(firebaseService: FirestoreService = FirestoreService(), showError: Bool = false, errorMessage: String = "") {
+    init(firebaseService: FirestoreService = FirestoreService(), showError: Bool = false, errorTitle: String = "", errorDescription: String = "", showImageUploadError: Bool = false) {
         self.firestoreService = firebaseService
         self.showError = showError
-        self.errorMessage = errorMessage
+        self.errorTitle = errorTitle
+        self.errorDescription = errorDescription
+        self.showImageUploadError = showImageUploadError
     }
     
     func createUser(user: UserModel) async {
@@ -29,7 +32,8 @@ class NewAccountViewModel {
             newUser.id = uid
             try await firestoreService.createUser(user: newUser)
         } catch {
-            errorMessage = "Error al crear usuario"
+            errorTitle = "Error al crear usuario"
+            errorDescription = "Hubo un error al crear el usuario. Inténtelo más tarde."
             showError = true
             print("Ha ocurrido un error al crear el usuario: \(error)")
         }
@@ -41,7 +45,8 @@ class NewAccountViewModel {
             return try await firestoreService.checkIfNicknameNotExists(nickname: nickName)
         } catch {
             showError = true
-            errorMessage = "Error al verificar nickname"
+            errorTitle = "Error al verificar nickname"
+            errorDescription = "Hubo un error al comprobar el nickname. Inténtelo más tarde."
             print("Error al comprobar el nombre de usuario: \(error)")
             return false
         }
@@ -52,7 +57,8 @@ class NewAccountViewModel {
         do {
             try await firestoreService.saveImage(image: image)
         } catch {
-            errorMessage = "Error al cargar la imagen en la base de datos"
+            errorTitle = "Error al cargar la imagen"
+            errorDescription = "Hubo un error al subir la imagen al servidor. Inténtelo más tarde."
             showError = true
             showImageUploadError = true
         }
