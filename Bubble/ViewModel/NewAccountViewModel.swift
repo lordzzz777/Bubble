@@ -34,4 +34,16 @@ class NewAccountViewModel {
             print("Ha ocurrido un error al crear el usuario: \(error)")
         }
     }
+    
+    @MainActor
+    func checkNickNameNotExists(nickName: String) async -> Bool {
+        do {
+            return try await firebaseService.checkIfNicknameNotExists(nickname: nickName)
+        } catch {
+            showError = true
+            errorMessage = "Error al verificar nickname"
+            print("Error al comprobar el nombre de usuario: \(error)")
+            return false
+        }
+    }
 }

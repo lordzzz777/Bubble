@@ -15,23 +15,49 @@ struct NewAccountView: View {
     @State private var selectedItem: PhotosPickerItem? = nil
     @State private var selectedImage: Image? = nil
     @State private var nickname: String = ""
+    @State private var nickNameNotExists: Bool = false
+    @State private var checkingNickName: Bool = false
     
     var body: some View {
         NavigationStack {
             VStack(spacing: 40) {
                 SelectAvatarView()
                 
-                TextField("Nickname", text: $nickname)
-                    .textFieldStyle(.roundedBorder)
-                    .padding(.horizontal)
-                    .padding(.top)
-                
+                VStack(alignment: .leading, spacing: 2) {
+                    ZStack(alignment: .trailing) {
+                        TextField("Nickname", text: $nickname)
+                            .textFieldStyle(.roundedBorder)
+                            .onChange(of: nickname) {
+                               Task {
+                                   checkingNickName = true // Para mostrar el progress view
+                                   nickNameNotExists = await newAccountViewModel.checkNickNameNotExists(nickName: nickname) // Checkea si el nickname no existe en firestore
+                                   checkingNickName = false
+                                }
+                            }
+                        
+                        if checkingNickName {
+                            ProgressView()
+                        }
+                    }
+                    
+                    if !nickNameNotExists && !nickname.isEmpty {
+                        Label {
+                            Text("Este nickname ya está en uso")
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                        }
+                        .foregroundStyle(.red)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top)
                 
                 Spacer()
             }
             .navigationTitle("Nueva cuenta")
             .toolbar {
-                if !nickname.isEmpty {
+                //Habilita el botón solo si el nickname no está vacío y si el nickname no existe en la base de datos
+                if !nickname.isEmpty && nickNameNotExists {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
                             Task {

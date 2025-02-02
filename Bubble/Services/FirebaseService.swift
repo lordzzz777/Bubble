@@ -20,4 +20,17 @@ actor FirebaseService {
             throw error
         }
     }
+    
+    
+    func checkIfNicknameNotExists(nickname: String) async throws -> Bool {
+        do {
+            let querySnapshot = try await database.collection("users").whereField("nickname", isEqualTo: nickname).getDocuments()
+            let documents = querySnapshot.documents.compactMap({$0})
+            let userData = documents.map { $0.data() }.compactMap{$0}
+            
+            return userData.isEmpty
+        } catch {
+            throw error
+        }
+    }
 }
