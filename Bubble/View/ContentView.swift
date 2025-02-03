@@ -16,7 +16,7 @@ struct ContentView: View {
             
             VStack(alignment: .center, content: {
                 if isConnected {
-                    HomeView()
+                    ChatsView()
                 } else {
                     Text("¡¡Sin señal de red ... !!").font(.largeTitle.bold())
                     Image(systemName: "wifi.slash")

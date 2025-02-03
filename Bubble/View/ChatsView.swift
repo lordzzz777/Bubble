@@ -9,7 +9,7 @@ import SwiftUI
 import FirebaseFirestore
 import FirebaseCore
 
-struct HomeView: View {
+struct ChatsView: View {
     @State var viewModel = ChatViewModel()
     
     // Esta es la variable que almacenará el valor seleccionado del Picker
@@ -58,8 +58,7 @@ struct HomeView: View {
                                     let id1 = chat.participants[1]
                                     let timestamp: Timestamp =  chat.lastMessageTimestamp
                                     let lastMessage = chat.lastMessage
-                                    UserProfileView(userID: id1, timestamp: timestamp)
-                                    Text("\(lastMessage)")
+                                    ListChatRowView(userID: id1, lastMessage: lastMessage, timestamp: timestamp)
                                 }
                                 .swipeActions(content: {
                                     Button("borrar", systemImage: "trash.fill", role: .destructive, action: {
@@ -79,7 +78,7 @@ struct HomeView: View {
                     Text(option).searchCompletion(option)
                 }
             }
-            .navigationTitle("Chat")
+            .navigationTitle("Chats")
             .onAppear {
                 viewModel.fetchChats()
             }
@@ -103,5 +102,5 @@ struct HomeView: View {
 }
 
 #Preview {
-    HomeView()
+    ChatsView()
 }
