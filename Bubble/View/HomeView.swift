@@ -7,10 +7,11 @@
 
 import SwiftUI
 import FirebaseFirestore
+import FirebaseCore
 
 struct HomeView: View {
     @State var viewModel = ChatViewModel()
-
+    
     // Esta es la variable que almacenará el valor seleccionado del Picker
     @State private var selectedVisibility = "privado"
     @State private var searchText = ""
@@ -49,18 +50,18 @@ struct HomeView: View {
                 }else{
                     
                     List{
-                        ForEach(viewModel.chats, id:\.lastMessageTimestamp.timeIntervalSince1970){ chat in
+                        ForEach(viewModel.chats, id:\.lastMessageTimestamp){ chat in
                             NavigationLink(destination: {
                                 
                             }, label: {
                                 VStack(alignment: .leading){
-                                    //Text("Participantes: \(chat.participants.joined(separator: ", "))")
-                                    Text("Nº de Participantes: \(chat.participants.count)")
-                                        .font(.headline)
-                                    Text("Último mensaje: \(chat.lastMessageTimestamp.formatted(date: .numeric, time: .shortened))")
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                                } .swipeActions(content: {
+                                    let id1 = chat.participants[1]
+                                    let timestamp: Timestamp =  chat.lastMessageTimestamp
+                                    let lastMessage = chat.lastMessage
+                                    UserProfileView(userID: id1, timestamp: timestamp)
+                                    Text("\(lastMessage)")
+                                }
+                                .swipeActions(content: {
                                     Button("borrar", systemImage: "trash.fill", role: .destructive, action: {
                                         // ... Lógica eliminar
                                     })
@@ -79,11 +80,10 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("Chat")
-            .task {
-                print("📡 Cargando chats...")
-                await viewModel.loadChats()
+            .onAppear {
+                viewModel.fetchChats()
             }
-            .alert(isPresented: $viewModel.isMessageError) {
+            .alert(isPresented: $viewModel.isfetchChatsError) {
                 Alert(title: 
                         Text("Error al cargar los chats"),
                       message: Text("Puede intentar nuevamente."),
@@ -99,6 +99,7 @@ struct HomeView: View {
             })
         }
     }
+    
 }
 
 #Preview {

@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import Observation
 
+
 @Observable @MainActor
 class LoginViewModel {
     private let googleService = GoogleService()
