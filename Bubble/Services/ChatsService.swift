@@ -8,9 +8,13 @@
 import Foundation
 import FirebaseCore
 import Firebase
+import FirebaseAuth
 
-class UserService {
+class ChatsService {
+    
     private let database = Firestore.firestore()
+    private let uid = Auth.auth().currentUser?.uid ?? ""
+    
     /// 🔹 **Obtener un usuario por ID**
     func getUser(by id: String ,completion: @escaping(UserModel?) -> Void) {
         let userRef = database.collection("users").document(id)
@@ -45,23 +49,25 @@ class UserService {
     
     
     // Traerme los chas de este usuario en tiempo real
-    func fetchMessages(for chatID: String , completion: @escaping([MessageModel]) -> Void){
+    func fetchChats(completion: @escaping(Result<[ChatModel], Error >) -> Void){
+        let chatsRef = database.collection("chats").whereField("participants", arrayContains: uid)
         
-        let messagesRef = database.collection("chats").document(chatID).collection("message")
-        
-        messagesRef.order(by: "timestamp", descending: false).getDocuments{ snapshot, error in
-            guard let documents = snapshot?.documents, error == nil else {
-                print("Error al obtener mensajes: \(error?.localizedDescription ?? "Desconocido")")
-                completion([])
+        chatsRef.addSnapshotListener { query, error in
+            if let errors = error{
+                print("No se puede motrar los chats: \(errors.localizedDescription )")
+                completion(.failure(errors))
+                return
+                
+            }
+            
+            guard let chatDocument = query?.documents.compactMap({$0})  else{
+                completion(.success([]))
                 return
             }
-            
-            let messages = documents.compactMap { doc -> MessageModel? in
-                try? doc.data(as: MessageModel.self)
-            }
-            
-            completion(messages)
-            
+            let chats = chatDocument.map{try? $0.data(as: ChatModel.self)}.compactMap{$0}
+            print(chats)
+            completion(.success(chats))
         }
+    
     }
 }

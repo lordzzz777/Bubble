@@ -10,12 +10,14 @@ import FirebaseFirestore
 import FirebaseCore
 
 struct ChatModel: Codable, Hashable {
-    var participants: [String] = [] 
+    @DocumentID var id: String?
+    var participants: [String] = []
     var lastMessage: String
     var lastMessageTimestamp: Timestamp
 }
 
 struct MessageModel: Codable, Hashable {
+    @DocumentID var id: String?
     var senderID: String
     var countent: String
     var timestamp: Timestamp
