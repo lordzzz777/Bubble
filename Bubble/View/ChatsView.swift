@@ -16,6 +16,7 @@ struct ChatsView: View {
     @State private var selectedVisibility = "privado"
     @State private var searchText = ""
     @State private var isWiffi = false
+    @State private var isMessageDestructive = false // activa alerta de eliminacion de chats
     
     // Esta es la lista de opciones para el Picker
     private let visibilityOptions = ["privado", "Publico"]
@@ -61,9 +62,9 @@ struct ChatsView: View {
                                     ListChatRowView(userID: id1, lastMessage: lastMessage, timestamp: timestamp)
                                 }
                                 .swipeActions(content: {
-                                    Button("borrar", systemImage: "trash.fill", role: .destructive, action: {
-                                        // ... Lógica eliminar
-                                    })
+                                    Button("borrar", systemImage: "trash.fill", action: {
+                                        isMessageDestructive = true
+                                    }).tint(.red )
                                 })
                                 
                             })
@@ -89,6 +90,20 @@ struct ChatsView: View {
                       dismissButton: .default(Text("OK"))
                 )
             }
+            .alert("⚠️ Eliminar Chat",
+                   isPresented: $isMessageDestructive,
+                   actions: {
+                Button("Eliminar") {
+                    // Acción para reintentar
+                }
+                Button("Cancelar", role: .cancel) {
+                    // Acción para cancelar
+                }
+            },
+                   message: {
+                Text("Si confirmas, se eliminará el Chat y la conversación de forma permanente y no podrás recuperarla. ¿Deseas continuar?")
+            }
+            )
             .toolbar(content: {
                 Button(action: {
                     // ... Logica
