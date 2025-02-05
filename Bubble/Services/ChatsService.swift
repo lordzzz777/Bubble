@@ -15,16 +15,15 @@ class ChatsService {
     private let database = Firestore.firestore()
     private let uid = Auth.auth().currentUser?.uid ?? ""
     
-    /// 🔹 **Obtener un usuario por ID**
-    func getUser(by id: String ,completion: @escaping(UserModel?) -> Void) {
-        let userRef = database.collection("users").document(id)
-        userRef.getDocument{ document, error in
-            guard let document = document, document.exists, let user = try? document.data(as: UserModel.self) else {
-                print("Usuario no encontrado o error: \(error?.localizedDescription ?? "Desconocido")")
-                completion(nil)
-                return
-            }
-            completion(user)
+    
+    @MainActor func getUser(id: String) async throws -> UserModel {
+        
+        do{
+            let document = try await database.collection("user").document(id).getDocument()
+            let userData = try document.data(as: UserModel.self)
+            return userData
+        }catch {
+            throw error
         }
     }
     
@@ -49,8 +48,8 @@ class ChatsService {
     
     
     // Traerme los chas de este usuario en tiempo real
-    func fetchChats(completion: @escaping(Result<[ChatModel], Error >) -> Void){
-        let chatsRef = database.collection("chats").whereField("participants", arrayContains: uid)
+    func fetchChats(completion: @escaping (Result<[ChatModel], Error >) -> Void){
+          let chatsRef = database.collection("chats").whereField("participants", arrayContains: uid)
         
         chatsRef.addSnapshotListener { query, error in
             if let errors = error{
@@ -69,5 +68,16 @@ class ChatsService {
             completion(.success(chats))
         }
     
+    }
+    
+    // Eliminar Chats
+    
+    @MainActor func deleteChat(chatID: String) async throws {
+    
+        do{
+            try await database.collection("chats").document(chatID).delete()
+        }catch {
+            throw error
+        }
     }
 }

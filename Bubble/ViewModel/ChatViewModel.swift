@@ -10,7 +10,7 @@ import FirebaseFirestore
 import Observation
 import FirebaseAuth
 
-@Observable
+@Observable @MainActor
 class ChatViewModel{
 
     private var userService = ChatsService()
@@ -26,14 +26,15 @@ class ChatViewModel{
     var errorDescription = ""
     
     // Cargar Usuarios
-    @MainActor
-    func fetchUser(userID: String){
-       
-        userService.getUser(by: userID){ user in
-                DispatchQueue.main.async{
-                    self.user = user
-                }
-            }
+   
+    func fetchUser(userID: String) async{
+        do{
+            let userData = try await userService.getUser(id: userID)
+            user = userData
+        }catch {
+            errorTitle = ""
+            errorDescription = ""
+        }
     }
     
     func updateUserOnlineStatus(userID: String, isOnline: Bool) {
@@ -58,6 +59,7 @@ class ChatViewModel{
     func fetchChats(){
         
         userService.fetchChats { [weak self] result in
+            
             switch result {
             case .success(let success):
                 self?.chats = success
@@ -70,7 +72,14 @@ class ChatViewModel{
         
     }
     
-
+    func deleteChat(id: String) async {
+        do{
+           try await userService.deleteChat(chatID: id)
+        }catch{
+            errorTitle = "no se pudo eliminar el Chat"
+            errorDescription = "Ocurrio un error desconocido al eliminar el chat, intentelo mas tarde"
+        }
+    }
     
 //    // Cargar mensaje de un chat
 //    func fetchMessages(for chatID: String) {
@@ -88,32 +97,7 @@ class ChatViewModel{
 //        
 //    }
 //    
-//    // Eliminar Chat y susmensajes
-//    func deleteChat(chatID: String){
-//        let chatRef = database.collection("chats").document(chatID)
-//        
-//        // Elimina todos los mensajes dentro del Chat
-//        chatRef.collection("message").getDocuments { snapshot, error in
-//            guard let documents = snapshot?.documents else {
-//                print("No hay mensajes para eliminar o error: \(error?.localizedDescription ?? "Desconocido")")
-//                return
-//            }
-//            
-//            for document in documents {
-//                document.reference.delete()
-//            }
-//            
-//            // Eliminar el chat una vez que se elimine los mesajes
-//            chatRef.delete { error in
-//                
-//                if error != nil {
-//                    print("")
-//                } else {
-//                    
-//                }
-//            }
-//        }
-//    }
+
     
     func getFriendID(_ ids: [String]) -> String {
         var friendID = ""

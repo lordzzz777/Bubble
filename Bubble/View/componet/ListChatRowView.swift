@@ -42,7 +42,10 @@ struct ListChatRowView: View {
 
                     }.contextMenu(menuItems: {
                         Button("Actualizar Última Conexión") {
-                          viewModel.updateLastConnection(userID: userID)
+                            Task {
+                              // viewModel.updateLastConnection(userID: userID)
+                                
+                            }
                         }
                     })
                     Spacer()
@@ -54,9 +57,9 @@ struct ListChatRowView: View {
             }
         }
         .onAppear {
-          
-                viewModel.fetchUser(userID: userID)
-    
+            Task{
+                await viewModel.fetchUser(userID: userID)
+            }
         }
     }
 }
