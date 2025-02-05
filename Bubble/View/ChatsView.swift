@@ -62,7 +62,7 @@ struct ChatsView: View {
                             })
                             .swipeActions(content: {
                                 Button("borrar", systemImage: "trash.fill", action: {
-                                    selectedId = chat.id
+                                   
                                     isMessageDestructive = true
                                 }).tint(.red )
                             })
@@ -70,9 +70,7 @@ struct ChatsView: View {
                                    isPresented: $isMessageDestructive,
                                    actions: {
                                 Button("Eliminar") {
-                                    Task { @MainActor in
-                                        await viewModel.deleteChat(id: chat.id)
-                                    }
+                                 
                                     
                                 }
                                 Button("Cancelar", role: .cancel) {

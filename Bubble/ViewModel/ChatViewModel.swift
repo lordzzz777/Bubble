@@ -18,7 +18,6 @@ class ChatViewModel{
    
     var user: UserModel?
     
-    //var userModel: [UserModel] = []
     var chats: [ChatModel] = []
     var messages: [MessageModel] = []
     var isfetchChatsError = false
@@ -26,24 +25,34 @@ class ChatViewModel{
     var errorDescription = ""
     
     // Cargar Usuarios
-   
-    func fetchUser(userID: String) async{
-        do{
-            let userData = try await userService.getUser(id: userID)
-            user = userData
-        }catch {
-            errorTitle = ""
-            errorDescription = ""
+    /// Cargar usuario con `@escaping`
+    func fetchUser(id: String) {
+        userService.getUser(id: id) { result in
+            DispatchQueue.main.async {
+                if case .success(let user) = result {
+                    self.user = user
+                }
+            }
         }
     }
-    
-    func updateUserOnlineStatus(userID: String, isOnline: Bool) {
-        userService.updateUserOnlineStatus(userID: userID, isOnline: isOnline)
-    }
-    
-    func updateLastConnection(userID: String) {
-        userService.updateLastConnection(userID: userID)
-    }
+
+//    func fetchUser(userID: String) async{
+//        do{
+//            let userData = try await userService.getUser(id: userID)
+//            user = userData
+//        }catch {
+//            errorTitle = ""
+//            errorDescription = ""
+//        }
+//    }
+//    
+//    func updateUserOnlineStatus(userID: String, isOnline: Bool) {
+//        userService.updateUserOnlineStatus(userID: userID, isOnline: isOnline)
+//    }
+//    
+//    func updateLastConnection(userID: String) {
+//        userService.updateLastConnection(userID: userID)
+//    }
     
     
     // Formatea Timestamp para combertir en String
@@ -56,20 +65,22 @@ class ChatViewModel{
     
     // Cargar los chats
 
-    func fetchChats(){
+  func fetchChats() {
         
-        userService.fetchChats { [weak self] result in
-            
-            switch result {
-            case .success(let success):
-                self?.chats = success
-            case .failure(_):
-                self?.isfetchChatsError = true
-                self?.errorTitle = "Error al obtener los chats"
-                self?.errorDescription = "Ocurrió un error desconocido al obtener los chas, intentelo mas tarde"
+       userService.fetchChats { [weak self] result in
+            guard let self = self else { return }
+           
+            Task{@MainActor in
+                switch result {
+                case .success(let success):
+                    self.chats = success
+                case .failure(_):
+                    self.isfetchChatsError = true
+                    self.errorTitle = "Error al obtener los chats"
+                    self.errorDescription = "Ocurrió un error desconocido al obtener los chas, intentelo mas tarde"
+                }
             }
         }
-        
     }
     
     func deleteChat(id: String) async {

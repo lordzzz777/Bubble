@@ -57,9 +57,9 @@ struct ListChatRowView: View {
             }
         }
         .onAppear {
-            Task{
-                await viewModel.fetchUser(userID: userID)
-            }
+            
+                viewModel.fetchUser(id: userID)
+          
         }
     }
 }

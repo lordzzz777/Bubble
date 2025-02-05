@@ -7,25 +7,46 @@
 
 import Foundation
 import FirebaseCore
-import Firebase
+@preconcurrency import Firebase
 import FirebaseAuth
 
-class ChatsService {
+final class ChatsService {
     
     private let database = Firestore.firestore()
     private let uid = Auth.auth().currentUser?.uid ?? ""
     
-    
-    @MainActor func getUser(id: String) async throws -> UserModel {
-        
-        do{
-            let document = try await database.collection("user").document(id).getDocument()
-            let userData = try document.data(as: UserModel.self)
-            return userData
-        }catch {
-            throw error
+    func getUser(id: String, completion: @escaping (Result<UserModel, Error >) -> Void){
+     let document =  database.collection("user").document(id)
+        document.addSnapshotListener{ query, error in
+            if let error = error {
+                print("Error al recivir los datos de usurio: \(error) ")
+                return
+            }
+            
+            guard let document = query, document.exists else {
+                completion(.failure(NSError(domain: "Firestore", code: 404, userInfo: [NSLocalizedDescriptionKey: "Usuario no encontrado"])))
+                return
+            }
+                
+            do{
+                let user = try document.data(as: UserModel.self)
+                completion(.success(user))
+            }catch {
+                completion(.failure(error))
+            }
         }
     }
+    
+//    @MainActor func getUser(id: String) async throws -> UserModel {
+//        
+//        do{
+//            let document = try await database.collection("user").document(id).getDocument()
+//            let userData = try document.data(as: UserModel.self)
+//            return userData
+//        }catch {
+//            throw error
+//        }
+//    }
     
     /// 🔹 **Actualizar el estado en línea**
     func updateUserOnlineStatus(userID: String, isOnline: Bool) {
@@ -73,7 +94,7 @@ class ChatsService {
     // Eliminar Chats
     
     @MainActor func deleteChat(chatID: String) async throws {
-    
+
         do{
             try await database.collection("chats").document(chatID).delete()
         }catch {
