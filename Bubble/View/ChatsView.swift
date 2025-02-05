@@ -17,7 +17,7 @@ struct ChatsView: View {
     @State private var searchText = ""
     @State private var isWiffi = false
     @State private var isMessageDestructive = false // activa alerta de eliminacion de chats
-    @State private var selectedId = ""
+    @State private var countenIDChats: String = ""
     // Esta es la lista de opciones para el Picker
     private let visibilityOptions = ["privado", "Publico"]
     
@@ -62,7 +62,6 @@ struct ChatsView: View {
                             })
                             .swipeActions(content: {
                                 Button("borrar", systemImage: "trash.fill", action: {
-                                   
                                     isMessageDestructive = true
                                 }).tint(.red )
                             })
@@ -70,7 +69,8 @@ struct ChatsView: View {
                                    isPresented: $isMessageDestructive,
                                    actions: {
                                 Button("Eliminar") {
-                                 
+                                    
+                                   // viewModel.deleteChat(chatID: chat.description.entityIdentifierString)
                                     
                                 }
                                 Button("Cancelar", role: .cancel) {
@@ -92,7 +92,7 @@ struct ChatsView: View {
                 }
             }
             .navigationTitle("Chats")
-            .onAppear {
+            .task {
                 viewModel.fetchChats()
             }
             .alert(isPresented: $viewModel.isfetchChatsError) {

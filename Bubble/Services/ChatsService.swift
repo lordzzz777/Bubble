@@ -7,47 +7,38 @@
 
 import Foundation
 import FirebaseCore
-@preconcurrency import Firebase
+import Firebase
 import FirebaseAuth
 
-final class ChatsService {
+class ChatsService {
     
     private let database = Firestore.firestore()
     private let uid = Auth.auth().currentUser?.uid ?? ""
     
-    func getUser(id: String, completion: @escaping (Result<UserModel, Error >) -> Void){
-     let document =  database.collection("user").document(id)
-        document.addSnapshotListener{ query, error in
+    func getUser(by id: String, completion: @escaping (Result<UserModel?, Error>) -> Void) {
+        let userRef = database.collection("users").document(id)
+        
+        userRef.getDocument { query, error in
             if let error = error {
-                print("Error al recivir los datos de usurio: \(error) ")
+                print("Error al intentar traer los datos del usuario \(error)")
+                completion(.failure(error))
                 return
             }
             
             guard let document = query, document.exists else {
-                completion(.failure(NSError(domain: "Firestore", code: 404, userInfo: [NSLocalizedDescriptionKey: "Usuario no encontrado"])))
+                let defaultError = NSError(domain: "Firestore", code: 404, userInfo: [NSLocalizedDescriptionKey: "Usuario no encontrado"])
+                print("Usuario no encontrado")
+                completion(.failure(defaultError))
                 return
             }
-                
-            do{
-                let user = try document.data(as: UserModel.self)
-                completion(.success(user))
-            }catch {
-                completion(.failure(error))
-            }
+            
+            // Intentamos convertir el documento a UserModel
+            let user = try? document.data(as: UserModel.self)
+            completion(.success(user))
         }
     }
-    
-//    @MainActor func getUser(id: String) async throws -> UserModel {
-//        
-//        do{
-//            let document = try await database.collection("user").document(id).getDocument()
-//            let userData = try document.data(as: UserModel.self)
-//            return userData
-//        }catch {
-//            throw error
-//        }
-//    }
-    
+
+
     /// 🔹 **Actualizar el estado en línea**
     func updateUserOnlineStatus(userID: String, isOnline: Bool) {
         database.collection("users").document(userID).updateData(["isOnline": isOnline]) { error in
@@ -69,8 +60,8 @@ final class ChatsService {
     
     
     // Traerme los chas de este usuario en tiempo real
-    func fetchChats(completion: @escaping (Result<[ChatModel], Error >) -> Void){
-          let chatsRef = database.collection("chats").whereField("participants", arrayContains: uid)
+    func fetchChats(completion: @escaping(Result<[ChatModel], Error >) -> Void){
+        let chatsRef = database.collection("chats").whereField("participants", arrayContains: uid)
         
         chatsRef.addSnapshotListener { query, error in
             if let errors = error{
@@ -89,16 +80,5 @@ final class ChatsService {
             completion(.success(chats))
         }
     
-    }
-    
-    // Eliminar Chats
-    
-    @MainActor func deleteChat(chatID: String) async throws {
-
-        do{
-            try await database.collection("chats").document(chatID).delete()
-        }catch {
-            throw error
-        }
     }
 }
