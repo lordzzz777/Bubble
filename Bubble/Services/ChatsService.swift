@@ -52,25 +52,15 @@ class ChatsService {
                 return
             }
             
-//            guard let chatDocument = query?.documents.compactMap({$0})  else{
-//                completion(.success([]))
-//                return
-//            }
-//            
-//            let chats = chatDocument.map{try? $0.data(as: ChatModel.self)}.compactMap{$0}
-//            print(chats)
-//            completion(.success(chats))
-            
-            guard let documents = query?.documents else {
-                print("No hay chats disponibles")
+            guard let chatDocument = query?.documents.compactMap({$0})  else{
                 completion(.success([]))
                 return
             }
             
-            let chats = documents.compactMap { try? $0.data(as: ChatModel.self) }
-            print("Se encontraron \(chats.count) chats") // Verifica si los datos se están obteniendo
-            
+            let chats = chatDocument.map{try? $0.data(as: ChatModel.self)}.compactMap{$0}
+            print(chats)
             completion(.success(chats))
+            
         }
         
     }
