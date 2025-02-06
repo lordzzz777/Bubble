@@ -10,13 +10,14 @@ import FirebaseFirestore
 import FirebaseCore
 
 struct ChatsView: View {
-    @State var viewModel = ChatViewModel()
+    @Bindable var viewModel = ChatViewModel()
     
     // Esta es la variable que almacenará el valor seleccionado del Picker
     @State private var selectedVisibility = "privado"
     @State private var searchText = ""
     @State private var isWiffi = false
-    
+    @State private var isMessageDestructive = false // activa alerta de eliminacion de chats
+    @State private var countenIDChats: String = ""
     // Esta es la lista de opciones para el Picker
     private let visibilityOptions = ["privado", "Publico"]
     
@@ -51,22 +52,37 @@ struct ChatsView: View {
                     
                     List{
                         ForEach(viewModel.chats, id:\.lastMessageTimestamp){ chat in
+                            
                             NavigationLink(destination: {
                                 
                             }, label: {
                                 VStack(alignment: .leading){
-                                    let id1 = chat.participants[1]
-                                    let timestamp: Timestamp =  chat.lastMessageTimestamp
-                                    let lastMessage = chat.lastMessage
-                                    ListChatRowView(userID: id1, lastMessage: lastMessage, timestamp: timestamp)
+                                    ListChatRowView(userID:viewModel.getFriendID(chat.participants), lastMessage: chat.lastMessage, timestamp: chat.lastMessageTimestamp)
+
                                 }
-                                .swipeActions(content: {
-                                    Button("borrar", systemImage: "trash.fill", role: .destructive, action: {
-                                        // ... Lógica eliminar
-                                    })
+                                // Alerta de advertencia antes de eliminar el chat
+                                .alert("⚠️ Eliminar Chat",
+                                       isPresented: $isMessageDestructive,
+                                       actions: {
+                                    Button("Eliminar") {
+                                        if let chatID = chat.id{
+                                            viewModel.deleteChat(chatID: chatID)
+                                        }
+                                    }
+                                    Button("Cancelar", role: .cancel) {
+                                        // ... Acción para cancelar
+                                    }
+                                },
+                                       message: {
+                                    Text("Si confirmas, se eliminará el Chat y la conversación de forma permanente y no podrás recuperarla. ¿Deseas continuar?")
                                 })
-                                
                             })
+                            .swipeActions(content: {
+                                Button("borrar", systemImage: "trash.fill", action: {
+                                    isMessageDestructive = true
+                                }).tint(.red )
+                            })
+
                         }
                         
                     }
@@ -79,16 +95,29 @@ struct ChatsView: View {
                 }
             }
             .navigationTitle("Chats")
-            .onAppear {
+            .task {
                 viewModel.fetchChats()
             }
+            
+            // Alerta de Error
             .alert(isPresented: $viewModel.isfetchChatsError) {
                 Alert(title: 
-                        Text("Error al cargar los chats"),
-                      message: Text("Puede intentar nuevamente."),
+                        Text(viewModel.errorTitle),
+                      message: Text(viewModel.errorDescription),
                       dismissButton: .default(Text("OK"))
                 )
             }
+            
+            // Alerta de corfimación
+            .alert(isPresented: $viewModel.isSuccessMessas) {
+                Alert(title:
+                        Text(viewModel.successMessasTitle),
+                      message: Text(viewModel.successMessasDescription),
+                      dismissButton: .default(Text("OK"))
+                )
+            }
+
+            
             .toolbar(content: {
                 Button(action: {
                     // ... Logica
