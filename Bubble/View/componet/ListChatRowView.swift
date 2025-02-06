@@ -41,8 +41,8 @@ struct ListChatRowView: View {
                         Text(lastMessage).font(.footnote)
 
                     }.contextMenu(menuItems: {
-                        Button("Actualizar Última Conexión") {
-                          viewModel.updateLastConnection(userID: userID)
+                        Button("Botón onTag") {
+                          // ...
                         }
                     })
                     Spacer()

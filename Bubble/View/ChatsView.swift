@@ -58,28 +58,31 @@ struct ChatsView: View {
                             }, label: {
                                 VStack(alignment: .leading){
                                     ListChatRowView(userID:viewModel.getFriendID(chat.participants), lastMessage: chat.lastMessage, timestamp: chat.lastMessageTimestamp)
+
                                 }
+                                // Alerta de advertencia antes de eliminar el chat
+                                .alert("⚠️ Eliminar Chat",
+                                       isPresented: $isMessageDestructive,
+                                       actions: {
+                                    Button("Eliminar") {
+                                        if let chatID = chat.id{
+                                            viewModel.deleteChat(chatID: chatID)
+                                        }
+                                    }
+                                    Button("Cancelar", role: .cancel) {
+                                        // ... Acción para cancelar
+                                    }
+                                },
+                                       message: {
+                                    Text("Si confirmas, se eliminará el Chat y la conversación de forma permanente y no podrás recuperarla. ¿Deseas continuar?")
+                                })
                             })
                             .swipeActions(content: {
                                 Button("borrar", systemImage: "trash.fill", action: {
                                     isMessageDestructive = true
                                 }).tint(.red )
                             })
-                            .alert("⚠️ Eliminar Chat",
-                                   isPresented: $isMessageDestructive,
-                                   actions: {
-                                Button("Eliminar") {
-                                    
-                                   // viewModel.deleteChat(chatID: chat.description.entityIdentifierString)
-                                    
-                                }
-                                Button("Cancelar", role: .cancel) {
-                                    // Acción para cancelar
-                                }
-                            },
-                                   message: {
-                                Text("Si confirmas, se eliminará el Chat y la conversación de forma permanente y no podrás recuperarla. ¿Deseas continuar?")
-                            })
+
                         }
                         
                     }
@@ -95,10 +98,21 @@ struct ChatsView: View {
             .task {
                 viewModel.fetchChats()
             }
+            
+            // Alerta de Error
             .alert(isPresented: $viewModel.isfetchChatsError) {
                 Alert(title: 
                         Text(viewModel.errorTitle),
                       message: Text(viewModel.errorDescription),
+                      dismissButton: .default(Text("OK"))
+                )
+            }
+            
+            // Alerta de corfimación
+            .alert(isPresented: $viewModel.isSuccessMessas) {
+                Alert(title:
+                        Text(viewModel.successMessasTitle),
+                      message: Text(viewModel.successMessasDescription),
                       dismissButton: .default(Text("OK"))
                 )
             }

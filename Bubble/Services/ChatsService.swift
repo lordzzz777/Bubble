@@ -15,6 +15,8 @@ class ChatsService {
     private let database = Firestore.firestore()
     private let uid = Auth.auth().currentUser?.uid ?? ""
     
+    
+    // Obtener un usuario por ID ...
     func getUser(by id: String, completion: @escaping (Result<UserModel?, Error>) -> Void) {
         let userRef = database.collection("users").document(id)
         
@@ -37,26 +39,6 @@ class ChatsService {
             completion(.success(user))
         }
     }
-
-
-    /// 🔹 **Actualizar el estado en línea**
-    func updateUserOnlineStatus(userID: String, isOnline: Bool) {
-        database.collection("users").document(userID).updateData(["isOnline": isOnline]) { error in
-            if let error = error {
-                print("Error al actualizar estado online: \(error.localizedDescription)")
-            }
-        }
-    }
-    
-    
-    /// 🔹 **Actualizar la última conexión**
-    func updateLastConnection(userID: String) {
-        database.collection("users").document(userID).updateData(["lastConnectionTimestamp": Timestamp()]) { error in
-            if let error = error {
-                print("Error al actualizar la última conexión: \(error.localizedDescription)")
-            }
-        }
-    }
     
     
     // Traerme los chas de este usuario en tiempo real
@@ -64,21 +46,79 @@ class ChatsService {
         let chatsRef = database.collection("chats").whereField("participants", arrayContains: uid)
         
         chatsRef.addSnapshotListener { query, error in
-            if let errors = error{
-                print("No se puede motrar los chats: \(errors.localizedDescription )")
-                completion(.failure(errors))
+            if let error = error{
+                print("No se puede obtenido los chats: \(error.localizedDescription )")
+                completion(.failure(error))
                 return
-                
             }
             
-            guard let chatDocument = query?.documents.compactMap({$0})  else{
+//            guard let chatDocument = query?.documents.compactMap({$0})  else{
+//                completion(.success([]))
+//                return
+//            }
+//            
+//            let chats = chatDocument.map{try? $0.data(as: ChatModel.self)}.compactMap{$0}
+//            print(chats)
+//            completion(.success(chats))
+            
+            guard let documents = query?.documents else {
+                print("No hay chats disponibles")
                 completion(.success([]))
                 return
             }
-            let chats = chatDocument.map{try? $0.data(as: ChatModel.self)}.compactMap{$0}
-            print(chats)
+            
+            let chats = documents.compactMap { try? $0.data(as: ChatModel.self) }
+            print("Se encontraron \(chats.count) chats") // Verifica si los datos se están obteniendo
+            
             completion(.success(chats))
         }
-    
+        
     }
+    
+    // Metodo para eliminar los chats
+    func deleteChat(chatID: String, completion: @escaping (Result<Void, Error>) -> Void){
+        let chatRef = database.collection("chats").document(chatID)
+        
+        chatRef.delete{ error in
+            if let error = error {
+                print("Error al eliminar el chat: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }else {
+                print("El chat se ha eliminado con exito")
+                completion(.success(()))
+            }
+        }
+    }
+    
+    // Metodo para eliminar todos los chats del Usuario
+    func deleteAllChatsForUser(uI: String, completion: @escaping (Result<Void, Error>) -> Void){
+        let chatsRef = database.collection("chats").whereField("participants", arrayContains: uid)
+        chatsRef.getDocuments{ query, error in
+            if let error = error {
+                print("Error al obtener los chats: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+            
+            let batch = self.database.batch()
+            
+            query?.documents.forEach{ document in
+                batch.deleteDocument(document.reference)
+            }
+            
+            batch.commit{ batchError in
+                if let batchError = batchError {
+                    print("Error al eliminar los chats: \(batchError.localizedDescription)")
+                    completion(.failure(batchError))
+                }else {
+                    print("Todo los chats eliminados con exito")
+                    completion(.success(()))
+                }
+            }
+        }
+    }
+    
+    
+    
 }

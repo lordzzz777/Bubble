@@ -17,13 +17,16 @@ class ChatViewModel{
     private var firestoreService = FirestoreService()
    
     var user: UserModel?
-    
-    //var userModel: [UserModel] = []
     var chats: [ChatModel] = []
     var messages: [MessageModel] = []
-    var isfetchChatsError = false
+    
     var errorTitle = ""
     var errorDescription = ""
+    var isfetchChatsError = false
+    
+    var successMessasTitle = ""
+    var successMessasDescription = ""
+    var isSuccessMessas = false
     
     // Cargar Usuarios
     @MainActor
@@ -40,27 +43,10 @@ class ChatViewModel{
         }
     }
     
-    func updateUserOnlineStatus(userID: String, isOnline: Bool) {
-        userService.updateUserOnlineStatus(userID: userID, isOnline: isOnline)
-    }
-    
-    func updateLastConnection(userID: String) {
-        userService.updateLastConnection(userID: userID)
-    }
-    
-    
-    // Formatea Timestamp para combertir en String
-    func formatTimestamp(_ timestamp: Timestamp) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm" // Formato personalizado
-        
-        return formatter.string(from: timestamp.dateValue())
-    }
+
     
     // Cargar los chats
-
     func fetchChats(){
-        
         userService.fetchChats { [weak self] result in
             switch result {
             case .success(let success):
@@ -74,51 +60,41 @@ class ChatViewModel{
         
     }
     
-
+    // Metodo para eliminar un solo chat
+    func deleteChat(chatID: String){
+        userService.deleteChat(chatID: chatID) { [weak self] result in
+            
+            switch result{
+            case .success(_):
+                self?.successMessasTitle = "Exrito"
+                self?.successMessasDescription = "El chat se ha eliminado con exito"
+                self?.isSuccessMessas = true
+            case .failure(_):
+                self?.errorTitle = "Error"
+                self?.errorDescription = "El chat no se ha podido eliminar, intentelo mas tarde"
+                self?.isfetchChatsError = true
+            }
+        }
+    }
     
-//    // Cargar mensaje de un chat
-//    func fetchMessages(for chatID: String) {
-//        database.collection("chats").document(chatID).collection("message").order(by: "timestamp", descending: false).addSnapshotListener { [weak self] snapshot, error in
-//            
-//            guard let documens = snapshot?.documents, error == nil else {
-//                print("Error al obtener mensajes: \(error?.localizedDescription ?? "Desconocido")")
-//                return
-//            }
-//            
-//            self?.messages = documens.compactMap{ doc -> MessageModel? in
-//                try? doc.data(as: MessageModel.self)
-//            }
-//        }
-//        
-//    }
-//    
-//    // Eliminar Chat y susmensajes
-//    func deleteChat(chatID: String){
-//        let chatRef = database.collection("chats").document(chatID)
-//        
-//        // Elimina todos los mensajes dentro del Chat
-//        chatRef.collection("message").getDocuments { snapshot, error in
-//            guard let documents = snapshot?.documents else {
-//                print("No hay mensajes para eliminar o error: \(error?.localizedDescription ?? "Desconocido")")
-//                return
-//            }
-//            
-//            for document in documents {
-//                document.reference.delete()
-//            }
-//            
-//            // Eliminar el chat una vez que se elimine los mesajes
-//            chatRef.delete { error in
-//                
-//                if error != nil {
-//                    print("")
-//                } else {
-//                    
-//                }
-//            }
-//        }
-//    }
+    // Metodo para leliminar todos los chat del usuario
+    func deleteChats(uid: String){
+        userService.deleteAllChatsForUser(uI: uid){ [weak self] result in
+            
+            switch result{
+            case .success:
+                self?.successMessasTitle = "Exrito"
+                self?.successMessasDescription = "Los chats se ha eliminado con exito"
+                self?.isSuccessMessas = true
+            case .failure(_):
+                self?.errorTitle = "Error"
+                self?.errorDescription = "Los chats no se ha podido eliminar, intentelo mas tarde"
+                self?.isfetchChatsError = true
+            }
+        }
+    }
     
+    // Obtener el idi del usuario
     func getFriendID(_ ids: [String]) -> String {
         var friendID = ""
         let uID = Auth.auth().currentUser?.uid ?? ""
@@ -128,6 +104,14 @@ class ChatViewModel{
             }
         }
         return friendID
+    }
+    
+    // Formatea Timestamp para combertir en String
+    func formatTimestamp(_ timestamp: Timestamp) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm" // Formato personalizado
+        
+        return formatter.string(from: timestamp.dateValue())
     }
 
 }
