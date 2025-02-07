@@ -14,7 +14,11 @@ import CryptoKit
 import AuthenticationServices
 
 @Observable
+<<<<<<< HEAD
 final class AppleServices {
+=======
+class AppleServices {
+>>>>>>> lordzzz_Repair_bugs
     var nonce = ""
     var errorMessage: LocalizedStringKey = ""
     var showError = false
@@ -122,6 +126,7 @@ private func randomNonceString(length: Int = 32) -> String {
     return result
 }
 
+<<<<<<< HEAD
 //private func randomNonceString(length: Int = 32) -> String {
 //    precondition(length > 0)
 //    var randomBytes = [UInt8](repeating: 0, count: length)
@@ -143,6 +148,8 @@ private func randomNonceString(length: Int = 32) -> String {
 //    return String(nonce)
 //    }
 
+=======
+>>>>>>> lordzzz_Repair_bugs
 private func sha256(_ input: String) -> String {
     let inputData = Data(input.utf8)
     let hashedData = SHA256.hash(data: inputData)

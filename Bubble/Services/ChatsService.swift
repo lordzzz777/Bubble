@@ -43,8 +43,9 @@ class ChatsService {
     
     // Traerme los chas de este usuario en tiempo real
     func fetchChats(completion: @escaping(Result<[ChatModel], Error >) -> Void){
-        let chatsRef = database.collection("chats").whereField("participants", arrayContains: uid)
-        
+
+        let chatsRef = database.collection("chats").whereField("participants", arrayContains: uid).order(by: "lastMessageTimestamp", descending: false)
+
         chatsRef.addSnapshotListener { query, error in
             if let error = error{
                 print("No se puede obtenido los chats: \(error.localizedDescription )")
@@ -60,7 +61,7 @@ class ChatsService {
             let chats = chatDocument.map{try? $0.data(as: ChatModel.self)}.compactMap{$0}
             print(chats)
             completion(.success(chats))
-            
+
         }
         
     }

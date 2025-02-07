@@ -20,13 +20,20 @@ class ChatViewModel{
     var chats: [ChatModel] = []
     var messages: [MessageModel] = []
     
+
+    let visibilityOptions = ["privado", "Publico"]
+    var selectedVisibility = "privado"
+    var searchText = ""
     var errorTitle = ""
     var errorDescription = ""
-    var isfetchChatsError = false
-    
     var successMessasTitle = ""
     var successMessasDescription = ""
+    
+    var isMessageDestructive = false
+    var isfetchChatsError = false
     var isSuccessMessas = false
+    var isWiffi = false
+
     
     // Cargar Usuarios
     @MainActor
@@ -37,13 +44,12 @@ class ChatViewModel{
                 self?.user = success
             case .failure(_):
                 self?.isfetchChatsError = true
-                self?.errorTitle = ""
-                self?.errorDescription = ""
+                self?.errorTitle = "Error al traerte el usuario"
+                self?.errorDescription = "Ocurrió un error por el cual no se apodido mostrar el ususrio intentelo mas tarde"
+
             }
         }
     }
-    
-
     
     // Cargar los chats
     func fetchChats(){
@@ -69,6 +75,7 @@ class ChatViewModel{
                 self?.successMessasTitle = "Exrito"
                 self?.successMessasDescription = "El chat se ha eliminado con exito"
                 self?.isSuccessMessas = true
+                self?.chats.removeAll(where: {$0.id == chatID})
             case .failure(_):
                 self?.errorTitle = "Error"
                 self?.errorDescription = "El chat no se ha podido eliminar, intentelo mas tarde"
@@ -86,6 +93,7 @@ class ChatViewModel{
                 self?.successMessasTitle = "Exrito"
                 self?.successMessasDescription = "Los chats se ha eliminado con exito"
                 self?.isSuccessMessas = true
+                self?.chats.removeAll(where: {$0.id == uid})
             case .failure(_):
                 self?.errorTitle = "Error"
                 self?.errorDescription = "Los chats no se ha podido eliminar, intentelo mas tarde"
