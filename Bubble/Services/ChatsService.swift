@@ -43,7 +43,7 @@ class ChatsService {
     
     // Traerme los chas de este usuario en tiempo real
     func fetchChats(completion: @escaping(Result<[ChatModel], Error >) -> Void){
-        let chatsRef = database.collection("chats").whereField("participants", arrayContains: uid)
+        let chatsRef = database.collection("chats").whereField("participants", arrayContains: uid).order(by: "lastMessageTimestamp", descending: false)
         
         chatsRef.addSnapshotListener { query, error in
             if let error = error{
@@ -60,17 +60,7 @@ class ChatsService {
             let chats = chatDocument.map{try? $0.data(as: ChatModel.self)}.compactMap{$0}
             print(chats)
             completion(.success(chats))
-            
-//            guard let documents = query?.documents else {
-//                print("No hay chats disponibles")
-//                completion(.success([]))
-//                return
-//            }
-//            
-//            let chats = documents.compactMap { try? $0.data(as: ChatModel.self) }
-//            print("Se encontraron \(chats.count) chats") // Verifica si los datos se están obteniendo
-//            
-//            completion(.success(chats))
+
         }
         
     }
