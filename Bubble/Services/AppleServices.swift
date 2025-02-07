@@ -14,11 +14,8 @@ import CryptoKit
 import AuthenticationServices
 
 @Observable
-<<<<<<< HEAD
-final class AppleServices {
-=======
 class AppleServices {
->>>>>>> lordzzz_Repair_bugs
+
     var nonce = ""
     var errorMessage: LocalizedStringKey = ""
     var showError = false
@@ -126,30 +123,6 @@ private func randomNonceString(length: Int = 32) -> String {
     return result
 }
 
-<<<<<<< HEAD
-//private func randomNonceString(length: Int = 32) -> String {
-//    precondition(length > 0)
-//    var randomBytes = [UInt8](repeating: 0, count: length)
-//    let errorCode = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
-//    if errorCode != errSecSuccess {
-//        fatalError(
-//            "Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)"
-//        )
-//    }
-//    
-//    let charset: [Character] =
-//    Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
-//    
-//    let nonce = randomBytes.map { byte in
-//        // Pick a random character from the set, wrapping around if needed.
-//        charset[Int(byte) % charset.count]
-//    }
-//    
-//    return String(nonce)
-//    }
-
-=======
->>>>>>> lordzzz_Repair_bugs
 private func sha256(_ input: String) -> String {
     let inputData = Data(input.utf8)
     let hashedData = SHA256.hash(data: inputData)
