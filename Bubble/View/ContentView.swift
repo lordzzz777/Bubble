@@ -13,34 +13,19 @@ struct ContentView: View {
     
     var body: some View {
         TabView{
-            
-            VStack(alignment: .center, content: {
-                if isConnected {
-                    ChatsView()
-                } else {
-                    Text("¡¡Sin señal de red ... !!").font(.largeTitle.bold())
-                    Image(systemName: "wifi.slash")
-                        .font(.system(size: 150).bold())
-                }
-            })
-            .task {
-                for await status in networkMonitor.connectionStatuses() {
-                    isConnected = status
-                }
-            }
-            
-            .tabItem({
-                Label("Chas", systemImage: "message.fill")
-            })
+            ChatsView()
+                .tabItem({
+                    Label("Chats", systemImage: "message.fill")
+                })
             
             Text("Pantalla 2")
                 .tabItem({
-                    Label("", systemImage: "person.3.sequence.fill")
+                    Label("Comunidades", systemImage: "person.3.sequence.fill")
                 })
             
             Text("Pantalla 3")
                 .tabItem({
-                    Label("", systemImage: "gear")
+                    Label("Ajustes", systemImage: "gear")
                 })
         }
     }
