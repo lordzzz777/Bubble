@@ -64,7 +64,7 @@ struct ChatsView: View {
                     
                 }
             }
-            .searchable(text: $viewModel.searchText, placement: .navigationBarDrawer(displayMode: .always)) {
+            .searchable(text: $viewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
                 ForEach(viewModel.visibilityOptions, id: \.self) { option in
                     Text(option).searchCompletion(option)
                 }
@@ -72,7 +72,7 @@ struct ChatsView: View {
             .navigationTitle("Chats")
             
             .task {
-                viewModel.fetchChats()
+                await viewModel.fetchCats()
             }
             
             // Alerta de Error

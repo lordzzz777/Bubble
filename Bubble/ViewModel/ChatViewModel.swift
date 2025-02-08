@@ -10,38 +10,51 @@ import FirebaseFirestore
 import Observation
 import FirebaseAuth
 
-@Observable
+@Observable @MainActor
 class ChatViewModel{
-
-    private var userService = ChatsService()
+    
+    // Servicios
+    private var allServices = ChatsService()
     private var firestoreService = FirestoreService()
    
+    // Datos del usuario y chats
     var user: UserModel?
     var chats: [ChatModel] = []
     var messages: [MessageModel] = []
+    
+    // Tareas de escucha
     private var chatTask: Task<Void, Never>?
     private var userTask: Task<Void, Never>?
     
+    // Opciones de visibilidad para los chats
     let visibilityOptions = ["privado", "Publico"]
     var selectedVisibility = "privado"
-    var searchText = ""
+    
+    // Variables para la búsqueda
+    var searchQuery = ""
+    
+    // Manejo de errores
     var errorTitle = ""
     var errorDescription = ""
+    
+    // Mensajes de éxito
     var successMessasTitle = ""
     var successMessasDescription = ""
     
+    // Flags de estado
     var isMessageDestructive = false
     var isfetchChatsError = false
     var isSuccessMessas = false
     var isWiffi = false
     
     
-    
-    @MainActor func fetchUser (userID: String) {
+    /// Obtiene la información de un usuario en tiempo real y la almacena en la variable `user`.
+    /// - Parameter userID: El ID del usuario que se desea obtener.
+    func fetchUser (userID: String) {
         userTask?.cancel()
         userTask = Task {
             do{
-                for try await user in await userService.getUser(by: userID){
+                for try await user in await allServices.getUser(by: userID){
                     self.user = user
                 }
             }catch{
@@ -52,28 +65,31 @@ class ChatViewModel{
         }
     }
     
-    @MainActor     // Método para obtener los chats en tiempo real
-    func fetchChats() {
-        chatTask?.cancel() // Evitar múltiples suscripciones
-        chatTask = Task {
-            do{
-                for try await chats in try await userService.getChats(){
-                    await MainActor.run {
-                        self.chats = chats
-                    }
+    /// Obtiene la lista de chats en los que el usuario participa y los almacena en la variable `chats`.
+    /// Esta función escucha cambios en tiempo real.
+    /// - Note: Cancela cualquier tarea en ejecución antes de iniciar una nueva.
+    func fetchCats() async{
+        chatTask?.cancel()
+        
+        chatTask:  do{
+                for try await chat in allServices.getChats(){
+                    self.chats = chat
                 }
+                
             }catch{
-                await MainActor.run(body: {
-                    self.errorTitle = ""
-                })
+                self.errorTitle = "Error al obtener los chats"
+                self.errorDescription = "Ocurrió un error desconocido al obtener los chas, intentelo mas tarde"
+                self.isfetchChatsError = true
             }
-        }
+        
     }
     
-    @MainActor func deleteChat(chatID: String){
+    /// Elimina un chat específico tanto de Firestore como de la lista local de chats en el ViewModel.
+    /// - Parameter chatID: El ID del chat que se desea eliminar.
+     func deleteChat(chatID: String){
        Task {
             do{
-                try await userService.deleteChat(chatID: chatID)
+                try await allServices.deleteChat(chatID: chatID)
                 self.chats.removeAll{$0.id == chatID}
                 
             }catch {
@@ -83,100 +99,21 @@ class ChatViewModel{
             }
         }
     }
-    
-//    @MainActor func deleteChatsAll(){
-//        Task{
-//            do{
-//                try await userService.deleteAllChatsForUser(uiD: userService.uid)
-//            }catch {
-//                self.errorTitle = "Error"
-//                self.errorDescription = "los chats no se ha podido eliminar, intentelo mas tarde"
-//                self.isfetchChatsError = true
-//            }
-//        }
-//    }
-    
-    // Metodo para eliminar un solo chat
-//    func deleteChat(chatID: String){
-//        userService.deleteChat(chatID: chatID) { [weak self] result in
-//            
-//            switch result{
-//            case .success(_):
-//                self?.successMessasTitle = "Exrito"
-//                self?.successMessasDescription = "El chat se ha eliminado con exito"
-//                self?.isSuccessMessas = true
-//                self?.chats.removeAll(where: {$0.id == chatID})
-//            case .failure(_):
-//                self?.errorTitle = "Error"
-//                self?.errorDescription = "El chat no se ha podido eliminar, intentelo mas tarde"
-//                self?.isfetchChatsError = true
-//            }
-//        }
-//    }
-    
-
-    // Cargar Usuarios
-//    @MainActor
-//    func fetchUser(userID: String){
-//        userService.getUser(by: userID){ [weak self] result in
-//            switch result {
-//            case .success(let success):
-//                self?.user = success
-//            case .failure(_):
-//                self?.isfetchChatsError = true
-//                self?.errorTitle = "Error al traerte el usuario"
-//                self?.errorDescription = "Ocurrió un error por el cual no se apodido mostrar el ususrio intentelo mas tarde"
-//            }
-//        }
-//    }
-    
-//    // Cargar los chats
-//    func fetchChats(){
-//        userService.fetchChats { [weak self] result in
-//            switch result {
-//            case .success(let success):
-//                self?.chats = success
-//            case .failure(_):
-//                self?.isfetchChatsError = true
-//                self?.errorTitle = "Error al obtener los chats"
-//                self?.errorDescription = "Ocurrió un error desconocido al obtener los chas, intentelo mas tarde"
-//            }
-//        }
-//        
-//    }
-    
-
-//    // Metodo para leliminar todos los chat del usuario
-//    func deleteChats(uid: String){
-//        userService.deleteAllChatsForUser(uiD: <#String#>, uI: uid){ [weak self] result in
-//            
-//            switch result{
-//            case .success:
-//                self?.successMessasTitle = "Exrito"
-//                self?.successMessasDescription = "Los chats se ha eliminado con exito"
-//                self?.isSuccessMessas = true
-//                self?.chats.removeAll(where: {$0.id == uid})
-//            case .failure(_):
-//                self?.errorTitle = "Error"
-//                self?.errorDescription = "Los chats no se ha podido eliminar, intentelo mas tarde"
-//                self?.isfetchChatsError = true
-//            }
-//        }
-//    }
-    
-    // Método para detener la escucha cuando la vista desaparece
-    func stopListening() {
-        chatTask?.cancel()
-        userTask?.cancel()
-        chatTask = nil
-        userTask = nil
+        
+    /// Detiene la escucha de actualizaciones en tiempo real de los chats y el usuario.
+    /// Cancela cualquier tarea activa y libera los recursos asociados.
+    nonisolated func stopListening() {
+        Task {@MainActor in
+            chatTask?.cancel()
+            userTask?.cancel()
+            chatTask = nil
+            userTask = nil
+        }
     }
     
-    deinit {
-        stopListening()
-    }
-    
-    // Obtener el idi del usuario
+    /// Obtiene el ID del amigo dentro de una lista de IDs, excluyendo el del usuario actual.
+    /// - Parameter ids: Un array de Strings que contiene los IDs de los participantes.
+    /// - Returns: El ID del amigo si se encuentra, de lo contrario, una cadena vacía.
     func getFriendID(_ ids: [String]) -> String {
         var friendID = ""
         let uID = Auth.auth().currentUser?.uid ?? ""
@@ -188,7 +125,9 @@ class ChatViewModel{
         return friendID
     }
     
-    // Formatea Timestamp para combertir en String
+    /// Convierte un `Timestamp` de Firestore en una cadena de texto con formato de hora.
+    /// - Parameter timestamp: El `Timestamp` que se desea formatear.
+    /// - Returns: Una cadena de texto con la hora en formato `HH:mm`.
     func formatTimestamp(_ timestamp: Timestamp) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm" // Formato personalizado
@@ -196,4 +135,8 @@ class ChatViewModel{
         return formatter.string(from: timestamp.dateValue())
     }
 
+    // Llamado cuando el ViewModel es destruido, detiene cualquier escucha activa.
+    deinit {
+        stopListening()
+    }
 }
