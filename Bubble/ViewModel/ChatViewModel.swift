@@ -12,9 +12,11 @@ import FirebaseAuth
 
 @Observable @MainActor
 class ChatViewModel{
+
     
     // Servicios
     private var allServices = ChatsService()
+
     private var firestoreService = FirestoreService()
    
     // Datos del usuario y chats
@@ -22,6 +24,7 @@ class ChatViewModel{
     var chats: [ChatModel] = []
     var messages: [MessageModel] = []
     
+
     // Tareas de escucha
     private var chatTask: Task<Void, Never>?
     private var userTask: Task<Void, Never>?
@@ -42,12 +45,14 @@ class ChatViewModel{
     var successMessasDescription = ""
     
     // Flags de estado
+
     var isMessageDestructive = false
     var isfetchChatsError = false
     var isSuccessMessas = false
     var isWiffi = false
 
     
+
     
     /// Obtiene la información de un usuario en tiempo real y la almacena en la variable `user`.
     /// - Parameter userID: El ID del usuario que se desea obtener.
@@ -126,6 +131,7 @@ class ChatViewModel{
         return friendID
     }
     
+
     /// Convierte un `Timestamp` de Firestore en una cadena de texto con formato de hora.
     /// - Parameter timestamp: El `Timestamp` que se desea formatear.
     /// - Returns: Una cadena de texto con la hora en formato `HH:mm`.

@@ -68,6 +68,7 @@ struct ChatsView: View {
                     
                 }
             }
+
             .searchable(text: $viewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
                 ForEach(viewModel.visibilityOptions, id: \.self) { option in
 
@@ -77,6 +78,7 @@ struct ChatsView: View {
             .navigationTitle("Chats")
 
             .task {
+
                 await viewModel.fetchCats()
             }
             
