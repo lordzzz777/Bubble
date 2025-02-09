@@ -10,7 +10,7 @@ import FirebaseFirestore
 import FirebaseCore
 
 struct ChatsView: View {
-    @Bindable var viewModel = ChatViewModel()
+    @Bindable var chatsViewModel = ChatViewModel()
 
     @State private var chatIdSelected: String = ""
     
@@ -18,8 +18,8 @@ struct ChatsView: View {
         NavigationStack {
             // Usamos un Picker con un estilo segmentado
             VStack{
-                Picker("Visibilidad", selection: $viewModel.selectedVisibility) {
-                    ForEach(viewModel.visibilityOptions, id: \.self) { option in
+                Picker("Visibilidad", selection: $chatsViewModel.selectedVisibility) {
+                    ForEach(chatsViewModel.visibilityOptions, id: \.self) { option in
                         Text(option)
                             .tag(option) // Asegúrate de usar .tag para asociar cada Text con su valor
                     }
@@ -27,7 +27,7 @@ struct ChatsView: View {
                 .pickerStyle(.segmented)
                 .padding()
                 
-                if $viewModel.chats.isEmpty {
+                if $chatsViewModel.chats.isEmpty {
                     Text("No tienes chats aún")
                         .font(.largeTitle.bold())
                         .padding(.bottom, 20)
@@ -38,12 +38,12 @@ struct ChatsView: View {
                     Spacer()
                 } else {
                     List {
-                        ForEach(viewModel.chats, id:\.lastMessageTimestamp) { chat in
+                        ForEach(chatsViewModel.chats, id:\.lastMessageTimestamp) { chat in
                             NavigationLink(destination: {
                                 
                             }, label: {
                                 VStack(alignment: .leading) {
-                                    ListChatRowView(userID:viewModel.getFriendID(chat.participants), lastMessage: chat.lastMessage, timestamp: chat.lastMessageTimestamp)
+                                    ListChatRowView(userID:chatsViewModel.getFriendID(chat.participants), lastMessage: chat.lastMessage, timestamp: chat.lastMessageTimestamp)
                                 }
                             })
                             .swipeActions(content: {
@@ -52,7 +52,7 @@ struct ChatsView: View {
                                         chatIdSelected = chatID
                                     }
                                     
-                                    viewModel.isMessageDestructive = true
+                                    chatsViewModel.isMessageDestructive = true
                                     
                                 })
                                 
@@ -62,28 +62,28 @@ struct ChatsView: View {
                     }
                 }
             }
-            .searchable(text: $viewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
-                ForEach(viewModel.visibilityOptions, id: \.self) { option in
+            .searchable(text: $chatsViewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
+                ForEach(chatsViewModel.visibilityOptions, id: \.self) { option in
                     Text(option).searchCompletion(option)
                 }
             }
             .navigationTitle("Chats")
             .task {
-                await viewModel.fetchCats()
+                await chatsViewModel.fetchCats()
             }
             // Alerta de Error
-            .alert(isPresented: $viewModel.isfetchChatsError) {
-                Alert(title: Text(viewModel.errorTitle), message: Text(viewModel.errorDescription), dismissButton: .default(Text("OK"))
+            .alert(isPresented: $chatsViewModel.isfetchChatsError) {
+                Alert(title: Text(chatsViewModel.errorTitle), message: Text(chatsViewModel.errorDescription), dismissButton: .default(Text("OK"))
                 )
             }
             // Alerta de corfimación
-            .alert(isPresented: $viewModel.isSuccessMessas) {
-                Alert(title: Text(viewModel.successMessasTitle), message: Text(viewModel.successMessasDescription), dismissButton: .default(Text("OK")))
+            .alert(isPresented: $chatsViewModel.isSuccessMessas) {
+                Alert(title: Text(chatsViewModel.successMessasTitle), message: Text(chatsViewModel.successMessasDescription), dismissButton: .default(Text("OK")))
             }
             // Alerta de advertencia antes de eliminar el chat
-            .alert("⚠️ Eliminar Chat", isPresented: $viewModel.isMessageDestructive, actions: {
+            .alert("⚠️ Eliminar Chat", isPresented: $chatsViewModel.isMessageDestructive, actions: {
                 Button("Eliminar") {
-                    viewModel.deleteChat(chatID: chatIdSelected)
+                    chatsViewModel.deleteChat(chatID: chatIdSelected)
                 }
                 
                 Button("Cancelar", role: .cancel) {}
@@ -94,7 +94,7 @@ struct ChatsView: View {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
                         Button("Agregar amigo", systemImage: "person.fill.badge.plus") {
-                            
+                            chatsViewModel.showAddFriendView.toggle()
                         }
                         
                         Button("Crear comunidad", systemImage: "person.2.badge.plus.fill") {
@@ -104,6 +104,9 @@ struct ChatsView: View {
                         Image(systemName: "ellipsis.circle")
                     }
                 }
+            }
+            .fullScreenCover(isPresented: $chatsViewModel.showAddFriendView) {
+                AddNewFriendView()
             }
         }
     }
