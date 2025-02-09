@@ -38,9 +38,8 @@ struct ChatsView: View {
                     Spacer()
                 } else {
                     
-                    List{
+                    List {
                         ForEach(viewModel.chats, id:\.lastMessageTimestamp) { chat in
-                            
                             NavigationLink(destination: {
                                 
                             }, label: {
@@ -97,11 +96,17 @@ struct ChatsView: View {
                 Text("Si confirmas, se eliminará el Chat y la conversación de forma permanente y no podrás recuperarla. ¿Deseas continuar?")
             })
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button("Agregar amigo", systemImage: "person.fill.badge.plus") {
+                            
+                        }
                         
+                        Button("Crear comunidad", systemImage: "person.2.badge.plus.fill") {
+                            
+                        }
                     } label: {
-                        Image(systemName: "line.3.horizontal")
+                        Image(systemName: "ellipsis.circle")
                     }
                 }
             }
