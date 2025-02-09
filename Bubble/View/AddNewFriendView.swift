@@ -18,6 +18,11 @@ struct AddNewFriendView: View {
                 
             }
             .searchable(text: $addNewFriendViewModel.friendNickname, placement: .automatic, prompt: Text("Busca por el nickname de tu amigo"))
+            .onChange(of: addNewFriendViewModel.friendNickname) { _, _ in
+                Task {
+                    await addNewFriendViewModel.searchFriendByNickname(addNewFriendViewModel.friendNickname)
+                }
+            }
             .navigationTitle("Agregar amigo")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
