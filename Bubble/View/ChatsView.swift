@@ -37,7 +37,6 @@ struct ChatsView: View {
                     
                     Spacer()
                 } else {
-                    
                     List {
                         ForEach(viewModel.chats, id:\.lastMessageTimestamp) { chat in
                             NavigationLink(destination: {
@@ -45,7 +44,6 @@ struct ChatsView: View {
                             }, label: {
                                 VStack(alignment: .leading) {
                                     ListChatRowView(userID:viewModel.getFriendID(chat.participants), lastMessage: chat.lastMessage, timestamp: chat.lastMessageTimestamp)
-
                                 }
                             })
                             .swipeActions(content: {
@@ -60,11 +58,8 @@ struct ChatsView: View {
                                 
                                 .tint(.red )
                             })
-
                         }
-                        
                     }
-                    
                 }
             }
             .searchable(text: $viewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
