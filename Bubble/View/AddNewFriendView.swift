@@ -14,8 +14,10 @@ struct AddNewFriendView: View {
     
     var body: some View {
         NavigationStack {
-            List {
-                
+            List(addNewFriendViewModel.matchedUsers, id: \.id) { user in
+                MatchedFriendRowView(user: user) {
+                    
+                }
             }
             .searchable(text: $addNewFriendViewModel.friendNickname, placement: .automatic, prompt: Text("Busca por el nickname de tu amigo"))
             .onChange(of: addNewFriendViewModel.friendNickname) { _, _ in
