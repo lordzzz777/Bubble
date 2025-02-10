@@ -16,13 +16,17 @@ struct WelcomeView: View {
     
     var body: some View {
         ZStack {
-            switch loginFlowState {
+            switch loginViewModel.loginFlowState {
             case .loggedOut:
                 autenticationView
             case .loggedIn:
-                ContentView()
+                NewAccountView()// Vista principal de la app
+            case .hasNickname:
+                ContentView() // Vista para configurar el perfil
+                
             }
-        }
+            
+        }                .animation(.easeInOut, value: loginViewModel.loginFlowState)
     }
     
     var autenticationView: some View {
@@ -42,27 +46,19 @@ struct WelcomeView: View {
                     appleServices.continueWithAppleCompletion(result: result)
                 } .background{
                     RoundedRectangle(cornerRadius: 15, style: .continuous)
-                        
+                    
                 }                .background{
                     RoundedRectangle(cornerRadius: 5, style: .continuous)
                         .stroke(Color.primary, lineWidth: 2)
                         .fill(.white)
-                        
+                    
                     
                     
                 }.frame(width: 300, height: 50).padding()
                 
-                
                 Button(action: {
-                    isSignInWithGoogleButtonPressed = true
-                    
-                    loginViewModel.signInWithGoogle { success in
-                        if success {
-                            loginFlowState = .loggedIn
-                        } else {
-                            loginFlowState = .loggedOut
-                            isSignInWithGoogleButtonPressed = false
-                        }
+                    Task {
+                        loginViewModel.signInWithGoogle()
                     }
                 }, label: {
                     Image("google")
@@ -80,7 +76,7 @@ struct WelcomeView: View {
                     
                     
                 }.padding()
-
+                
             }.offset(y: -90)
                 .alert("Error al iniciar con Google", isPresented: $loginViewModel.showError) {
                     Button("Ok", role: .cancel) { }

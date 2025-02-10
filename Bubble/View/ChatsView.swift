@@ -10,8 +10,15 @@ import FirebaseFirestore
 import FirebaseCore
 
 struct ChatsView: View {
+<<<<<<< HEAD
     @Bindable var chatsViewModel = ChatViewModel()
 
+=======
+    @Bindable var viewModel = ChatViewModel()
+    @State private var trashUserDefault = LoginViewModel()
+    
+    // Esta es la variable que almacenará el valor seleccionado del Picker
+>>>>>>> d1e4e90 (implementado Flujo de navegación según estado de registro,)
     @State private var chatIdSelected: String = ""
     
     var body: some View {
@@ -36,9 +43,18 @@ struct ChatsView: View {
                         .font(.system(size: 100))
                     
                     Spacer()
+<<<<<<< HEAD
                 } else {
                     List {
                         ForEach(chatsViewModel.chats, id:\.lastMessageTimestamp) { chat in
+=======
+                    
+                }else{
+                    Text(trashUserDefault.errorMessage)
+                    List{
+                        ForEach(viewModel.chats, id:\.lastMessageTimestamp){ chat in
+                            
+>>>>>>> d1e4e90 (implementado Flujo de navegación según estado de registro,)
                             NavigationLink(destination: {
                                 
                             }, label: {
@@ -90,6 +106,7 @@ struct ChatsView: View {
             }, message: {
                 Text("Si confirmas, se eliminará el Chat y la conversación de forma permanente y no podrás recuperarla. ¿Deseas continuar?")
             })
+<<<<<<< HEAD
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
@@ -108,6 +125,22 @@ struct ChatsView: View {
             .fullScreenCover(isPresented: $chatsViewModel.showAddFriendView) {
                 AddNewFriendView()
             }
+=======
+            
+            .toolbar(content: {
+                Button(action: {
+                    
+                }, label: {
+                    Image(systemName: "plus")
+                })
+                
+                Button(action: {
+                    trashUserDefault.logoutUser()
+                }, label: {
+                    Image(systemName: "trash.fill")
+                })
+            })
+>>>>>>> d1e4e90 (implementado Flujo de navegación según estado de registro,)
         }
     }
 
