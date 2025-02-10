@@ -65,7 +65,7 @@ struct WelcomeView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 20)
-                    Text("Sing in with Goojle").font(.title3.bold())
+                    Text("Sing in with Google").font(.title3.bold())
                         .foregroundStyle(.black)
                 })
                 .background{
