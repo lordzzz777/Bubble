@@ -20,13 +20,20 @@ struct WelcomeView: View {
             case .loggedOut:
                 autenticationView
             case .loggedIn:
-                NewAccountView()// Vista principal de la app
+                NewAccountView()
             case .hasNickname:
-                ContentView() // Vista para configurar el perfil
+                ContentView()
                 
             }
-            
-        }                .animation(.easeInOut, value: loginViewModel.loginFlowState)
+        }
+        .animation(.easeInOut, value: loginViewModel.loginFlowState)
+        
+        ///Cuando ` checkIfUserHasNickname()` detecta un error, el estado `showError ` se activa y se debe mostrar una alerta.
+        .alert("Error", isPresented: $loginViewModel.showError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(loginViewModel.errorMessage)
+        }
     }
     
     var autenticationView: some View {

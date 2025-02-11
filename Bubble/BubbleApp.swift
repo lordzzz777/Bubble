@@ -8,28 +8,22 @@
 import SwiftUI
 import FirebaseCore
 import FirebaseAppCheck
+import GoogleSignIn
 
-class AppDlegate: NSObject, UIApplicationDelegate {
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+@main
+struct BubbleApp: App {
+    @AppStorage("LoginFlowState") private var loginFlowState = UserLoginState.loggedOut
+    
+    init() {
         FirebaseApp.configure()
+        FirebaseConfiguration.shared.setLoggerLevel(.min)
         
 #if DEBUG
         let providerFactory = AppCheckDebugProviderFactory()
         AppCheck.setAppCheckProviderFactory(providerFactory)
 #endif
-        return true
+        
     }
-    
-
-}
-
-@main
-struct BubbleApp: App {
-    
-    // register app delegate for Firebase setup
-    @UIApplicationDelegateAdaptor(AppDlegate.self) var delegate
-    @AppStorage("LoginFlowState") private var loginFlowState = UserLoginState.loggedOut
-    
     
     var body: some Scene {
         WindowGroup {
@@ -46,6 +40,12 @@ struct BubbleApp: App {
                     
                 }
             }
+            .onOpenURL { url in
+                if GIDSignIn.sharedInstance.hasPreviousSignIn() {
+                    GIDSignIn.sharedInstance.handle(url)
+                }
+            }
+            .id(loginFlowState.rawValue)
         }
     }
 }
