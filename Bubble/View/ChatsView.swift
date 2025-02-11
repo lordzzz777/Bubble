@@ -12,7 +12,7 @@ import FirebaseCore
 struct ChatsView: View {
 
     @Bindable var chatsViewModel = ChatViewModel()
-
+    @State private var trashUserDefault = LoginViewModel()
     @State private var chatIdSelected: String = ""
     
     var body: some View {
@@ -94,6 +94,20 @@ struct ChatsView: View {
             })
 
             .toolbar {
+                
+                /// ** Botón para cerrar sesion *
+                /// Este boton del navegador solo
+                /// es para modo de pruebas se devera quitar
+                /// al finaliza las mismas
+                ToolbarItem(placement: .automatic, content: {
+                    Button(action: {
+                        trashUserDefault.logoutUser()
+                    }, label: {
+                        Image(systemName: "trash.fill").tint(.red)
+                    })
+                })
+                ///====================================================///
+                
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
                         Button("Agregar amigo", systemImage: "person.fill.badge.plus") {
