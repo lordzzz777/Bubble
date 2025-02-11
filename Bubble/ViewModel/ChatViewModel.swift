@@ -16,7 +16,6 @@ class ChatViewModel{
     
     // Servicios
     private var allServices = ChatsService()
-
     private var firestoreService = FirestoreService()
    
     // Datos del usuario y chats
@@ -45,7 +44,6 @@ class ChatViewModel{
     var successMessasDescription = ""
     
     // Flags de estado
-
     var isMessageDestructive = false
     var isfetchChatsError = false
     var isSuccessMessas = false
@@ -62,6 +60,7 @@ class ChatViewModel{
             guard let self = self else {return}
             do{
                 for try await user in await allServices.getUser(by: userID){
+                    guard !Task.isCancelled else { return }
                     self.user = user
                 }
             }catch{
@@ -82,6 +81,7 @@ class ChatViewModel{
             guard let self = self else {return}
             do{
                 for try await chat in allServices.getChats(){
+                    guard !Task.isCancelled else { return }
                     self.chats = chat
                 }
                 
@@ -150,5 +150,6 @@ class ChatViewModel{
     // Llamado cuando el ViewModel es destruido, detiene cualquier escucha activa.
     deinit {
         stopListening()
+        print("ChatViewModel eliminado correctamente")
     }
 }

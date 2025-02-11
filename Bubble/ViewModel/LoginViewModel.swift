@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import Observation
 import FirebaseAuth
+import FirebaseFirestore
 
 @Observable @MainActor
 class LoginViewModel {
@@ -37,7 +38,7 @@ class LoginViewModel {
     }
 
     
-    /// Autentica al usuario con Google y actualiza el estado en la UI.
+    /// Inicia sesión con Google
     func signInWithGoogle() {
         Task {
             do {
@@ -63,43 +64,52 @@ class LoginViewModel {
         loginFlowState = .loggedOut
     }
     
+    // Verifica si el usuario tiene un apodo registrado en la base de datos.
     func checkIfUserHasNickname() async {
-        guard let userID = uid else {
-             loginFlowState = .loggedOut
+        guard let userID = Auth.auth().currentUser?.uid else {
+            print("Error: No hay usuario autenticado.")
             return
         }
         
         do {
             let hasNickname = try await firestoreService.checkIfNicknameNotExists(nickname: userID)
-            if hasNickname  == true{
-                loginFlowState = .loggedIn
-                print("He entrado aqui 1º.......")
-            }else {
-                loginFlowState = .hasNickname
-                print("He entrado aqui 2º.......")
+            
+            await MainActor.run {
+                if hasNickname {
+                    loginFlowState = .loggedIn //Usuario ya registrado → Ir a Chats
+                } else {
+                    loginFlowState = .hasNickname //Usuario nuevo → Ir a Nueva Cuenta
+                }
             }
+            
         } catch {
             print("Error al verificar el nickname: \(error.localizedDescription)")
-            logoutUser()
+            await MainActor.run {
+                errorMessage = "No se pudo verificar tu cuenta. Inténtalo más tarde."
+                showError = true
+            }
         }
     }
     
-    /// 🔹 Cierra sesión y borra datos de `UserDefaults`
+    /// Cierra sesión y borra datos de `UserDefaults`
+    @MainActor
     func logoutUser() {
-        do {
-            try Auth.auth().signOut() // 🔹 Asegura que se ejecute sin problemas en el hilo correcto
-            print("✅ Usuario cerró sesión correctamente")
-        } catch {
-            print("🔴 Error al cerrar sesión: \(error.localizedDescription)")
-            return
-        }
-        
-        // 🔹 Asegurar que `loginFlowState` se actualice en el hilo principal
-        Task { @MainActor in
-           UserDefaults.standard.removeObject(forKey: "LoginFlowState")
-            loginFlowState = .loggedOut
-            print("✅ Estado de sesión actualizado a 'loggedOut'")
+        Task {
+            do {
+                //Detener todos los listeners de Firestore antes de cerrar sesión
+                try await Firestore.firestore().terminate()
+                try await Firestore.firestore().clearPersistence()
+                print("Listeners de Firestore detenidos")
+                
+                await MainActor.run {
+                    UserDefaults.standard.removeObject(forKey: "LoginFlowState")
+                    loginFlowState = .loggedOut
+                }
+                
+                print("Sesión cerrada y Google Sign-In revocado")
+            } catch let error as NSError {
+                print("Error al cerrar sesión: \(error), \(error.userInfo)")
+            }
         }
     }
-
 }
