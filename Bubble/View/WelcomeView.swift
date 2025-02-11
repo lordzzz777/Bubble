@@ -72,11 +72,7 @@ struct WelcomeView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 20)
-<<<<<<< HEAD
                     Text("Sign in with Google").font(.title3.bold())
-=======
-                    Text("Sing in with Google").font(.title3.bold())
->>>>>>> 220c3ec (solucionado error de tipo)
                         .foregroundStyle(.black)
                 })
                 .background{
