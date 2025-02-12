@@ -16,7 +16,6 @@ class ChatViewModel{
     
     // Servicios
     private var allServices = ChatsService()
-
     private var firestoreService = FirestoreService()
    
     // Datos del usuario y chats
@@ -45,7 +44,6 @@ class ChatViewModel{
     var successMessasDescription = ""
     
     // Flags de estado
-
     var isMessageDestructive = false
     var isfetchChatsError = false
     var isSuccessMessas = false
@@ -58,9 +56,11 @@ class ChatViewModel{
     /// - Parameter userID: El ID del usuario que se desea obtener.
     func fetchUser (userID: String) {
         userTask?.cancel()
-        userTask = Task {
+        userTask = Task { [weak self] in
+            guard let self = self else {return}
             do{
                 for try await user in await allServices.getUser(by: userID){
+                    guard !Task.isCancelled else { return }
                     self.user = user
                 }
             }catch{
@@ -77,8 +77,11 @@ class ChatViewModel{
     func fetchCats() async{
         chatTask?.cancel()
         
-        chatTask:  do{
+        chatTask = Task {[weak self] in
+            guard let self = self else {return}
+            do{
                 for try await chat in allServices.getChats(){
+                    guard !Task.isCancelled else { return }
                     self.chats = chat
                 }
                 
@@ -87,13 +90,15 @@ class ChatViewModel{
                 self.errorDescription = "Ocurrió un error desconocido al obtener los chas, intentelo mas tarde"
                 self.isfetchChatsError = true
             }
+        }
         
     }
     
     /// Elimina un chat específico tanto de Firestore como de la lista local de chats en el ViewModel.
     /// - Parameter chatID: El ID del chat que se desea eliminar.
      func deleteChat(chatID: String){
-       Task {
+       Task {  [weak self] in
+           guard let self = self else {return}
             do{
                 try await allServices.deleteChat(chatID: chatID)
                 self.chats.removeAll{$0.id == chatID}
@@ -145,5 +150,6 @@ class ChatViewModel{
     // Llamado cuando el ViewModel es destruido, detiene cualquier escucha activa.
     deinit {
         stopListening()
+        print("ChatViewModel eliminado correctamente")
     }
 }
