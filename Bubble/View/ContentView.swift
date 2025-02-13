@@ -23,7 +23,7 @@ struct ContentView: View {
                     Label("Comunidades", systemImage: "person.3.sequence.fill")
                 })
             
-            Text("Pantalla 3")
+            SettingView()
                 .tabItem({
                     Label("Ajustes", systemImage: "gear")
                 })

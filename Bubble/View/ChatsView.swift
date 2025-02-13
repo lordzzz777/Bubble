@@ -119,15 +119,9 @@ struct ChatsView: View {
             
             .toolbar(content: {
                 Button(action: {
-                    
+                    // ...
                 }, label: {
                     Image(systemName: "plus")
-                })
-                
-                Button(action: {
-                    trashUserDefault.logoutUser()
-                }, label: {
-                    Image(systemName: "trash.fill")
                 })
             })
         }
