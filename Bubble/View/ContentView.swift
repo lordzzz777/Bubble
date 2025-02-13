@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var isConnected: Bool = false
+    
     private let networkMonitor = NetworkMonitor()
     
     var body: some View {

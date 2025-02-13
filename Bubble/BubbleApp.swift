@@ -17,7 +17,7 @@ struct BubbleApp: App {
     init() {
         FirebaseApp.configure()
         FirebaseConfiguration.shared.setLoggerLevel(.min)
-        
+        disableGRPCLogging()
 #if DEBUG
         let providerFactory = AppCheckDebugProviderFactory()
         AppCheck.setAppCheckProviderFactory(providerFactory)
@@ -47,5 +47,11 @@ struct BubbleApp: App {
             }
             .id(loginFlowState.rawValue)
         }
+    }
+    
+    /// Desactiva logs de `gRPC` en Firebase
+    private func disableGRPCLogging() {
+        setenv("GRPC_VERBOSITY", "ERROR", 1) // Solo mostrará errores críticos
+        setenv("GRPC_TRACE", "", 1) // No mostrará trazas internas de gRPC
     }
 }
