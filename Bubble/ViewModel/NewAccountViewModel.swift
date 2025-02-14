@@ -12,7 +12,11 @@ import FirebaseAuth
 @Observable @MainActor
 class NewAccountViewModel {
     private let firestoreService: FirestoreService
-    private let uid = Auth.auth().currentUser?.uid ?? ""
+    
+    var uid: String? {
+        return Auth.auth().currentUser?.uid
+    }
+
     var showError: Bool
     var errorTitle: String
     var errorDescription: String
@@ -27,6 +31,12 @@ class NewAccountViewModel {
     }
     
     func createUser(user: UserModel) async {
+        
+        guard let uid = Auth.auth().currentUser?.uid else {
+            print("Error : No hay usuarios autenticados")
+            return
+        }
+        
         do {
             var newUser = user
             newUser.id = uid

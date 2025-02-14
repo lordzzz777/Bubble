@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var isConnected: Bool = false
+    
     private let networkMonitor = NetworkMonitor()
     
     var body: some View {
@@ -23,7 +23,7 @@ struct ContentView: View {
                     Label("Comunidades", systemImage: "person.3.sequence.fill")
                 })
             
-            Text("Pantalla 3")
+            SettingView()
                 .tabItem({
                     Label("Ajustes", systemImage: "gear")
                 })

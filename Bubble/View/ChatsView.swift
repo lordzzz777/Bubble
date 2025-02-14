@@ -12,6 +12,10 @@ import FirebaseCore
 struct ChatsView: View {
     @Bindable var chatsViewModel = ChatViewModel()
 
+    @Bindable var viewModel = ChatViewModel()
+    @State private var trashUserDefault = LoginViewModel()
+    
+    // Esta es la variable que almacenará el valor seleccionado del Picker
     @State private var chatIdSelected: String = ""
     
     var body: some View {
@@ -36,9 +40,12 @@ struct ChatsView: View {
                         .font(.system(size: 100))
                     
                     Spacer()
-                } else {
-                    List {
-                        ForEach(chatsViewModel.chats, id:\.lastMessageTimestamp) { chat in
+                    
+                }else{
+                    Text(trashUserDefault.errorMessage)
+                    List{
+                        ForEach(viewModel.chats, id:\.lastMessageTimestamp){ chat in
+                            
                             NavigationLink(destination: {
                                 
                             }, label: {

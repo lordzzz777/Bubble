@@ -7,35 +7,51 @@
 
 import SwiftUI
 import FirebaseCore
-
-class AppDlegate: NSObject, UIApplicationDelegate {
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        FirebaseApp.configure()
-        return true
-    }
-}
+import FirebaseAppCheck
+import GoogleSignIn
 
 @main
 struct BubbleApp: App {
-    
-    // register app delegate for Firebase setup
-    @UIApplicationDelegateAdaptor(AppDlegate.self) var delegate
     @AppStorage("LoginFlowState") private var loginFlowState = UserLoginState.loggedOut
-
+    
+    init() {
+        FirebaseApp.configure()
+        FirebaseConfiguration.shared.setLoggerLevel(.min)
+        disableGRPCLogging()
+#if DEBUG
+        let providerFactory = AppCheckDebugProviderFactory()
+        AppCheck.setAppCheckProviderFactory(providerFactory)
+#endif
+        
+    }
     
     var body: some Scene {
         WindowGroup {
             NavigationStack{
                 switch loginFlowState {
                 case .loggedOut:
-                    // ... View of autentications
                     WelcomeView()
+                    
                 case .loggedIn:
-                    // ... Destinations 
+                    NewAccountView()
+                    
+                case .hasNickname:
                     ContentView()
-                        
+                    
                 }
             }
+            .onOpenURL { url in
+                if GIDSignIn.sharedInstance.hasPreviousSignIn() {
+                    GIDSignIn.sharedInstance.handle(url)
+                }
+            }
+            .id(loginFlowState.rawValue)
         }
+    }
+    
+    /// Desactiva logs de `gRPC` en Firebase
+    private func disableGRPCLogging() {
+        setenv("GRPC_VERBOSITY", "ERROR", 1) // Solo mostrará errores críticos
+        setenv("GRPC_TRACE", "", 1) // No mostrará trazas internas de gRPC
     }
 }

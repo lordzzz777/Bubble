@@ -7,8 +7,6 @@
 
 import Network
 
-import Network
-
 @MainActor
 class NetworkMonitor {
     private let monitor = NWPathMonitor()
