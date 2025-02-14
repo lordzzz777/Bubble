@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import FirebaseCore
 
 struct AddNewFriendView: View {
     @State private var addNewFriendViewModel: AddNewFriendViewModel = .init()
@@ -14,9 +15,9 @@ struct AddNewFriendView: View {
     
     var body: some View {
         NavigationStack {
-            List(addNewFriendViewModel.matchedUsers, id: \.id) { user in
-                MatchedFriendRowView(user: user) {
-                    
+            List {
+                ForEach(addNewFriendViewModel.matchedUsers, id: \.id) { user in
+                    MatchedFriendRowView(user: user)
                 }
             }
             .searchable(text: $addNewFriendViewModel.friendNickname, placement: .automatic, prompt: Text("Busca por el nickname de tu amigo"))

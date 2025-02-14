@@ -9,6 +9,10 @@ import Foundation
 import FirebaseFirestore
 import FirebaseAuth
 
+enum AddNewFriendError: Error {
+    case messageIdError
+}
+
 actor AddNewFriendService {
     private let database = Firestore.firestore()
     private let uid = Auth.auth().currentUser?.uid ?? ""
@@ -22,6 +26,35 @@ actor AddNewFriendService {
             let documentsData = documents.documents.compactMap({$0})
             let matchedFriends = try documentsData.map { try $0.data(as: UserModel.self )}
             return matchedFriends
+        } catch {
+            throw error
+        }
+    }
+    
+    
+    func sendFriendRequest(message: MessageModel) async throws {
+        do {
+            guard let messageId = message.id else {
+                throw AddNewFriendError.messageIdError
+            }
+            
+            Task {
+                try await database.collection("users").document(uid).collection("chats").document(messageId).setData(message.dictionary)
+            }
+        } catch {
+            print("Error al enviar la solicitud: \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
+    private func getCurrentUserInfo() async throws -> UserModel {
+        do {
+            let document = try await database.collection("users").document(uid).getDocument()
+            guard let userData = try? document.data(as: UserModel.self) else {
+                fatalError("No se pudo obtener el usuario")
+            }
+            print(userData)
+            return userData
         } catch {
             throw error
         }

@@ -10,12 +10,13 @@ import FirebaseCore
 
 struct MatchedFriendRowView: View {
     
+    @State private var addNewFriendViewModel: AddNewFriendViewModel = .init()
     var user: UserModel
-    var sendFriendRequest: () async -> Void
     
     var body: some View {
         HStack {
             VStack {
+                // Si la url no está vacía se muestra la imagen del usuario. Sino, se muestra una imagen por defecto
                 if !user.imgUrl.isEmpty {
                     AsyncImage(url: URL(string: user.imgUrl)) { image in
                         image.resizable()
@@ -36,8 +37,9 @@ struct MatchedFriendRowView: View {
             Spacer()
             
             Button {
+                print("Hola")
                 Task {
-                    await sendFriendRequest()
+                    await addNewFriendViewModel.sendFriendRequest(message: MessageModel(senderID: user.id, content: "", timestamp: Timestamp.init(), type: MessageType.friendRequest))
                 }
             } label: {
                 Text("Agregar amigo")
@@ -48,5 +50,5 @@ struct MatchedFriendRowView: View {
 }
 
 #Preview {
-    MatchedFriendRowView(user: UserModel(id: "1UAaH1mnl6XOQbPJqNz6qnnN8ku1", nickname: "Yeikobu24", imgUrl: "https://firebasestorage.googleapis.com/v0/b/bubble-3080f.firebasestorage.app/o/avatars%2FBepWRX9L8BNGGLfnUmxehfpzB4c2.jpg?alt=media&token=b6079556-f774-4c8d-aed6-c6ddeeb05abc", lastConnectionTimeStamp: Timestamp.init(), isOnline: false, chats: [], friends: []), sendFriendRequest: {})
+    MatchedFriendRowView(user: UserModel(id: "1UAaH1mnl6XOQbPJqNz6qnnN8ku1", nickname: "Yeikobu24", imgUrl: "https://firebasestorage.googleapis.com/v0/b/bubble-3080f.firebasestorage.app/o/avatars%2FBepWRX9L8BNGGLfnUmxehfpzB4c2.jpg?alt=media&token=b6079556-f774-4c8d-aed6-c6ddeeb05abc", lastConnectionTimeStamp: Timestamp.init(), isOnline: false, chats: [], friends: []))
 }

@@ -19,13 +19,24 @@ struct ChatModel: Codable, Hashable {
 struct MessageModel: Codable, Hashable {
     @DocumentID var id: String?
     var senderID: String
-    var countent: String
+    var content: String
     var timestamp: Timestamp
     var type: MessageType
+    
+    var dictionary: [String: Any] {
+        return [
+            "id": id ?? UUID().uuidString,
+            "senderID": senderID,
+            "content": content,
+            "timestamp": timestamp,
+            "type": type.rawValue
+        ]
+    }
 }
 
 enum MessageType: String, Codable {
     case text
+    case friendRequest
     case image
     case video
 }
