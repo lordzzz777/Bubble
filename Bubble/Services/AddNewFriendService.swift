@@ -32,18 +32,19 @@ actor AddNewFriendService {
     }
     
     
-    func sendFriendRequest(message: MessageModel) async throws {
-        do {
-            guard let messageId = message.id else {
-                throw AddNewFriendError.messageIdError
+    func sendFriendRequest(friendUID: String) async throws {
+        Task {
+            do {
+                let currentUserInfo = try await self.getCurrentUserInfo()
+                print("currentUserInfo: \(currentUserInfo)")
+                let newFriendRequestMessage = MessageModel(id: UUID().uuidString, senderID: currentUserInfo.id, content: "\(currentUserInfo.nickname) quiere ser tu amigo", timestamp: Timestamp.init(), type: MessageType.friendRequest)
+                let chat = ChatModel(id: UUID().uuidString, participants: [currentUserInfo.id, friendUID], lastMessage: newFriendRequestMessage.content, lastMessageTimestamp: newFriendRequestMessage.timestamp, messages: [newFriendRequestMessage])
+                
+                try await database.collection("users").document(friendUID).collection("chats").document(chat.id).setData(chat.dictionary)
+            } catch {
+                print("Error al enviar la solicitud: \(error.localizedDescription)")
+                throw error
             }
-            
-            Task {
-                try await database.collection("users").document(uid).collection("chats").document(messageId).setData(message.dictionary)
-            }
-        } catch {
-            print("Error al enviar la solicitud: \(error.localizedDescription)")
-            throw error
         }
     }
     

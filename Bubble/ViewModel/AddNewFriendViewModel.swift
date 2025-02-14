@@ -30,10 +30,10 @@ class AddNewFriendViewModel {
     }
     
     @MainActor
-    func sendFriendRequest(message: MessageModel) async {
+    func sendFriendRequest(friendUID: String) async {
         Task {
             do {
-                try await addNewFriendService.sendFriendRequest(message: message)
+                try await addNewFriendService.sendFriendRequest(friendUID: friendUID)
             } catch {
                 errorTitle = "Error al enviar solicitud de amistad"
                 errorDescription = "Ha ocurrido un error al intentar enviar una solicitud de amistad. Por favor, intente más tarde."

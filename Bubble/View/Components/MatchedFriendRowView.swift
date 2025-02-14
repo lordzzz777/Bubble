@@ -37,9 +37,8 @@ struct MatchedFriendRowView: View {
             Spacer()
             
             Button {
-                print("Hola")
                 Task {
-                    await addNewFriendViewModel.sendFriendRequest(message: MessageModel(senderID: user.id, content: "", timestamp: Timestamp.init(), type: MessageType.friendRequest))
+                    await addNewFriendViewModel.sendFriendRequest(friendUID: user.id)
                 }
             } label: {
                 Text("Agregar amigo")

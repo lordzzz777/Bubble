@@ -11,8 +11,6 @@ import FirebaseCore
 
 struct ChatsView: View {
     @Bindable var chatsViewModel = ChatViewModel()
-
-    @Bindable var viewModel = ChatViewModel()
     @State private var trashUserDefault = LoginViewModel()
     
     // Esta es la variable que almacenará el valor seleccionado del Picker
@@ -44,7 +42,7 @@ struct ChatsView: View {
                 }else{
                     Text(trashUserDefault.errorMessage)
                     List{
-                        ForEach(viewModel.chats, id:\.lastMessageTimestamp){ chat in
+                        ForEach(chatsViewModel.chats, id:\.lastMessageTimestamp){ chat in
                             
                             NavigationLink(destination: {
                                 
@@ -55,9 +53,7 @@ struct ChatsView: View {
                             })
                             .swipeActions(content: {
                                 Button("borrar", systemImage: "trash.fill", action: {
-                                    if let chatID = chat.id {
-                                        chatIdSelected = chatID
-                                    }
+                                    chatIdSelected = chat.id
                                     
                                     chatsViewModel.isMessageDestructive = true
                                     

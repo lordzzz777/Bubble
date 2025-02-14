@@ -10,14 +10,25 @@ import FirebaseFirestore
 import FirebaseCore
 
 struct ChatModel: Codable, Hashable {
-    @DocumentID var id: String?
+    var id: String = ""
     var participants: [String] = []
     var lastMessage: String
     var lastMessageTimestamp: Timestamp
+    var messages: [MessageModel] = []
+    
+    var dictionary: [String: Any] {
+        return [
+            "id": id,
+            "participants": participants,
+            "lastMessage": lastMessage,
+            "lastMessageTimestamp": lastMessageTimestamp,
+            "messages": messages.map(\.dictionary)
+        ]
+    }
 }
 
 struct MessageModel: Codable, Hashable {
-    @DocumentID var id: String?
+    var id: String = ""
     var senderID: String
     var content: String
     var timestamp: Timestamp
@@ -25,7 +36,7 @@ struct MessageModel: Codable, Hashable {
     
     var dictionary: [String: Any] {
         return [
-            "id": id ?? UUID().uuidString,
+            "id": id,
             "senderID": senderID,
             "content": content,
             "timestamp": timestamp,
