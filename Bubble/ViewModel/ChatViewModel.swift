@@ -12,8 +12,6 @@ import FirebaseAuth
 
 @Observable @MainActor
 class ChatViewModel{
-
-    
     // Servicios
     private var allServices = ChatsService()
     private var firestoreService = FirestoreService()
@@ -23,7 +21,6 @@ class ChatViewModel{
     var chats: [ChatModel] = []
     var messages: [MessageModel] = []
     
-
     // Tareas de escucha
     private var chatTask: Task<Void, Never>?
     private var userTask: Task<Void, Never>?
@@ -48,8 +45,10 @@ class ChatViewModel{
     var isfetchChatsError = false
     var isSuccessMessas = false
     var isWiffi = false
-
     
+    //Triggers de vistas para agregar amigos y crear comunidades
+    var showAddFriendView: Bool = false
+    var showCreateCommunityView: Bool = false
 
     
     /// Obtiene la información de un usuario en tiempo real y la almacena en la variable `user`.
@@ -148,8 +147,8 @@ class ChatViewModel{
     }
 
     // Llamado cuando el ViewModel es destruido, detiene cualquier escucha activa.
-    deinit {
-        stopListening()
-        print("ChatViewModel eliminado correctamente")
-    }
+//    deinit {
+//        stopListening()
+//        print("ChatViewModel eliminado correctamente")
+//    }
 }

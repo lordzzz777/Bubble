@@ -10,22 +10,44 @@ import FirebaseFirestore
 import FirebaseCore
 
 struct ChatModel: Codable, Hashable {
-    @DocumentID var id: String?
+    var id: String = ""
     var participants: [String] = []
     var lastMessage: String
     var lastMessageTimestamp: Timestamp
+    var messages: [MessageModel] = []
+    
+    var dictionary: [String: Any] {
+        return [
+            "id": id,
+            "participants": participants,
+            "lastMessage": lastMessage,
+            "lastMessageTimestamp": lastMessageTimestamp,
+            "messages": messages.map(\.dictionary)
+        ]
+    }
 }
 
 struct MessageModel: Codable, Hashable {
-    @DocumentID var id: String?
+    var id: String = ""
     var senderID: String
-    var countent: String
+    var content: String
     var timestamp: Timestamp
     var type: MessageType
+    
+    var dictionary: [String: Any] {
+        return [
+            "id": id,
+            "senderID": senderID,
+            "content": content,
+            "timestamp": timestamp,
+            "type": type.rawValue
+        ]
+    }
 }
 
 enum MessageType: String, Codable {
     case text
+    case friendRequest
     case image
     case video
 }
