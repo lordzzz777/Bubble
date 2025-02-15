@@ -147,8 +147,8 @@ class ChatViewModel{
     }
 
     // Llamado cuando el ViewModel es destruido, detiene cualquier escucha activa.
-    deinit {
-        stopListening()
-        print("ChatViewModel eliminado correctamente")
-    }
+//    deinit {
+//        stopListening()
+//        print("ChatViewModel eliminado correctamente")
+//    }
 }
