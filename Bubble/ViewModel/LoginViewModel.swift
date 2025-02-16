@@ -40,13 +40,29 @@ class LoginViewModel {
     
     /// Inicia sesión con Google
     func signInWithGoogle() {
+        guard let userID = Auth.auth().currentUser?.uid else {
+            print("Error: No hay usuario autenticado.")
+            return
+        }
+        
         Task {
             do {
+                // Verivicar si el usuario exite y si tiene nickname
+                let hasNickname = try await firestoreService.checkIfNicknameNotExists(nickname: userID)
+                //let userID = try await firestoreService.checkIfUserExistsByID(userID: userID)
+                
+                // autentica al usuario
                 let success = try await googleService.authenticate()
                 
                 if success == true {
-                    loginFlowState = .loggedIn
+                    if hasNickname{
+                        loginFlowState = .hasNickname
+                    }else{
+                        loginFlowState = .loggedIn
+                    }
+                    
                 }else {
+                    print("Estoy dentro del else de la funcion signInWithGoogle()")
                     await checkIfUserHasNickname()
                 }
                 
