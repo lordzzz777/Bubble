@@ -13,7 +13,7 @@ import GoogleSignIn
 
 // MARK: - Enumeras los caso Login para FireBase
 enum UserLoginState: Int {
-    case loggedOut, loggedIn, hasNickname
+    case loggedOut, hasNickname, loggedIn
 }
 
 

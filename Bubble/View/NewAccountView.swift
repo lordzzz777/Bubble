@@ -81,7 +81,7 @@ struct NewAccountView: View {
                                 )
                                 
                                 // 🔹 Una vez registrado el nickname, cambiar el estado a `.hasNickname`
-                                loginFlowState = .hasNickname
+                                loginFlowState = .loggedIn
                             }
                         } label: {
                             Text("Finalizar")

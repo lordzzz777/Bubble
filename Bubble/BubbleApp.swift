@@ -32,10 +32,10 @@ struct BubbleApp: App {
                 case .loggedOut:
                     WelcomeView()
                     
-                case .loggedIn:
+                case .hasNickname:
                     NewAccountView()
                     
-                case .hasNickname:
+                case .loggedIn:
                     ContentView()
                     
                 }

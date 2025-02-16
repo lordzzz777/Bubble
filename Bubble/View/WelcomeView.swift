@@ -19,9 +19,9 @@ struct WelcomeView: View {
             switch loginViewModel.loginFlowState {
             case .loggedOut:
                 autenticationView
-            case .loggedIn:
-                NewAccountView()
             case .hasNickname:
+                NewAccountView()
+            case .loggedIn:
                 ContentView()
                 
             }
