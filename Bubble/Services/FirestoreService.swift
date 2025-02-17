@@ -20,11 +20,23 @@ enum FirestoreError: Error {
 
 actor FirestoreService {
     private let database = Firestore.firestore()
-    private let uid = Auth.auth().currentUser?.uid ?? ""
+   
+    var uid: String? {
+        guard let user = Auth.auth().currentUser else {
+            print("Intento de acceder a Firebase sin usuario autenticado.")
+            return nil
+        }
+        return user.uid
+    }
     
     func createUser(user: UserModel) async throws {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            print("Error : No hay usuarios autenticados")
+            return
+        }
+        
         do {
-            if try await checkIfUserExistsByID(userID: uid) {
+            if try await checkIfUserExistsByID(userID: uid ) {
                 let newUserData: [String: Any] = ["nickname": user.nickname]
                 try await database.collection("users").document(uid).updateData(newUserData)
             } else {
@@ -61,6 +73,11 @@ actor FirestoreService {
     }
     
     func saveImage(image: UIImage) async throws {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            print("Error : No hay usuarios autenticados")
+            return
+        }
+        
         let storage = Storage.storage()
         let storageRef = storage.reference().child("avatars/\(uid).jpg")
         

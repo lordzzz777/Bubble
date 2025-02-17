@@ -10,95 +10,110 @@ import FirebaseFirestore
 import FirebaseCore
 
 struct ChatsView: View {
-    @State var viewModel = ChatViewModel()
+    @Bindable var chatsViewModel = ChatViewModel()
+    @State private var trashUserDefault = LoginViewModel()
     
     // Esta es la variable que almacenará el valor seleccionado del Picker
-    @State private var selectedVisibility = "privado"
-    @State private var searchText = ""
-    @State private var isWiffi = false
-    
-    // Esta es la lista de opciones para el Picker
-    private let visibilityOptions = ["privado", "Publico"]
-    
-    var filteredData: [ModelListMock] {
-        if searchText.isEmpty {
-            return dataList
-        } else {
-            return dataList.filter { $0.nameAlias.lowercased().contains(searchText.lowercased()) }
-        }
-    }
+    @State private var chatIdSelected: String = ""
     
     var body: some View {
-        NavigationStack{
+        NavigationStack {
             // Usamos un Picker con un estilo segmentado
             VStack{
-                Picker("Visibilidad", selection: $selectedVisibility) {
-                    ForEach(visibilityOptions, id: \.self) { option in
-                        Text(option).tag(option) // Asegúrate de usar .tag para asociar cada Text con su valor
+                Picker("Visibilidad", selection: $chatsViewModel.selectedVisibility) {
+                    ForEach(chatsViewModel.visibilityOptions, id: \.self) { option in
+                        Text(option)
+                            .tag(option) // Asegúrate de usar .tag para asociar cada Text con su valor
                     }
                 }
                 .pickerStyle(.segmented)
                 .padding()
                 
-                if $viewModel.chats.isEmpty{
-                    Text("No tienes chats aún").font(.largeTitle.bold())
+                if $chatsViewModel.chats.isEmpty {
+                    Text("No tienes chats aún")
+                        .font(.largeTitle.bold())
                         .padding(.bottom, 20)
+                    
                     Image(systemName: "bubble.left.and.exclamationmark.bubble.right")
                         .font(.system(size: 100))
+                    
                     Spacer()
                     
                 }else{
-                    
+                    Text(trashUserDefault.errorMessage)
                     List{
-                        ForEach(viewModel.chats, id:\.lastMessageTimestamp){ chat in
+                        ForEach(chatsViewModel.chats, id:\.lastMessageTimestamp){ chat in
+                            
                             NavigationLink(destination: {
                                 
                             }, label: {
-                                VStack(alignment: .leading){
-                                    let id1 = chat.participants[1]
-                                    let timestamp: Timestamp =  chat.lastMessageTimestamp
-                                    let lastMessage = chat.lastMessage
-                                    ListChatRowView(userID: id1, lastMessage: lastMessage, timestamp: timestamp)
+                                VStack(alignment: .leading) {
+                                    ListChatRowView(userID:chatsViewModel.getFriendID(chat.participants), lastMessage: chat.lastMessage, timestamp: chat.lastMessageTimestamp)
                                 }
-                                .swipeActions(content: {
-                                    Button("borrar", systemImage: "trash.fill", role: .destructive, action: {
-                                        // ... Lógica eliminar
-                                    })
+                            })
+                            .swipeActions(content: {
+                                Button("borrar", systemImage: "trash.fill", action: {
+                                    chatIdSelected = chat.id
+                                    
+                                    chatsViewModel.isMessageDestructive = true
+                                    
                                 })
                                 
+                                .tint(.red )
                             })
                         }
-                        
                     }
-                    
                 }
             }
-            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always)) {
-                ForEach(visibilityOptions, id: \.self) { option in
+            .searchable(text: $chatsViewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
+                ForEach(chatsViewModel.visibilityOptions, id: \.self) { option in
                     Text(option).searchCompletion(option)
                 }
             }
             .navigationTitle("Chats")
-            .onAppear {
-                viewModel.fetchChats()
+            .task {
+                await chatsViewModel.fetchCats()
             }
-            .alert(isPresented: $viewModel.isfetchChatsError) {
-                Alert(title: 
-                        Text("Error al cargar los chats"),
-                      message: Text("Puede intentar nuevamente."),
-                      dismissButton: .default(Text("OK"))
+            // Alerta de Error
+            .alert(isPresented: $chatsViewModel.isfetchChatsError) {
+                Alert(title: Text(chatsViewModel.errorTitle), message: Text(chatsViewModel.errorDescription), dismissButton: .default(Text("OK"))
                 )
             }
-            .toolbar(content: {
-                Button(action: {
-                    // ... Logica
-                }, label: {
-                    Image(systemName: "plus")
-                })
+            // Alerta de corfimación
+            .alert(isPresented: $chatsViewModel.isSuccessMessas) {
+                Alert(title: Text(chatsViewModel.successMessasTitle), message: Text(chatsViewModel.successMessasDescription), dismissButton: .default(Text("OK")))
+            }
+            // Alerta de advertencia antes de eliminar el chat
+            .alert("⚠️ Eliminar Chat", isPresented: $chatsViewModel.isMessageDestructive, actions: {
+                Button("Eliminar") {
+                    chatsViewModel.deleteChat(chatID: chatIdSelected)
+                }
+                
+                Button("Cancelar", role: .cancel) {}
+            }, message: {
+                Text("Si confirmas, se eliminará el Chat y la conversación de forma permanente y no podrás recuperarla. ¿Deseas continuar?")
             })
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button("Agregar amigo", systemImage: "person.fill.badge.plus") {
+                            chatsViewModel.showAddFriendView.toggle()
+                        }
+                        
+                        Button("Crear comunidad", systemImage: "person.2.badge.plus.fill") {
+                            
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
+            .fullScreenCover(isPresented: $chatsViewModel.showAddFriendView) {
+                AddNewFriendView()
+            }
         }
     }
-    
+
 }
 
 #Preview {

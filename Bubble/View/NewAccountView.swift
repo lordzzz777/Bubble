@@ -18,6 +18,8 @@ struct NewAccountView: View {
     @State private var nickNameNotExists: Bool = false
     @State private var checkingNickName: Bool = false
     
+    @AppStorage("LoginFlowState") private var loginFlowState: UserLoginState = .loggedIn
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 40) {
@@ -28,10 +30,10 @@ struct NewAccountView: View {
                         TextField("Nickname", text: $nickname)
                             .textFieldStyle(.roundedBorder)
                             .onChange(of: nickname) {
-                               Task {
-                                   checkingNickName = true // Para mostrar el progress view
-                                   nickNameNotExists = await newAccountViewModel.checkNickNameNotExists(nickName: nickname) // Checkea si el nickname no existe en firestore
-                                   checkingNickName = false
+                                Task {
+                                    checkingNickName = true // Para mostrar el progress view
+                                    nickNameNotExists = await newAccountViewModel.checkNickNameNotExists(nickName: nickname) // Checkea si el nickname no existe en firestore
+                                    checkingNickName = false
                                 }
                             }
                             .overlay {
@@ -77,6 +79,9 @@ struct NewAccountView: View {
                                         isOnline: true, chats: [],
                                         friends: [])
                                 )
+                                
+                                // 🔹 Una vez registrado el nickname, cambiar el estado a `.hasNickname`
+                                loginFlowState = .loggedIn
                             }
                         } label: {
                             Text("Finalizar")
