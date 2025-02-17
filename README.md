@@ -74,7 +74,25 @@ Este proyecto está licenciado bajo la [MIT License](LICENSE).
 
 ## Próximos Pasos
 
-- **Primer sprint:** Crear login o registro, Crear nueva cuenta ->  **Estatus:** **finalizado**
-- **Segundo sprint:** Vista chats: Vistas de Listado de Chats, Vista chats: Eliminar chats con swipe hacia la izquierda, Vista de chats: Mostrar detalles en tarjetas de chat (Chat Card Details) -> **Estatus:** **finalizado**
-- **Tercero sprint:** Flujo de navegación según estado de registro, Solucionar typo del botón de Google, Eliminar chats con swipe hacia la izquierda, Solicitudes de amistad, Flujo de navegación según estado de registro -> **Estatus:** **finalizado**
-- **Cuarto sprint:** Solucionar bug que te lleva a la pantalla de crear nueva cuenta con una cuenta ya creada, T35-Solucionar bug que crashea la app al recibir una solicitud de amistad, Refactorizar alerts de la vista de chats y su respectivo viewmodel, Refactorizar alerts de la vista de chats y su respectivo viewmodel, Actualización Readme -> **Estatus:** **En Proceso ...**
+- **Primer sprint, estatus: finalizad:**
+    - Crear login o registro,
+    - Crear nueva cuenta
+      
+- **Segundo sprint, estatus: finalizad:**
+    - Vista chats: Vistas de Listado de Chats,
+    - Vista chats: Eliminar chats con swipe hacia la izquierda,
+    - Vista de chats: Mostrar detalles en tarjetas de chat (Chat Card Details)
+  
+- **Tercero sprint, estatus: finalizad:**
+    - Flujo de navegación según estado de registro,
+    - Solucionar typo del botón de Google,
+    - Eliminar chats con swipe hacia la izquierda,
+    - Solicitudes de amistad, Flujo de navegación según estado de registro
+      
+- **Cuarto sprint, estatus: En Proceso ... :**
+    - Solucionar bug que te lleva a la pantalla de crear nueva cuenta con una cuenta ya creada,
+    - Solucionar bug que crashea la app al recibir una solicitud de amistad,
+    - Refactorizar alerts de la vista de chats y su respectivo viewmodel,
+    - Refactorizar alerts de la vista de chats y su respectivo viewmodel,
+    - Actualización Readme
+      
