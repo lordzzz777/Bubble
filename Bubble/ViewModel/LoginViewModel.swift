@@ -40,14 +40,26 @@ class LoginViewModel {
     
     /// Inicia sesión con Google
     func signInWithGoogle() {
+        guard let userID = Auth.auth().currentUser?.uid else {
+            print("Error: No hay usuario autenticado.")
+            return
+        }
+        
         Task {
             do {
-                let success = try await googleService.authenticate()
+                // Verivicar si el usuario exite
+                let user = try await firestoreService.checkIfUserExistsByID(userID: userID)
+                let success = try await googleService.authenticate()// autentica al usuario
                 
                 if success == true {
-                    loginFlowState = .loggedIn
+                    if user{
+                        loginFlowState = .loggedIn
+                    }else{
+                        loginFlowState = .hasNickname
+                    }
+                    
                 }else {
-                    await checkIfUserHasNickname()
+                    print("Estoy dentro del else de la funcion signInWithGoogle()")
                 }
                 
             } catch {
@@ -64,32 +76,6 @@ class LoginViewModel {
         loginFlowState = .loggedOut
     }
     
-    // Verifica si el usuario tiene un apodo registrado en la base de datos.
-    func checkIfUserHasNickname() async {
-        guard let userID = Auth.auth().currentUser?.uid else {
-            print("Error: No hay usuario autenticado.")
-            return
-        }
-        
-        do {
-            let hasNickname = try await firestoreService.checkIfNicknameNotExists(nickname: userID)
-            
-            await MainActor.run {
-                if hasNickname {
-                    loginFlowState = .loggedIn //Usuario ya registrado → Ir a Chats
-                } else {
-                    loginFlowState = .hasNickname //Usuario nuevo → Ir a Nueva Cuenta
-                }
-            }
-            
-        } catch {
-            print("Error al verificar el nickname: \(error.localizedDescription)")
-            await MainActor.run {
-                errorMessage = "No se pudo verificar tu cuenta. Inténtalo más tarde."
-                showError = true
-            }
-        }
-    }
     
     /// Cierra sesión y borra datos de `UserDefaults`
     @MainActor
