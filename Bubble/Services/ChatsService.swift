@@ -32,6 +32,12 @@ actor ChatsService {
     /// - Parameter id: El ID del usuario que se desea obtener.
     /// - Returns: Un `AsyncThrowingStream` que emite `UserModel?` y maneja errores.
     func getUser(by id: String) -> AsyncThrowingStream<UserModel?, Error> {
+        guard !id.isEmpty else { // Me aseguro que que si el id esta bacio no crache
+            return AsyncThrowingStream { continuation in
+                continuation.finish(throwing: NSError(domain: "FirestoreError", code: 0, userInfo: [NSLocalizedDescriptionKey: "El ID de usuario no puede estar vacío."]))
+            }
+        }
+        
         let userRef = database.collection("users").document(id)
         
         return AsyncThrowingStream { continuation in

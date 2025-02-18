@@ -125,14 +125,19 @@ class ChatViewModel{
     /// - Parameter ids: Un array de Strings que contiene los IDs de los participantes.
     /// - Returns: El ID del amigo si se encuentra, de lo contrario, una cadena vacía.
     func getFriendID(_ ids: [String]) -> String {
-        var friendID = ""
-        let uID = Auth.auth().currentUser?.uid ?? ""
-        ids.forEach { id in
-            if id != uID {
-                friendID = id
+        let currentUserID = Auth.auth().currentUser?.uid ?? ""
+        
+        //Buscar el primer ID que NO sea el del usuario actual
+        for id in ids {
+            if id != currentUserID {
+                return id //Retorna el ID del amigo
             }
         }
-        return friendID
+        if let friendID = ids.first{
+            return friendID
+        }
+
+        return "El amigo no ha sido encontrado ..."
     }
     
 
