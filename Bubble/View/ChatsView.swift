@@ -12,6 +12,7 @@ import FirebaseCore
 struct ChatsView: View {
     @Bindable var chatsViewModel = ChatViewModel()
     @State private var trashUserDefault = LoginViewModel()
+    @State private var isMessageDestructive = false
     
     // Esta es la variable que almacenará el valor seleccionado del Picker
     @State private var chatIdSelected: String = ""
@@ -43,7 +44,6 @@ struct ChatsView: View {
                     Text(trashUserDefault.errorMessage)
                     List{
                         ForEach(chatsViewModel.chats, id:\.lastMessageTimestamp){ chat in
-                            
                             NavigationLink(destination: {
                                 
                             }, label: {
@@ -54,9 +54,7 @@ struct ChatsView: View {
                             .swipeActions(content: {
                                 Button("borrar", systemImage: "trash.fill", action: {
                                     chatIdSelected = chat.id
-                                    
-                                    chatsViewModel.isMessageDestructive = true
-                                    
+                                    isMessageDestructive = true
                                 })
                                 
                                 .tint(.red )
@@ -70,21 +68,22 @@ struct ChatsView: View {
                     Text(option).searchCompletion(option)
                 }
             }
+            
             .navigationTitle("Chats")
             .task {
                 await chatsViewModel.fetchCats()
             }
+            
             // Alerta de Error
             .alert(isPresented: $chatsViewModel.isfetchChatsError) {
                 Alert(title: Text(chatsViewModel.errorTitle), message: Text(chatsViewModel.errorDescription), dismissButton: .default(Text("OK"))
                 )
             }
-            // Alerta de corfimación
-            .alert(isPresented: $chatsViewModel.isSuccessMessas) {
-                Alert(title: Text(chatsViewModel.successMessasTitle), message: Text(chatsViewModel.successMessasDescription), dismissButton: .default(Text("OK")))
-            }
+            
             // Alerta de advertencia antes de eliminar el chat
-            .alert("⚠️ Eliminar Chat", isPresented: $chatsViewModel.isMessageDestructive, actions: {
+            .alert("⚠️ Eliminar Chat",
+                   isPresented: $isMessageDestructive,
+                   actions: {
                 Button("Eliminar") {
                     chatsViewModel.deleteChat(chatID: chatIdSelected)
                 }

@@ -11,6 +11,8 @@ struct ContentView: View {
     
     private let networkMonitor = NetworkMonitor()
     
+    @State private var isShowAlert = false
+    
     var body: some View {
         TabView{
             ChatsView()
@@ -28,6 +30,21 @@ struct ContentView: View {
                     Label("Ajustes", systemImage: "gear")
                 })
         }
+        .onAppear{
+            Task{
+                for await stutus in networkMonitor.connectionStatuses(){
+                    isShowAlert = !stutus
+                }
+            }
+        }
+        .alert("Error de conexion ⚠️",
+               isPresented: $isShowAlert,
+               actions: {
+            Button("OK", role: .cancel) {}
+        }, message: {
+            
+            Text("No hay conexion wifi")
+        })
     }
 }
 

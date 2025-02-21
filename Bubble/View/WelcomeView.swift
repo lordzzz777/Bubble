@@ -29,7 +29,7 @@ struct WelcomeView: View {
         .animation(.easeInOut, value: loginViewModel.loginFlowState)
         
         ///Cuando ` checkIfUserHasNickname()` detecta un error, el estado `showError ` se activa y se debe mostrar una alerta.
-        .alert("Error", isPresented: $loginViewModel.showError) {
+        .alert(loginViewModel.errorTitle, isPresented: $loginViewModel.showError) {
             Button("OK", role: .cancel) { }
         } message: {
             Text(loginViewModel.errorMessage)
@@ -85,11 +85,6 @@ struct WelcomeView: View {
                 }.padding()
                 
             }.offset(y: -90)
-                .alert("Error al iniciar con Google", isPresented: $loginViewModel.showError) {
-                    Button("Ok", role: .cancel) { }
-                } message: {
-                    Text(loginViewModel.errorMessage)
-                }
         }
     }
 }
