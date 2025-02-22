@@ -8,14 +8,16 @@
 import SwiftUI
 import FirebaseFirestore
 import FirebaseCore
+import FirebaseAuth
 
 struct ChatsView: View {
-    @Bindable var chatsViewModel = ChatViewModel()
+    @Bindable private var chatsViewModel = ChatViewModel()
     @State private var trashUserDefault = LoginViewModel()
     @State private var isMessageDestructive = false
     
     // Esta es la variable que almacenará el valor seleccionado del Picker
     @State private var chatIdSelected: String = ""
+    
     
     var body: some View {
         NavigationStack {
@@ -42,25 +44,65 @@ struct ChatsView: View {
                     
                 }else{
                     Text(trashUserDefault.errorMessage)
-                    List{
-                        ForEach(chatsViewModel.chats, id:\.lastMessageTimestamp){ chat in
-                            NavigationLink(destination: {
-                                
-                            }, label: {
-                                VStack(alignment: .leading) {
-                                    ListChatRowView(userID:chatsViewModel.getFriendID(chat.participants), lastMessage: chat.lastMessage, timestamp: chat.lastMessageTimestamp)
-                                }
-                            })
-                            .swipeActions(content: {
-                                Button("borrar", systemImage: "trash.fill", action: {
-                                    chatIdSelected = chat.id
-                                    isMessageDestructive = true
+                    List {
+                        ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
+                            if chat.isAccepted {
+                                // ✅ Chat ya aceptado
+                                NavigationLink(destination: {
+                                    // Vista del chat aceptado
+                                }, label: {
+                                    VStack(alignment: .leading) {
+                                        ListChatRowView(
+                                            userID: chatsViewModel.getFriendID(chat.participants),
+                                            lastMessage: chat.lastMessage,
+                                            timestamp: chat.lastMessageTimestamp
+                                        )
+                                    }
                                 })
+                                .swipeActions {
+                                    Button("Borrar", systemImage: "trash.fill") {
+                                        chatIdSelected = chat.id
+                                        isMessageDestructive = true
+                                    }
+                                    .tint(.red)
+                                }
                                 
-                                .tint(.red )
-                            })
+                            } else {
+                                // ❓ Chat pendiente de aceptación
+                                VStack(alignment: .leading) {
+                                    ListChatRowView(
+                                        userID: chatsViewModel.getFriendID(chat.participants),
+                                        lastMessage: "Solicitud pendiente...",
+                                        timestamp: chat.lastMessageTimestamp
+                                    )
+                                    .swipeActions {
+                                        Button("Borrar", systemImage: "trash.fill") {
+                                            chatIdSelected = chat.id
+                                            isMessageDestructive = true
+                                        }
+                                        .tint(.red)
+                                    }
+                                    
+                                    if chat.solicitadoID == Auth.auth().currentUser?.uid {
+                                        // ✅ Mostrar botón "Aceptar" solo al solicitado
+                                        Button("Aceptar Solicitud") {
+                                            Task {
+                                                await chatsViewModel.acceptFriendRequest(chatID: chat.id)
+                                            }
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        
+                                    } else if chat.solicitanteID == Auth.auth().currentUser?.uid {
+                                        // 🔒 Mostrar mensaje de espera al solicitante
+                                        Text("Esperando aceptación del otro usuario...")
+                                            .foregroundColor(.gray)
+                                            .font(.footnote)
+                                    }
+                                }
+                            }
                         }
                     }
+
                 }
             }
             .searchable(text: $chatsViewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {

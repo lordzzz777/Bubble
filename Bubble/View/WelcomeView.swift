@@ -44,6 +44,11 @@ struct WelcomeView: View {
                 Text("App Bubble")
             }.font(.largeTitle.bold())
                 .offset(y: 100)
+            Image(.iconCartoons)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 300)
+                .offset(y: 190)
             Spacer()
             VStack{
                 

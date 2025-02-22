@@ -11,14 +11,14 @@ import Observation
 import FirebaseAuth
 
 @Observable @MainActor
-class ChatViewModel{
+class ChatViewModel: AddNewFriendViewModel {
     // Servicios
     private var allServices = ChatsService()
     private var firestoreService = FirestoreService()
    
     // Datos del usuario y chats
     var user: UserModel?
-    var chats: [ChatModel] = []
+   // var chats: [ChatModel] = []
     var messages: [MessageModel] = []
     
     // Tareas de escucha
@@ -30,8 +30,8 @@ class ChatViewModel{
     var selectedVisibility = "privado"
     
     var searchQuery = "" // Variables para la búsqueda
-    var errorTitle = ""  // Manejo de errores
-    var errorDescription = ""
+   // var errorTitle = ""  // Manejo de errores
+   // var errorDescription = ""
     var isfetchChatsError = false
     var showAddFriendView: Bool = false
 
