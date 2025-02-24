@@ -21,3 +21,13 @@ struct UserModel: Codable {
         return ["id": id, "nickname": nickname, "imgUrl": imgUrl, "lastConnectionTimeStamp": lastConnectionTimeStamp, "isOnline": isOnline, "chats": chats, "friends": friends]
     }
 }
+
+// Modelo temporal para la solicitud de amistad
+struct FriendRequest: Codable, Identifiable, Equatable {
+    var id: String
+    var senderID: String
+    var receiverID: String
+    var message: String
+    var timestamp: Timestamp
+
+}
