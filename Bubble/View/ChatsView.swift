@@ -18,7 +18,6 @@ struct ChatsView: View {
     // Esta es la variable que almacenará el valor seleccionado del Picker
     @State private var chatIdSelected: String = ""
     
-    
     var body: some View {
         NavigationStack {
             // Usamos un Picker con un estilo segmentado
@@ -44,6 +43,7 @@ struct ChatsView: View {
                     
                 }else{
                     Text(trashUserDefault.errorMessage)
+                  
                     List {
                         ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
                             if chat.isAccepted {
@@ -66,7 +66,6 @@ struct ChatsView: View {
                                     }
                                     .tint(.red)
                                 }
-                                
                             } else {
                                 // ❓ Chat pendiente de aceptación
                                 VStack(alignment: .leading) {
@@ -102,7 +101,6 @@ struct ChatsView: View {
                             }
                         }
                     }
-
                 }
             }
             .searchable(text: $chatsViewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
@@ -115,7 +113,7 @@ struct ChatsView: View {
             .task {
                 await chatsViewModel.fetchCats()
             }
-            
+
             // Alerta de Error
             .alert(isPresented: $chatsViewModel.isfetchChatsError) {
                 Alert(title: Text(chatsViewModel.errorTitle), message: Text(chatsViewModel.errorDescription), dismissButton: .default(Text("OK"))

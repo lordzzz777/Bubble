@@ -73,7 +73,6 @@ class LoginViewModel {
         loginFlowState = .loggedOut
     }
     
-    
     /// Cierra sesión y borra datos de `UserDefaults`
     func logoutUser() {
         Task {

@@ -34,8 +34,6 @@ class ChatViewModel: AddNewFriendViewModel {
    // var errorDescription = ""
     var isfetchChatsError = false
     var showAddFriendView: Bool = false
-
-
     
     /// Obtiene la información de un usuario en tiempo real y la almacena en la variable `user`.
     /// - Parameter userID: El ID del usuario que se desea obtener.
@@ -84,16 +82,17 @@ class ChatViewModel: AddNewFriendViewModel {
      func deleteChat(chatID: String){
        Task {  [weak self] in
            guard let self = self else {return}
-            do{
+            do {
                 try await allServices.deleteChat(chatID: chatID)
                 self.chats.removeAll{$0.id == chatID}
                 
-            }catch {
+            } catch {
                 self.errorTitle = "Error"
                 self.errorDescription = "El chat no se ha podido eliminar, intentelo mas tarde"
                 self.isfetchChatsError = true
             }
         }
+        return friendID
     }
         
     /// Detiene la escucha de actualizaciones en tiempo real de los chats y el usuario.
@@ -125,7 +124,6 @@ class ChatViewModel: AddNewFriendViewModel {
 
         return "El amigo no ha sido encontrado ..."
     }
-    
 
     /// Convierte un `Timestamp` de Firestore en una cadena de texto con formato de hora.
     /// - Parameter timestamp: El `Timestamp` que se desea formatear.

@@ -7,6 +7,7 @@
 
 import Foundation
 
+
 @Observable @MainActor
 class AddNewFriendViewModel {
     private let addNewFriendService: AddNewFriendService = AddNewFriendService()
@@ -32,7 +33,7 @@ class AddNewFriendViewModel {
             showError = true
         }
     }
-    
+
     /// Envía una solicitud de amistad al usuario con el UID especificado
     /// - Parameter friendUID: UID del amigo al que se desea enviar la solicitud
     func sendFriendRequest(friendUID: String) async {
@@ -46,7 +47,7 @@ class AddNewFriendViewModel {
             }
         }
     }
-    
+
     /// Función para aceptar solicitud de amistad
     func acceptFriendRequest(chatID: String) async{
         do{

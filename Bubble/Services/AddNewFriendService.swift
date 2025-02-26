@@ -9,16 +9,19 @@ import Foundation
 import FirebaseFirestore
 import FirebaseAuth
 
+
 // Enum para definir posibles errores específicos en la gestión de amigos
 enum AddNewFriendError: Error {
     case messageIdError
 }
+
 
 // Servicio para la gestión de amigos, utilizando Firestore y FirebaseAuth
 actor AddNewFriendService {
     private let database = Firestore.firestore()
     private let uid = Auth.auth().currentUser?.uid ?? ""
     
+
     /// Busca amigos por su nickname en la base de datos
     /// - Parameter nickname: El nickname que se desea buscar
     /// - Returns: Un array de usuarios que coinciden con el nickname

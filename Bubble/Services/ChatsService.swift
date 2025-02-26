@@ -37,7 +37,6 @@ actor ChatsService {
                 continuation.finish(throwing: NSError(domain: "FirestoreError", code: 0, userInfo: [NSLocalizedDescriptionKey: "El ID de usuario no puede estar vacío."]))
             }
         }
-        
         let userRef = database.collection("users").document(id)
         
         return AsyncThrowingStream { continuation in
