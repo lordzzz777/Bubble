@@ -7,17 +7,22 @@
 
 import Foundation
 
-@Observable
+
+@Observable @MainActor
 class AddNewFriendViewModel {
     private let addNewFriendService: AddNewFriendService = AddNewFriendService()
     
     var friendNickname: String = ""
     var matchedUsers: [UserModel] = []
+    var chats: [ChatModel] = []
     var showError: Bool = false
+    var isSuccess = false
+    var successMessage: String = ""
     var errorTitle: String = ""
     var errorDescription: String = ""
     
-    @MainActor
+    /// Busca amigos por su nickname y actualiza la lista `matchedUsers`
+    /// - Parameter nickname: Nickname que se desea buscar
     func searchFriendByNickname(_ nickname: String) async {
         do {
             matchedUsers = try await addNewFriendService.searchFriendByNickname(nickname)
@@ -28,8 +33,9 @@ class AddNewFriendViewModel {
             showError = true
         }
     }
-    
-    @MainActor
+
+    /// Envía una solicitud de amistad al usuario con el UID especificado
+    /// - Parameter friendUID: UID del amigo al que se desea enviar la solicitud
     func sendFriendRequest(friendUID: String) async {
         Task {
             do {
@@ -39,6 +45,22 @@ class AddNewFriendViewModel {
                 errorDescription = "Ha ocurrido un error al intentar enviar una solicitud de amistad. Por favor, intente más tarde."
                 showError = true
             }
+        }
+    }
+
+    /// Función para aceptar solicitud de amistad
+    func acceptFriendRequest(chatID: String) async{
+        do{
+            try await addNewFriendService.acceptFriendRequest(chatID: chatID)
+            if let index = chats.firstIndex(where: {$0.id == chatID}){
+                chats[index].isAccepted = true
+            }
+            successMessage = "¡Solicitud de amistad aceptada!"
+            isSuccess = true
+        }catch{
+            errorTitle = ""
+            errorDescription = ""
+            showError = true
         }
     }
 }

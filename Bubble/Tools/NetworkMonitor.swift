@@ -19,7 +19,7 @@ class NetworkMonitor {
             let queue = DispatchQueue(label: "NetworkMonitorQueue")
             
             // Cada vez que cambia la conectividad, “yield” un nuevo valor
-            monitor.pathUpdateHandler = { path in
+            monitor.pathUpdateHandler = { path in     
                 let isConnected = (path.status == .satisfied)
                 continuation.yield(isConnected)
             }

@@ -17,13 +17,9 @@ class LoginViewModel {
     private let firestoreService = FirestoreService()
     private let uid = Auth.auth().currentUser?.uid
     
-    var showError: Bool = false
     var errorTitle: String = ""
-    var errorDescription: String = ""
-    var showImageUploadError: Bool = false
-    
-    var isAuthenticated = false
     var errorMessage: String = ""
+    var showError: Bool = false
     
     /// Estado de autenticación almacenado en `UserDefaults`
     var loginFlowState: UserLoginState{
@@ -63,9 +59,10 @@ class LoginViewModel {
                 }
                 
             } catch {
-               // showError = true
                 print(error.localizedDescription)
+                errorTitle = "Error al iniciar con Google"
                 errorMessage = "Ocurrio un error intentelo mas tarde"
+                showError = true
             }
         }
     }
@@ -76,9 +73,7 @@ class LoginViewModel {
         loginFlowState = .loggedOut
     }
     
-    
     /// Cierra sesión y borra datos de `UserDefaults`
-    @MainActor
     func logoutUser() {
         Task {
             do {
@@ -95,6 +90,9 @@ class LoginViewModel {
                 print("Sesión cerrada y Google Sign-In revocado")
             } catch let error as NSError {
                 print("Error al cerrar sesión: \(error), \(error.userInfo)")
+                errorTitle = "Error al cerrar sesión"
+                errorMessage = "Ocurrio un error intentelo mas tarde"
+                showError = true
             }
         }
     }
