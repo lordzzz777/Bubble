@@ -20,26 +20,30 @@ struct ListChatRowView: View {
         VStack {
             if let user = viewModel.user {
                 HStack(alignment: .center) {
-                    AsyncImage(url: URL(string: user.imgUrl)) { image in
-                        image.resizable()
-                            .scaledToFill()
-                    } placeholder: {
-                        ProgressView()
-                    }
-                    .clipShape(Circle())
-                    .overlay(content: {
+                    ZStack(alignment: .bottomTrailing) {
+                        if user.imgUrl.isEmpty {
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.system(size: 45))
+                        } else {
+                            AsyncImage(url: URL(string: user.imgUrl)) { image in
+                                image.resizable()
+                                    .scaledToFill()
+                            } placeholder: {
+                                ProgressView()
+                            }
+                            .clipShape(Circle())
+                            .frame(width: 45, height: 45)
+                        }
+                        
                         Circle()
                             .fill(user.isOnline ? .green : .gray)
-                            .frame(width: 20, height: 20)
-                            .offset(x: 23, y: 23)
-                    })
-                    .frame(width: 60, height: 60)
+                            .frame(width: 15, height: 15)
+                    }
                     
                     VStack(alignment: .leading){
                         Text(user.nickname)
-                            .font(.title2)
-                        Text(lastMessage).font(.footnote)
-
+                        Text(lastMessage)
+                            .font(.footnote)
                     }.contextMenu(menuItems: {
                         Button("Botón onTag") {
                           // ...
@@ -47,16 +51,14 @@ struct ListChatRowView: View {
                     })
                     Spacer()
                     Text(viewModel.formatTimestamp(timestamp))
-                        .font(.title3).foregroundStyle(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             } else {
                 ProgressView()
             }
         }
         .onAppear {
-          
                 viewModel.fetchUser(userID: userID)
-    
         }
     }
 }
