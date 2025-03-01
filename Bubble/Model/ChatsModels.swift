@@ -12,23 +12,17 @@ import FirebaseCore
 struct ChatModel: Codable, Hashable {
     var id: String = ""
     var participants: [String] = []
-    var solicitanteID: String = ""   // UID del solicitante
-    var solicitadoID: String = ""    // UID del solicitado
     var lastMessage: String
     var lastMessageTimestamp: Timestamp
     var messages: [MessageModel] = []
-    var isAccepted: Bool = false
     
     var dictionary: [String: Any] {
         return [
             "id": id,
             "participants": participants,
-            "solicitanteID": solicitanteID,
-            "solicitadoID": solicitadoID,
             "lastMessage": lastMessage,
             "lastMessageTimestamp": lastMessageTimestamp,
-            "messages": messages.map(\.dictionary),
-            "isAccepted": isAccepted
+            "messages": messages.map(\.dictionary)
         ]
     }
 }
