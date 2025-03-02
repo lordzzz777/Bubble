@@ -49,12 +49,12 @@ class AddNewFriendViewModel {
     }
 
     /// Función para aceptar solicitud de amistad
-    func acceptFriendRequest(chatID: String) async{
+    func acceptFriendRequest(chatID: String, senderUID: String) async{
         do{
-            try await addNewFriendService.acceptFriendRequest(chatID: chatID)
-            if let index = chats.firstIndex(where: {$0.id == chatID}){
-                chats[index].isAccepted = true
-            }
+            try await addNewFriendService.acceptFriendRequest(chatID: chatID, senderUID: senderUID)
+//            if let index = chats.firstIndex(where: {$0.id == chatID}){
+//                chats[index].isAccepted = true
+//            }
             successMessage = "¡Solicitud de amistad aceptada!"
             isSuccess = true
         }catch{

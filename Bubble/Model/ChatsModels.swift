@@ -12,30 +12,26 @@ import FirebaseCore
 struct ChatModel: Codable, Hashable {
     var id: String = ""
     var participants: [String] = []
-    var solicitanteID: String = ""   // UID del solicitante
-    var solicitadoID: String = ""    // UID del solicitado
     var lastMessage: String
+    var lastMessageType: MessageType
     var lastMessageTimestamp: Timestamp
-    var messages: [MessageModel] = []
-    var isAccepted: Bool = false
+    var lastMessageSenderUserID: String
     
     var dictionary: [String: Any] {
         return [
             "id": id,
             "participants": participants,
-            "solicitanteID": solicitanteID,
-            "solicitadoID": solicitadoID,
             "lastMessage": lastMessage,
+            "lastMessageType": lastMessageType.rawValue,
             "lastMessageTimestamp": lastMessageTimestamp,
-            "messages": messages.map(\.dictionary),
-            "isAccepted": isAccepted
+            "lastMessageSenderUserID": lastMessageSenderUserID
         ]
     }
 }
 
 struct MessageModel: Codable, Hashable {
     var id: String = ""
-    var senderID: String
+    var senderUserID: String
     var content: String
     var timestamp: Timestamp
     var type: MessageType
@@ -43,7 +39,7 @@ struct MessageModel: Codable, Hashable {
     var dictionary: [String: Any] {
         return [
             "id": id,
-            "senderID": senderID,
+            "senderUserID": senderUserID,
             "content": content,
             "timestamp": timestamp,
             "type": type.rawValue
@@ -54,6 +50,7 @@ struct MessageModel: Codable, Hashable {
 enum MessageType: String, Codable {
     case text
     case friendRequest
+    case acceptedFriendRequest
     case image
     case video
 }

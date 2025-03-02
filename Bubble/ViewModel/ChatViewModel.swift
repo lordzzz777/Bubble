@@ -13,7 +13,7 @@ import FirebaseAuth
 @Observable @MainActor
 class ChatViewModel: AddNewFriendViewModel {
     // Servicios
-    private var allServices = ChatsService()
+    private var chatsService = ChatsService()
     private var firestoreService = FirestoreService()
    
     // Datos del usuario y chats
@@ -37,16 +37,26 @@ class ChatViewModel: AddNewFriendViewModel {
     
     /// Obtiene la información de un usuario en tiempo real y la almacena en la variable `user`.
     /// - Parameter userID: El ID del usuario que se desea obtener.
-    func fetchUser (userID: String) {
+    func fetchUser(chat: ChatModel) {
         userTask?.cancel()
         userTask = Task { [weak self] in
             guard let self = self else {return}
-            do{
-                for try await user in await allServices.getUser(by: userID){
-                    guard !Task.isCancelled else { return }
-                    self.user = user
+            do {
+                if chat.participants.count < 2 {
+                    for try await user in await chatsService.getUser(by: chat.lastMessageSenderUserID) {
+                        guard !Task.isCancelled else { return }
+                        self.user = user
+                        print("friend user: \(String(describing: user?.nickname))")
+                    }
+                } else {
+                    let friendUID = getFriendID(chat.participants)
+                    for try await user in await chatsService.getUser(by: friendUID) {
+                        guard !Task.isCancelled else { return }
+                        self.user = user
+                        print("friend user: \(String(describing: user?.nickname))")
+                    }
                 }
-            }catch{
+            } catch {
                 self.errorTitle = "Error al traerte el usuario"
                 self.errorDescription = "Ocurrió un error por el cual no se apodido mostrar el ususrio intentelo mas tarde"
                 self.isfetchChatsError = true
@@ -63,7 +73,7 @@ class ChatViewModel: AddNewFriendViewModel {
         chatTask = Task {[weak self] in
             guard let self = self else {return}
             do{
-                for try await chat in allServices.getChats(){
+                for try await chat in chatsService.getChats(){
                     guard !Task.isCancelled else { return }
                     self.chats = chat
                 }
@@ -83,7 +93,7 @@ class ChatViewModel: AddNewFriendViewModel {
        Task {  [weak self] in
            guard let self = self else {return}
             do {
-                try await allServices.deleteChat(chatID: chatID)
+                try await chatsService.deleteChat(chatID: chatID)
                 self.chats.removeAll{$0.id == chatID}
                 
             } catch {
@@ -132,5 +142,10 @@ class ChatViewModel: AddNewFriendViewModel {
         formatter.dateFormat = "HH:mm" // Formato personalizado
         
         return formatter.string(from: timestamp.dateValue())
+    }
+    
+    
+    func getFriendID(participants: [String]) -> String {
+        return participants.filter { $0 != Auth.auth().currentUser?.uid ?? "" }.first ?? ""
     }
 }

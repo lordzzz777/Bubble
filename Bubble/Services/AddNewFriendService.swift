@@ -49,46 +49,23 @@ actor AddNewFriendService {
 
                 let newFriendRequestMessage = MessageModel(
                     id: UUID().uuidString,
-                    senderID: currentUserInfo.id,
-                    content: "\(currentUserInfo.nickname) quiere ser tu amigo/a",
+                    senderUserID: currentUserInfo.id,
+                    content: "",
                     timestamp: Timestamp.init(),
                     type: MessageType.friendRequest
                 )
                 
                 let chat = ChatModel(
                     id: UUID().uuidString,
-                    participants: [currentUserInfo.id, friendUID],
-                    solicitanteID: currentUserInfo.id, // 👈 Solicitante
-                    solicitadoID: friendUID,          // 👈 Solicitado
+                    participants: [friendUID],
                     lastMessage: newFriendRequestMessage.content,
+                    lastMessageType: newFriendRequestMessage.type,
                     lastMessageTimestamp: newFriendRequestMessage.timestamp,
-                    messages: [newFriendRequestMessage],
-                    isAccepted: false
+                    lastMessageSenderUserID: newFriendRequestMessage.senderUserID
                 )
                 
-//                // Crear el mensaje de solicitud de amistad
-//                let newFriendRequestMessage = MessageModel(
-//                    id: UUID().uuidString,
-//                    senderID: currentUserInfo.id,
-//                    content: "\(currentUserInfo.nickname) quiere ser tu amigo",
-//                    timestamp: Timestamp.init(),
-//                    type: MessageType.friendRequest
-//                )
-//                
-//                // 🔥 Modificación importante: Incluir ambos UIDs en participantes
-//                let chat = ChatModel(
-//                    id: UUID().uuidString,
-//                    participants: [currentUserInfo.id, friendUID], // 👉 Ahora ambos usuarios ven el chat
-//                    lastMessage: newFriendRequestMessage.content,
-//                    lastMessageTimestamp: newFriendRequestMessage.timestamp,
-//                    messages: [newFriendRequestMessage],
-//                    isAccepted: false
-//                )
-                
                 try await database.collection("chats").document(chat.id).setData(chat.dictionary)
-                // 🚀 Actualizar las listas de chats de ambos usuarios
-                try await updateUserChats(userID: currentUserInfo.id, chatID: chat.id)
-                try await updateUserChats(userID: friendUID, chatID: chat.id)
+                try await database.collection("chats").document(chat.id).collection("messages").addDocument(data: newFriendRequestMessage.dictionary)
             } catch {
                 print("Error al enviar la solicitud: \(error.localizedDescription)")
                 throw error
@@ -125,11 +102,24 @@ actor AddNewFriendService {
         }
     }
     
-    func acceptFriendRequest(chatID: String) async throws {
+    func acceptFriendRequest(chatID: String, senderUID: String) async throws {
         let chatRef = database.collection("chats").document(chatID)
         
         do {
-            try await chatRef.updateData(["isAccepted": true])
+            let participants = [uid, senderUID]
+            try await chatRef.updateData(["participants": participants])
+            
+            // Agregando mensajes
+            let newAcceptedFriendRequestMessage: MessageModel = .init(senderUserID: uid, content: "", timestamp: .init(), type: .acceptedFriendRequest)
+            try await chatRef.collection("messages").addDocument(data: newAcceptedFriendRequestMessage.dictionary)
+            
+            // Actualizando el chat
+            let updateChatInfo: ChatModel = .init(id: chatID, participants: participants, lastMessage: "", lastMessageType: newAcceptedFriendRequestMessage.type, lastMessageTimestamp: newAcceptedFriendRequestMessage.timestamp, lastMessageSenderUserID: newAcceptedFriendRequestMessage.senderUserID)
+            try await chatRef.updateData(updateChatInfo.dictionary)
+            
+            // Agregando los id de los usuarios a los amigos
+            try await database.collection("users").document(uid).setData(["friends": [senderUID]], merge: true)
+            try await database.collection("users").document(senderUID).setData(["friends": [uid]], merge: true)
             print("Solicitud aceptada")
         } catch {
             print("Error al aceptar la solicitud: \(error.localizedDescription)")
