@@ -40,7 +40,8 @@ struct ListChatRowView: View {
                     
                     VStack(alignment: .leading){
                         Text(user.nickname)
-                            
+                        
+                        // Aquí para manejar los diferentes tipos de mensajes que pueden venir
                         switch chat.lastMessageType {
                         case .text:
                             Text(chat.lastMessage)
