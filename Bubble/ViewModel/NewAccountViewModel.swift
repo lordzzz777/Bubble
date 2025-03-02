@@ -16,7 +16,8 @@ class NewAccountViewModel {
     var uid: String? {
         return Auth.auth().currentUser?.uid
     }
-
+    
+    var user: UserModel?
     var showError: Bool
     var errorTitle: String
     var errorDescription: String
@@ -71,6 +72,33 @@ class NewAccountViewModel {
             errorDescription = "Hubo un error al subir la imagen al servidor. Inténtelo más tarde."
             showError = true
             showImageUploadError = true
+        }
+    }
+    
+    ///Carga los datos del usuaerio
+    func loadUserData() async{
+        do{
+            let data = try await firestoreService.getUserData()
+            guard let getUser = data else{ return }
+            self.user = getUser
+        }catch{
+            errorTitle = "Error"
+            errorDescription = "Usuario no encontrado"
+            showError = true
+        }
+    }
+    
+    ///Actualiza el nickname
+    func updateNicname(newNickname: String) async{
+        
+        do{
+            try await firestoreService.updateNickname(newNickname: newNickname)
+            self.user?.nickname = newNickname
+        }catch{
+            showError = true
+            errorTitle = "Error al verificar nickname"
+            errorDescription = "Hubo un error al comprobar el nickname. Inténtelo más tarde."
+            print("Error al comprobar el nombre de usuario: \(error)")
         }
     }
 }

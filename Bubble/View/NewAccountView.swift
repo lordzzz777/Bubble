@@ -18,6 +18,7 @@ struct NewAccountView: View {
     @State private var nickNameNotExists: Bool = false
     @State private var checkingNickName: Bool = false
     
+    
     @AppStorage("LoginFlowState") private var loginFlowState: UserLoginState = .loggedIn
     
     var body: some View {

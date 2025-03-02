@@ -8,15 +8,18 @@
 import SwiftUI
 
 struct SettingView: View {
+    @State var isShowEditUser: Bool = true
     @State private var isShowAlertWarning = false
     @State private var trashUserDefault = LoginViewModel()
     
-    let general: [SettingModel] = [
-        .init(titleSetting: "Cuenta", selectedView: AnyView(Text("Mi cuenta"))),
+    var general: [SettingModel]{
+        return[
+            .init(titleSetting: "Cuenta", selectedView: AnyView(UserProfileView())),
         .init(titleSetting: "Privacidad", selectedView: AnyView(Text("Mi privacidad"))),
         .init(titleSetting: "Chats", selectedView: AnyView(Text("Mis chats"))),
         .init(titleSetting: "Favoritos", selectedView: AnyView(Text("Mis favoritos")))
-    ]
+     ]
+    }
     
     let informationSupport: [SettingModel] = [
         .init(titleSetting: "Terminos de privacidad", selectedView: AnyView(Text("Terminos y condiciones"))),
@@ -25,6 +28,7 @@ struct SettingView: View {
     ]
     
     var body: some View {
+
         NavigationStack{
             Form{
                 Section("General"){

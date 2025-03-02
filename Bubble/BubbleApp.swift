@@ -12,6 +12,7 @@ import GoogleSignIn
 
 @main
 struct BubbleApp: App {
+    
     @AppStorage("LoginFlowState") private var loginFlowState = UserLoginState.loggedOut
     
     init() {
