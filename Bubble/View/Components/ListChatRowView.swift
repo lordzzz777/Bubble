@@ -12,11 +12,12 @@ struct ListChatRowView: View {
     
     let chat: ChatModel
     
-    @State private var viewModel = ChatViewModel()
+    @State private var chatViewModel = ChatViewModel()
+    @State private var addNewFriendViewModel = AddNewFriendViewModel()
     
     var body: some View {
         VStack {
-            if let user = viewModel.user {
+            if let user = chatViewModel.user {
                 HStack(alignment: .center) {
                     ZStack(alignment: .bottomTrailing) {
                         if user.imgUrl.isEmpty {
@@ -45,15 +46,19 @@ struct ListChatRowView: View {
                         switch chat.lastMessageType {
                         case .text:
                             Text(chat.lastMessage)
+                                .font(.footnote)
                         case .friendRequest:
                             Text("Quiere ser tu amigo/a")
                                 .font(.footnote)
                         case .acceptedFriendRequest:
                             Text("Tú y \(user.nickname) ahora son amigos")
+                                .font(.footnote)
                         case .image:
                             Text("Te ha enviado una imagen")
+                                .font(.footnote)
                         case .video:
                             Text("Te ha enviado un video")
+                                .font(.footnote)
                         }
                     }.contextMenu(menuItems: {
                         Button("Botón onTag") {
@@ -65,14 +70,17 @@ struct ListChatRowView: View {
                     
                     if chat.lastMessageType == .friendRequest {
                         Button {
-                            
+                            Task {
+                                await addNewFriendViewModel.acceptFriendRequest(chatID: chat.id, senderUID: chat.lastMessageSenderUserID)
+                            }
                         } label: {
                             Text("Aceptar")
                                 .foregroundStyle(Color.accentColor)
                         }
+                        .buttonStyle(BorderlessButtonStyle())
                     }
                     
-                    Text(viewModel.formatTimestamp(chat.lastMessageTimestamp))
+                    Text(chatViewModel.formatTimestamp(chat.lastMessageTimestamp))
                         .foregroundStyle(.secondary)
                 }
             } else {
@@ -80,7 +88,7 @@ struct ListChatRowView: View {
             }
         }
         .onAppear {
-            viewModel.fetchUser(userID: chat.lastMessageSenderUserID)
+            chatViewModel.fetchUser(chat: chat)
         }
     }
 }

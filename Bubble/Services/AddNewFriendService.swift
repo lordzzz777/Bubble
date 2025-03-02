@@ -108,7 +108,18 @@ actor AddNewFriendService {
         do {
             let participants = [uid, senderUID]
             try await chatRef.updateData(["participants": participants])
+            
+            // Agregando mensajes
             let newAcceptedFriendRequestMessage: MessageModel = .init(senderUserID: uid, content: "", timestamp: .init(), type: .acceptedFriendRequest)
+            try await chatRef.collection("messages").addDocument(data: newAcceptedFriendRequestMessage.dictionary)
+            
+            // Actualizando el chat
+            let updateChatInfo: ChatModel = .init(id: chatID, participants: participants, lastMessage: "", lastMessageType: newAcceptedFriendRequestMessage.type, lastMessageTimestamp: newAcceptedFriendRequestMessage.timestamp, lastMessageSenderUserID: newAcceptedFriendRequestMessage.senderUserID)
+            try await chatRef.updateData(updateChatInfo.dictionary)
+            
+            // Agregando los id de los usuarios a los amigos
+            try await database.collection("users").document(uid).setData(["friends": [senderUID]], merge: true)
+            try await database.collection("users").document(senderUID).setData(["friends": [uid]], merge: true)
             print("Solicitud aceptada")
         } catch {
             print("Error al aceptar la solicitud: \(error.localizedDescription)")

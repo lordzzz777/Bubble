@@ -62,7 +62,6 @@ struct ChatsView: View {
                             }
                         }
                     }
-                    .listStyle(InsetListStyle())
                 }
             }
             .searchable(text: $chatsViewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
