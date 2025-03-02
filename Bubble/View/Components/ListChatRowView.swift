@@ -41,27 +41,36 @@ struct ListChatRowView: View {
                     VStack(alignment: .leading){
                         Text(user.nickname)
                             
-                        HStack {
+                        switch chat.lastMessageType {
+                        case .text:
                             Text(chat.lastMessage)
+                        case .friendRequest:
+                            Text("Quiere ser tu amigo/a")
                                 .font(.footnote)
-                            
-                            if chat.lastMessageType.rawValue == MessageType.friendRequest.rawValue {
-                                Spacer()
-                                
-                                Button {
-                                    
-                                } label: {
-                                    Text("Aceptar")
-                                        .font(.footnote)
-                                }
-                            }
+                        case .acceptedFriendRequest:
+                            Text("Tú y \(user.nickname) ahora son amigos")
+                        case .image:
+                            Text("Te ha enviado una imagen")
+                        case .video:
+                            Text("Te ha enviado un video")
                         }
                     }.contextMenu(menuItems: {
                         Button("Botón onTag") {
                           // ...
                         }
                     })
+                    
                     Spacer()
+                    
+                    if chat.lastMessageType == .friendRequest {
+                        Button {
+                            
+                        } label: {
+                            Text("Aceptar")
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
+                    
                     Text(viewModel.formatTimestamp(chat.lastMessageTimestamp))
                         .foregroundStyle(.secondary)
                 }

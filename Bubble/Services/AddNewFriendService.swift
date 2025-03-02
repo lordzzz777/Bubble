@@ -50,7 +50,7 @@ actor AddNewFriendService {
                 let newFriendRequestMessage = MessageModel(
                     id: UUID().uuidString,
                     senderUserID: currentUserInfo.id,
-                    content: "\(currentUserInfo.nickname) quiere ser tu amigo/a",
+                    content: "",
                     timestamp: Timestamp.init(),
                     type: MessageType.friendRequest
                 )

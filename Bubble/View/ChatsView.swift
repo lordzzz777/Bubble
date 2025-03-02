@@ -29,7 +29,7 @@ struct ChatsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .padding()
+                .padding(.horizontal)
                 
                 if $chatsViewModel.chats.isEmpty {
                     Text("No tienes chats aún")
@@ -62,6 +62,7 @@ struct ChatsView: View {
                             }
                         }
                     }
+                    .listStyle(InsetListStyle())
                 }
             }
             .searchable(text: $chatsViewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
