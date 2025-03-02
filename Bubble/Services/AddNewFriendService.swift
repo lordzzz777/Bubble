@@ -49,7 +49,7 @@ actor AddNewFriendService {
 
                 let newFriendRequestMessage = MessageModel(
                     id: UUID().uuidString,
-                    senderID: currentUserInfo.id,
+                    senderUserID: currentUserInfo.id,
                     content: "\(currentUserInfo.nickname) quiere ser tu amigo/a",
                     timestamp: Timestamp.init(),
                     type: MessageType.friendRequest
@@ -59,11 +59,13 @@ actor AddNewFriendService {
                     id: UUID().uuidString,
                     participants: [friendUID],
                     lastMessage: newFriendRequestMessage.content,
+                    lastMessageType: newFriendRequestMessage.type,
                     lastMessageTimestamp: newFriendRequestMessage.timestamp,
-                    messages: [newFriendRequestMessage]
+                    lastMessageSenderUserID: newFriendRequestMessage.senderUserID
                 )
                 
                 try await database.collection("chats").document(chat.id).setData(chat.dictionary)
+                try await database.collection("chats").document(chat.id).collection("messages").addDocument(data: newFriendRequestMessage.dictionary)
             } catch {
                 print("Error al enviar la solicitud: \(error.localizedDescription)")
                 throw error
@@ -100,11 +102,13 @@ actor AddNewFriendService {
         }
     }
     
-    func acceptFriendRequest(chatID: String) async throws {
+    func acceptFriendRequest(chatID: String, senderUID: String) async throws {
         let chatRef = database.collection("chats").document(chatID)
         
         do {
-            try await chatRef.updateData(["isAccepted": true])
+            let participants = [uid, senderUID]
+            try await chatRef.updateData(["participants": participants])
+            let newAcceptedFriendRequestMessage: MessageModel = .init(senderUserID: uid, content: "", timestamp: .init(), type: .acceptedFriendRequest)
             print("Solicitud aceptada")
         } catch {
             print("Error al aceptar la solicitud: \(error.localizedDescription)")

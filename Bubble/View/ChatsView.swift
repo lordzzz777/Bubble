@@ -50,11 +50,7 @@ struct ChatsView: View {
                                 
                             }, label: {
                                 VStack(alignment: .leading) {
-                                    ListChatRowView(
-                                        userID: chatsViewModel.getFriendID(chat.participants),
-                                        lastMessage: chat.lastMessage,
-                                        timestamp: chat.lastMessageTimestamp
-                                    )
+                                    ListChatRowView(chat: chat)
                                 }
                             })
                             .swipeActions {

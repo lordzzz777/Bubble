@@ -10,9 +10,7 @@ import FirebaseCore
 
 struct ListChatRowView: View {
     
-    let userID: String
-    let lastMessage: String
-    let timestamp: Timestamp
+    let chat: ChatModel
     
     @State private var viewModel = ChatViewModel()
     
@@ -42,15 +40,29 @@ struct ListChatRowView: View {
                     
                     VStack(alignment: .leading){
                         Text(user.nickname)
-                        Text(lastMessage)
-                            .font(.footnote)
+                            
+                        HStack {
+                            Text(chat.lastMessage)
+                                .font(.footnote)
+                            
+                            if chat.lastMessageType.rawValue == MessageType.friendRequest.rawValue {
+                                Spacer()
+                                
+                                Button {
+                                    
+                                } label: {
+                                    Text("Aceptar")
+                                        .font(.footnote)
+                                }
+                            }
+                        }
                     }.contextMenu(menuItems: {
                         Button("Botón onTag") {
                           // ...
                         }
                     })
                     Spacer()
-                    Text(viewModel.formatTimestamp(timestamp))
+                    Text(viewModel.formatTimestamp(chat.lastMessageTimestamp))
                         .foregroundStyle(.secondary)
                 }
             } else {
@@ -58,7 +70,7 @@ struct ListChatRowView: View {
             }
         }
         .onAppear {
-                viewModel.fetchUser(userID: userID)
+            viewModel.fetchUser(userID: chat.lastMessageSenderUserID)
         }
     }
 }
