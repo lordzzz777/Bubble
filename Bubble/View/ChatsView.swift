@@ -46,6 +46,7 @@ struct ChatsView: View {
                   
                     List {
                         ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
+
                             NavigationLink(destination: {
                                 
                             }, label: {

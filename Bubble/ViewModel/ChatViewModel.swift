@@ -92,6 +92,7 @@ class ChatViewModel: AddNewFriendViewModel {
      func deleteChat(chatID: String){
        Task {  [weak self] in
            guard let self = self else {return}
+             
             do {
                 try await chatsService.deleteChat(chatID: chatID)
                 self.chats.removeAll{$0.id == chatID}
@@ -102,6 +103,7 @@ class ChatViewModel: AddNewFriendViewModel {
                 self.isfetchChatsError = true
             }
         }
+        return friendID
     }
         
     /// Detiene la escucha de actualizaciones en tiempo real de los chats y el usuario.
@@ -143,9 +145,11 @@ class ChatViewModel: AddNewFriendViewModel {
         
         return formatter.string(from: timestamp.dateValue())
     }
+
     
     
     func getFriendID(participants: [String]) -> String {
         return participants.filter { $0 != Auth.auth().currentUser?.uid ?? "" }.first ?? ""
     }
+
 }
