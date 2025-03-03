@@ -25,7 +25,8 @@ struct UserProfileView: View {
             VStack(spacing: 20) {
                 profileImage() // Llamada funcion del PhotosPicker
                 
-                // Nickname
+                /// Muestra el textFild en caso que el usuario quisiera editar trar pulsar el botón de Editar
+                /// situado en la barra de navegación
                 if isEditingNickname {
                     TextField("Nuevo nickname", text: $newNickname)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -37,10 +38,23 @@ struct UserProfileView: View {
                                 checkingNickName = false
                             }
                         }
+                    
+                    /// Verifica si el nickname elejido esta en uso o no ...
+                    if !nickNameNotExists && newNickname != userProfileView.user?.nickname ?? ""  && !checkingNickName {
+                        
+                        
+                        Label {
+                            Text("Este nickname ya está en uso").bold()
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                        }
+                        .foregroundStyle(.red)
+                    }
                     Button("Guardar") {
                         Task {
                             await userProfileView.updateNicname(newNickname: newNickname)
                             isEditingNickname = false
+                            await userProfileView.showTemporaryAlert(title: "Nickname", message: "✅ Se ha actualizado con éxito")
                         }
                     }.disabled(nickNameNotExists ?  false : true)
                         .buttonStyle(.borderedProminent)
@@ -52,29 +66,37 @@ struct UserProfileView: View {
                 }
                 
                 Spacer()
-            }
-            .padding()
-            .task {
-                await userProfileView.loadUserData()
-            }
-            .alert(userProfileView.errorTitle, isPresented: $userProfileView.showError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(userProfileView.errorDescription)
-            }
+            }.padding()
             
-            .toolbar{
-                ToolbarItem(placement: .automatic, content: {
-                    Button("Editar") {
-                        withAnimation(.easeInOut, {
-                            isEditingNickname.toggle()
-                        })
-                        newNickname = userProfileView.user?.nickname ?? ""
-
-                        
-                    }
-                })
-            }
+                .task {
+                    await userProfileView.loadUserData()
+                }
+            
+                ///Alerta que informa al usuario de un error
+                .alert(userProfileView.errorTitle, isPresented: $userProfileView.showError) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(userProfileView.errorDescription)
+                }
+            
+                ///Alerta que informa al usuario que tanto la foto de perfil como el nickname, se han editado con exito
+                .alert(userProfileView.temporaryTitleAlert, isPresented: $userProfileView.isShowTemporaryAlert){
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text(userProfileView.temporaryMessagesAlert)
+                }
+                 
+                /// Zona de barra de navegación
+                .toolbar{
+                    ToolbarItem(placement: .automatic, content: {
+                        Button("Editar") {
+                            withAnimation(.easeInOut, {
+                                isEditingNickname.toggle()
+                            })
+                            newNickname = userProfileView.user?.nickname ?? ""
+                        }
+                    })
+                }
         }
     }
     
@@ -102,11 +124,11 @@ struct UserProfileView: View {
                                 image
                                     .resizable()
                                     .scaledToFill()
-                                    .frame(width: 120, height: 120)
+                                    .frame(width: 170, height: 170)
                                     .clipShape(Circle())
                             case .failure(_):
                                 Image(systemName: "person.circle.fill")
-                                    .font(.system(size: 120))
+                                    .font(.system(size: 170))
                             @unknown default:
                                 EmptyView()
                             }
@@ -117,7 +139,7 @@ struct UserProfileView: View {
                     EmptyView()
                 }
             }
-
+            
         }
         .onChange(of: selectedItem) { _, newItem in
             // Cargar la imagen seleccionada en firestore
@@ -126,7 +148,7 @@ struct UserProfileView: View {
                    let uiImage = UIImage(data: data) {
                     selectedImage = Image(uiImage: uiImage)
                     await userProfileView.saveImage(image: uiImage)
-                    
+                    await userProfileView.showTemporaryAlert(title: "👤 Foto de perfil", message: "✅ Se ha cambiado con éxito")
                     if userProfileView.showImageUploadError {
                         selectedImage = nil
                     }

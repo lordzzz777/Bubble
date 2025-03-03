@@ -16,12 +16,15 @@ class NewAccountViewModel {
     var uid: String? {
         return Auth.auth().currentUser?.uid
     }
-    
+
     var user: UserModel?
     var showError: Bool
     var errorTitle: String
     var errorDescription: String
     var showImageUploadError: Bool
+    var isShowTemporaryAlert: Bool = false
+    var temporaryTitleAlert = ""
+    var temporaryMessagesAlert = ""
     
     init(firebaseService: FirestoreService = FirestoreService(), showError: Bool = false, errorTitle: String = "", errorDescription: String = "", showImageUploadError: Bool = false) {
         self.firestoreService = firebaseService
@@ -100,5 +103,17 @@ class NewAccountViewModel {
             errorDescription = "Hubo un error al comprobar el nickname. Inténtelo más tarde."
             print("Error al comprobar el nombre de usuario: \(error)")
         }
+    }
+    
+    ///Alerta personalizada, despues de un tiempo desaparece
+    func showTemporaryAlert(title: String,  message: String, autoDissmisAfter seconds: Double = 6) async {
+        temporaryMessagesAlert = message
+        temporaryTitleAlert = title
+        
+        isShowTemporaryAlert = true
+            Task{
+                try await Task.sleep(for: .seconds(seconds))
+                isShowTemporaryAlert = false
+            }
     }
 }

@@ -101,7 +101,6 @@ class ChatViewModel: AddNewFriendViewModel {
                 self.isfetchChatsError = true
             }
         }
-        return friendID
     }
         
     /// Detiene la escucha de actualizaciones en tiempo real de los chats y el usuario.
