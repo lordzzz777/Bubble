@@ -11,7 +11,7 @@ import Observation
 import FirebaseAuth
 
 @Observable @MainActor
-class ChatViewModel: AddNewFriendViewModel {
+class ChatsViewModel: AddNewFriendViewModel {
     // Servicios
     private var chatsService = ChatsService()
     private var firestoreService = FirestoreService()

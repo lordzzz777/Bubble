@@ -11,7 +11,7 @@ import FirebaseCore
 import FirebaseAuth
 
 struct ChatsView: View {
-    @Bindable private var chatsViewModel = ChatViewModel()
+    @State private var chatsViewModel = ChatsViewModel()
     @State private var trashUserDefault = LoginViewModel()
     @State private var isMessageDestructive = false
     
@@ -46,13 +46,7 @@ struct ChatsView: View {
                   
                     List {
                         ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
-                            NavigationLink(destination: {
-                                
-                            }, label: {
-                                VStack(alignment: .leading) {
-                                    ListChatRowView(chat: chat)
-                                }
-                            })
+                            ListChatRowView(chat: chat)
                             .swipeActions {
                                 Button("Borrar", systemImage: "trash.fill") {
                                     chatIdSelected = chat.id
