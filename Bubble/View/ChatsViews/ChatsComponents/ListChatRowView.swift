@@ -49,8 +49,15 @@ struct ListChatRowView: View {
                             // Aquí para manejar los diferentes tipos de mensajes que pueden venir
                             switch chat.lastMessageType {
                             case .text:
-                                Text(chat.lastMessage)
-                                    .font(.footnote)
+                                HStack(spacing: 0) {
+                                    if chatsViewModel.checkIfMessageWasSentByCurrentUser(senderUserID: chat.lastMessageSenderUserID) {
+                                        Text("Tú: ")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    
+                                    Text(chat.lastMessage)
+                                }
+                                .font(.footnote)
                             case .friendRequest:
                                 Text("Quiere ser tu amigo/a")
                                     .font(.footnote)

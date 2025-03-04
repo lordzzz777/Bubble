@@ -148,4 +148,8 @@ class ChatsViewModel: AddNewFriendViewModel {
     func getFriendID(participants: [String]) -> String {
         return participants.filter { $0 != Auth.auth().currentUser?.uid ?? "" }.first ?? ""
     }
+    
+    func checkIfMessageWasSentByCurrentUser(senderUserID: String) -> Bool {
+        return senderUserID == Auth.auth().currentUser?.uid
+    }
 }
