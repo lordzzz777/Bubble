@@ -45,8 +45,18 @@ class PrivateChatService {
     @MainActor
     func sendMessage(chatID: String, messageText: String) async throws {
         do {
+            // Enviando mensaje en el chat
             let message = MessageModel(senderUserID: uid, content: messageText, timestamp: .init(), type: MessageType.text)
             try await database.collection("chats").document(chatID).collection("messages").addDocument(data: message.dictionary)
+            
+            // Actualizando información del chat
+            let updateChatInfo: [String: Any] = [
+                "lastMessageTimestamp": message.timestamp,
+                "lastMessageSenderUserID": uid,
+                "lastMessage": message.content,
+                "lastMessageType": message.type.rawValue
+            ]
+            try await database.collection("chats").document(chatID).updateData(updateChatInfo)
         } catch {
             throw PrivateChatServiceError.sendMessageFailed
         }
