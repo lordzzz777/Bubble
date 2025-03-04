@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import FirebaseAuth
 
 @Observable
 class PrivateChatViewModel {
@@ -20,6 +21,7 @@ class PrivateChatViewModel {
                 switch result {
                 case .success(let messages):
                     self?.messages = messages
+                    self?.messages.sort(by: { $0.timestamp.seconds < $1.timestamp.seconds })
                 case .failure(let error):
                     self?.errorTitle = "Error al obtener mensajes"
                     self?.errorMessage = "Hubo un error al intentar obtener los mensajes. Por favor, inténtalo más tarde."
@@ -27,5 +29,10 @@ class PrivateChatViewModel {
                     self?.showError = true
                 }
             }
+    }
+    
+    
+    func checkIfMessageWasSentByCurrentUser(_ message: MessageModel) -> Bool {
+        return message.senderUserID == Auth.auth().currentUser?.uid
     }
 }
