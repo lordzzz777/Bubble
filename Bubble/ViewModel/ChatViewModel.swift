@@ -30,8 +30,6 @@ class ChatViewModel: AddNewFriendViewModel {
     var selectedVisibility = "privado"
     
     var searchQuery = "" // Variables para la búsqueda
-   // var errorTitle = ""  // Manejo de errores
-   // var errorDescription = ""
     var isfetchChatsError = false
     var showAddFriendView: Bool = false
     
@@ -103,7 +101,6 @@ class ChatViewModel: AddNewFriendViewModel {
                 self.isfetchChatsError = true
             }
         }
-        return friendID
     }
         
     /// Detiene la escucha de actualizaciones en tiempo real de los chats y el usuario.

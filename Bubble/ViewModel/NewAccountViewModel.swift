@@ -17,10 +17,14 @@ class NewAccountViewModel {
         return Auth.auth().currentUser?.uid
     }
 
+    var user: UserModel?
     var showError: Bool
     var errorTitle: String
     var errorDescription: String
     var showImageUploadError: Bool
+    var isShowTemporaryAlert: Bool = false
+    var temporaryTitleAlert = ""
+    var temporaryMessagesAlert = ""
     
     init(firebaseService: FirestoreService = FirestoreService(), showError: Bool = false, errorTitle: String = "", errorDescription: String = "", showImageUploadError: Bool = false) {
         self.firestoreService = firebaseService
@@ -72,5 +76,44 @@ class NewAccountViewModel {
             showError = true
             showImageUploadError = true
         }
+    }
+    
+    ///Carga los datos del usuaerio
+    func loadUserData() async{
+        do{
+            let data = try await firestoreService.getUserData()
+            guard let getUser = data else{ return }
+            self.user = getUser
+        }catch{
+            errorTitle = "Error"
+            errorDescription = "Usuario no encontrado"
+            showError = true
+        }
+    }
+    
+    ///Actualiza el nickname
+    func updateNicname(newNickname: String) async{
+        
+        do{
+            try await firestoreService.updateNickname(newNickname: newNickname)
+            self.user?.nickname = newNickname
+        }catch{
+            showError = true
+            errorTitle = "Error al verificar nickname"
+            errorDescription = "Hubo un error al comprobar el nickname. Inténtelo más tarde."
+            print("Error al comprobar el nombre de usuario: \(error)")
+        }
+    }
+    
+    ///Alerta personalizada, despues de un tiempo desaparece
+    func showTemporaryAlert(title: String,  message: String, autoDissmisAfter seconds: Double = 6) async {
+        temporaryMessagesAlert = message
+        temporaryTitleAlert = title
+        
+        isShowTemporaryAlert = true
+            Task{
+                try await Task.sleep(for: .seconds(seconds))
+                isShowTemporaryAlert = false
+            }
     }
 }

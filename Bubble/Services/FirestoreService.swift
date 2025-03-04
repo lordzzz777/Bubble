@@ -47,7 +47,6 @@ actor FirestoreService {
         }
     }
     
-    
     func checkIfNicknameNotExists(nickname: String) async throws -> Bool {
         do {
             let querySnapshot = try await database.collection("users").whereField("nickname", isEqualTo: nickname).getDocuments()
@@ -129,6 +128,62 @@ actor FirestoreService {
             throw FirestoreError.updateImageURLInDatabaseError
         }
     }
+    
+    /// Obtiene los datos del usuario autenticado
+    func getUserData() async throws -> UserModel? {
+        guard let uid = self.uid else {
+            throw FirestoreError.checkUserByIDError
+        }
+        
+        do {
+            let document = try await database.collection("users").document(uid).getDocument()
+            
+            if !document.exists {
+                print("El usuario con UID \(uid) no existe en la base de datos.")
+                return nil
+            }
+            
+            guard let data = document.data() else {
+                print("El documento existe pero no tiene datos.")
+                return nil
+            }
+            
+            return UserModel(
+                id: uid,
+                nickname: data["nickname"] as? String ?? "",
+                imgUrl: data["imgUrl"] as? String ?? "",
+                lastConnectionTimeStamp: data["lastConnectionTimeStamp"] as? Timestamp ?? Timestamp(),
+                isOnline: data["isOnline"] as? Bool ?? false,
+                chats: data["chats"] as? [String] ?? [],
+                friends: data["friends"] as? [String] ?? []
+            )
+            
+        } catch {
+            print("Error al obtener los datos del usuario: \(error.localizedDescription)")
+            throw FirestoreError.checkUserByIDError
+        }
+    }
+    
+    /// Actualizar el nicname del usuario si no esta en uso
+    func updateNickname(newNickname: String ) async throws {
+        guard let uid = self.uid else {
+            print("Error: no hay usuaria autenticado")
+            return
+        }
+        
+        do{
+            let isAvalible = try await checkIfNicknameNotExists(nickname: newNickname)
+            guard isAvalible else {
+                print("El nickname ya esta en uso")
+                return
+            }
+            try await database.collection("users").document(uid).updateData(["nickname": newNickname])
+            print("Nickname actualizado correctamente a \(newNickname)")
+        }catch{
+            throw FirestoreError.checkNicknameError
+        }
+    }
+    
 }
 
 
