@@ -31,6 +31,10 @@ struct PrivateChatView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
+                            
+                            if message.type == .text {
+                                MessageBubbleView(message: message)
+                            }
                         }
                     }
                 }
