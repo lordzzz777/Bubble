@@ -8,16 +8,16 @@
 import Foundation
 import FirebaseAuth
 
-@Observable
+@Observable @MainActor
 class PrivateChatViewModel {
-    private let privateChatServide: PrivateChatService = PrivateChatService()
+    private let privateChatService: PrivateChatService = PrivateChatService()
     var messages: [MessageModel] = []
     var showError: Bool = false
     var errorTitle: String = ""
     var errorMessage: String = ""
     
     func fetchMessages(chatID: String) {
-         privateChatServide.fetchMessagesFromChat(chatID: chatID) { [weak self] result in
+         privateChatService.fetchMessagesFromChat(chatID: chatID) { [weak self] result in
                 switch result {
                 case .success(let messages):
                     self?.messages = messages
@@ -31,6 +31,16 @@ class PrivateChatViewModel {
             }
     }
     
+    func sendMessage(chatID: String, messageText: String) async {
+        do {
+            try await privateChatService.sendMessage(chatID: chatID, messageText: messageText)
+        } catch {
+            errorTitle = "No se pudo enviar mensaje"
+            errorMessage = "Hubo un error al intentar enviar el mensaje. Por favor, inténtalo más tarde."
+            showError = true
+            print(error.localizedDescription)
+        }
+    }
     
     func checkIfMessageWasSentByCurrentUser(_ message: MessageModel) -> Bool {
         return message.senderUserID == Auth.auth().currentUser?.uid

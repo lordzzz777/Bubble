@@ -12,6 +12,7 @@ import FirebaseAuth
 enum PrivateChatServiceError: Error {
     case fetchingMessagesFailed
     case fetchingDocumentsFailed
+    case sendMessageFailed
 }
 
 class PrivateChatService {
@@ -38,6 +39,16 @@ class PrivateChatService {
             print("messages in service: \(messages)")
             
             completionHandler(.success(messages))
+        }
+    }
+    
+    @MainActor
+    func sendMessage(chatID: String, messageText: String) async throws {
+        do {
+            let message = MessageModel(senderUserID: uid, content: messageText, timestamp: .init(), type: MessageType.text)
+            try await database.collection("chats").document(chatID).collection("messages").addDocument(data: message.dictionary)
+        } catch {
+            throw PrivateChatServiceError.sendMessageFailed
         }
     }
 }

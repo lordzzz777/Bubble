@@ -45,6 +45,14 @@ struct PrivateChatView: View {
                 ZStack(alignment: .bottomTrailing) {
                     TextField("Escribe tu mensaje", text: $messageText)
                         .padding(.trailing, 20)
+                        .onSubmit {
+                            Task {
+                                if !messageText.isEmpty {
+                                    await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageText)
+                                    messageText = ""
+                                }
+                            }
+                        }
                     
                     if !messageText.isEmpty {
                         Button {
