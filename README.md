@@ -62,37 +62,43 @@ Este proyecto está licenciado bajo la [MIT License](LICENSE).
 ---
 
 ## Capturas de Pantalla
-- . **Primer sprint:** Crear login o registro, Crear nueva cuenta y Vistas de Listado de Chats
 
-<img width="205"  alt="login" src="https://github.com/user-attachments/assets/039ec655-a08c-49b9-bd82-44dc5cb38870" />
-<img width="205"  alt="Registrar usuario" src="https://github.com/user-attachments/assets/67a63285-05ce-4904-8e87-60fa455284a8" />
-<img width="200"  alt="ChatsView" src="https://github.com/user-attachments/assets/239da25f-7cf1-4c8a-9a92-cc9e36a7cd3a" />
-<img width="205" alt="listachat" src="https://github.com/user-attachments/assets/54b10476-ff57-4996-b418-029e3fa23730" />
-<img width="205" alt="Captura de pantalla 2025-02-13 a las 15 15 15" src="https://github.com/user-attachments/assets/df4988e2-442e-4fe4-9c03-9a56b3ec693e" />
+<img width="150"  alt="login" src="https://github.com/user-attachments/assets/039ec655-a08c-49b9-bd82-44dc5cb38870" />
+<img width="150"  alt="Registrar usuario" src="https://github.com/user-attachments/assets/67a63285-05ce-4904-8e87-60fa455284a8" />
+<img width="150"  alt="ChatsView" src="https://github.com/user-attachments/assets/239da25f-7cf1-4c8a-9a92-cc9e36a7cd3a" />
+<img width="150" alt="listachat" src="https://github.com/user-attachments/assets/54b10476-ff57-4996-b418-029e3fa23730" />
+<img width="156" alt="Captura de pantalla 2025-03-05 a las 3 14 51" src="https://github.com/user-attachments/assets/2f0cea5e-36d1-4928-a35e-5bd31c70316a" />
+<img width="154" alt="Captura de pantalla 2025-03-05 a las 3 21 22" src="https://github.com/user-attachments/assets/4b393b6d-021e-4479-9ae3-8fe519674d3f" />
+<img width="154" alt="Captura de pantalla 2025-03-05 a las 3 31 16" src="https://github.com/user-attachments/assets/6a24d0c6-8971-45ca-a03b-a82062f382d3" />
 
 ---
 
 ## Próximos Pasos
 
-- **Primer sprint, estatus: finalizad:**
+- **Primer sprint, estatus: finalizado:**
     - Crear login o registro,
     - Crear nueva cuenta
       
-- **Segundo sprint, estatus: finalizad:**
+- **Segundo sprint, estatus: finalizado:**
     - Vista chats: Vistas de Listado de Chats,
     - Vista chats: Eliminar chats con swipe hacia la izquierda,
     - Vista de chats: Mostrar detalles en tarjetas de chat (Chat Card Details)
   
-- **Tercero sprint, estatus: finalizad:**
+- **Tercero sprint, estatus: finalizado:**
     - Flujo de navegación según estado de registro,
     - Solucionar typo del botón de Google,
     - Eliminar chats con swipe hacia la izquierda,
     - Solicitudes de amistad, Flujo de navegación según estado de registro
       
-- **Cuarto sprint, estatus: En Proceso ... :**
+- **Cuarto sprint, estatus: finalizado :**
     - Solucionar bug que te lleva a la pantalla de crear nueva cuenta con una cuenta ya creada,
     - Solucionar bug que crashea la app al recibir una solicitud de amistad,
     - Refactorizar alerts de la vista de chats y su respectivo viewmodel,
     - Refactorizar alerts de la vista de chats y su respectivo viewmodel,
     - Actualización Readme
-      
+
+- **Quinto sprint, estatus: En Proceso ... :**
+    - Solucionar bug aceptar solicitudes de amistad
+    - Edición de perfil
+    - Funcionalidad para enviar y recibir mensajes en la vista de un chat
+    - Actualización Readme
