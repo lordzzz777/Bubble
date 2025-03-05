@@ -11,7 +11,7 @@ import Observation
 import FirebaseAuth
 
 @Observable @MainActor
-class ChatViewModel: AddNewFriendViewModel {
+class ChatsViewModel: AddNewFriendViewModel {
     // Servicios
     private var chatsService = ChatsService()
     private var firestoreService = FirestoreService()
@@ -30,6 +30,8 @@ class ChatViewModel: AddNewFriendViewModel {
     var selectedVisibility = "privado"
     
     var searchQuery = "" // Variables para la búsqueda
+   // var errorTitle = ""  // Manejo de errores
+   // var errorDescription = ""
     var isfetchChatsError = false
     var showAddFriendView: Bool = false
     
@@ -90,7 +92,6 @@ class ChatViewModel: AddNewFriendViewModel {
      func deleteChat(chatID: String){
        Task {  [weak self] in
            guard let self = self else {return}
-             
             do {
                 try await chatsService.deleteChat(chatID: chatID)
                 self.chats.removeAll{$0.id == chatID}
@@ -142,11 +143,13 @@ class ChatViewModel: AddNewFriendViewModel {
         
         return formatter.string(from: timestamp.dateValue())
     }
-
     
     
     func getFriendID(participants: [String]) -> String {
         return participants.filter { $0 != Auth.auth().currentUser?.uid ?? "" }.first ?? ""
     }
-
+    
+    func checkIfMessageWasSentByCurrentUser(senderUserID: String) -> Bool {
+        return senderUserID == Auth.auth().currentUser?.uid
+    }
 }

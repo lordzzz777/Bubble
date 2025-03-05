@@ -49,7 +49,6 @@ actor AddNewFriendService {
 
                 let newFriendRequestMessage = MessageModel(
                     id: UUID().uuidString,
-
                     senderUserID: currentUserInfo.id,
                     content: "",
                     timestamp: Timestamp.init(),
@@ -67,7 +66,6 @@ actor AddNewFriendService {
                 
                 try await database.collection("chats").document(chat.id).setData(chat.dictionary)
                 try await database.collection("chats").document(chat.id).collection("messages").addDocument(data: newFriendRequestMessage.dictionary)
-
             } catch {
                 print("Error al enviar la solicitud: \(error.localizedDescription)")
                 throw error
@@ -104,7 +102,6 @@ actor AddNewFriendService {
         }
     }
     
-
     func acceptFriendRequest(chatID: String, senderUID: String) async throws {
         let chatRef = database.collection("chats").document(chatID)
         
@@ -123,7 +120,6 @@ actor AddNewFriendService {
             // Agregando los id de los usuarios a los amigos
             try await database.collection("users").document(uid).setData(["friends": [senderUID]], merge: true)
             try await database.collection("users").document(senderUID).setData(["friends": [uid]], merge: true)
-
             print("Solicitud aceptada")
         } catch {
             print("Error al aceptar la solicitud: \(error.localizedDescription)")
