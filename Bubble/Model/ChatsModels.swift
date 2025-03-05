@@ -12,8 +12,6 @@ import FirebaseCore
 struct ChatModel: Codable, Hashable {
     var id: String = ""
     var participants: [String] = []
-    var solicitanteID: String = ""   // UID del solicitante
-    var solicitadoID: String = ""    // UID del solicitado
     var lastMessage: String
     var lastMessageType: MessageType
     var lastMessageTimestamp: Timestamp
@@ -23,14 +21,10 @@ struct ChatModel: Codable, Hashable {
         return [
             "id": id,
             "participants": participants,
-            "solicitanteID": solicitanteID,
-            "solicitadoID": solicitadoID,
             "lastMessage": lastMessage,
             "lastMessageType": lastMessageType.rawValue,
             "lastMessageTimestamp": lastMessageTimestamp,
-
             "lastMessageSenderUserID": lastMessageSenderUserID
-
         ]
     }
 }

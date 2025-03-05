@@ -11,9 +11,8 @@ import FirebaseCore
 import FirebaseAuth
 
 struct ChatsView: View {
-    @Bindable private var chatsViewModel = ChatViewModel()
+    @State private var chatsViewModel = ChatsViewModel()
     @State private var trashUserDefault = LoginViewModel()
-   // @Bindable var viewModel = UserViewModel()
     @State private var isMessageDestructive = false
     
     // Esta es la variable que almacenará el valor seleccionado del Picker
@@ -44,17 +43,10 @@ struct ChatsView: View {
                     
                 }else{
                     Text(trashUserDefault.errorMessage)
-                    
+                  
                     List {
                         ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
-
-                            NavigationLink(destination: {
-                                
-                            }, label: {
-                                VStack(alignment: .leading) {
-                                    ListChatRowView(chat: chat)
-                                }
-                            })
+                            ListChatRowView(chat: chat)
                             .swipeActions {
                                 Button("Borrar", systemImage: "trash.fill") {
                                     chatIdSelected = chat.id
@@ -66,17 +58,17 @@ struct ChatsView: View {
                     }
                 }
             }
-            .navigationTitle("Chats")
             .searchable(text: $chatsViewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
                 ForEach(chatsViewModel.visibilityOptions, id: \.self) { option in
                     Text(option).searchCompletion(option)
                 }
             }
             
+            .navigationTitle("Chats")
             .task {
                 await chatsViewModel.fetchCats()
             }
-            
+
             // Alerta de Error
             .alert(isPresented: $chatsViewModel.isfetchChatsError) {
                 Alert(title: Text(chatsViewModel.errorTitle), message: Text(chatsViewModel.errorDescription), dismissButton: .default(Text("OK"))
@@ -115,7 +107,7 @@ struct ChatsView: View {
             }
         }
     }
-    
+
 }
 
 #Preview {
