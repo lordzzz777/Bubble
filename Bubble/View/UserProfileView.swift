@@ -12,6 +12,11 @@ import FirebaseCore
 struct UserProfileView: View {
     @Bindable var userProfileView: NewAccountViewModel = .init()
     
+    @State private var trashUserDefault = LoginViewModel()
+
+    
+    @AppStorage("LoginFlowState") private var loginFlowState: UserLoginState = .loggedIn
+    
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImage: Image?
     @State private var newNickname: String = ""
@@ -97,6 +102,11 @@ struct UserProfileView: View {
                     Button("Cancelar", role: .cancel) { }
                     Button("Eliminar", role: .destructive) {
                         // Logica para eliminar cuenta
+                        Task{
+                            await userProfileView.deleteUserAccount()
+                            trashUserDefault.logoutUser()
+                            loginFlowState = .loggedOut
+                        }
                     }
                     
                 } message: {
