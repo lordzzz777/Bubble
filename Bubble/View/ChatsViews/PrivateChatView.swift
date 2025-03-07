@@ -76,11 +76,24 @@ struct PrivateChatView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
+                    Menu {
+                        Button {
+                            
+                        } label: {
+                            Label("Bloquear a \(user.nickname)", systemImage: "hand.raised")
+                        }
                         
+                        Button {
+                            
+                        } label: {
+                            Label("Personalizar", systemImage: "paintpalette")
+                        }
+
+
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
+
                     
                 }
             }
