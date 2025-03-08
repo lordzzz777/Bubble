@@ -42,8 +42,14 @@ struct PrivateChatView: View {
 
                             if message.type == .text {
                                 MessageBubbleView(message: message)
+
                             }
                         }
+                        .padding(.bottom, 20)
+                    }
+                    .onChange(of: privateChatViewModel.lastMessage) { _, lastMessage in
+                        withAnimation { }
+                        proxy.scrollTo(lastMessage, anchor: .bottom)
                     }
                 }
 
@@ -117,5 +123,10 @@ struct PrivateChatView: View {
                 }
             }
         }
+    }
+    
+    // Vista auxiliar para dibujar una línea
+    private var line: some View {
+           VStack { Divider() }
     }
 }
