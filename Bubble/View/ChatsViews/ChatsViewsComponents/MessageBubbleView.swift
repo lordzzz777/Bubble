@@ -16,8 +16,14 @@ struct MessageBubbleView: View {
     
     var body: some View {
         VStack {
-            VStack {
+            HStack {
                 Text(message.content)
+                
+                Text(privateChatViewModel.formatTime(from: message.timestamp))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .frame(maxHeight: .infinity, alignment: .bottomTrailing)
+                    .offset(x: 6, y: 10)
             }
             .padding()
             .background(

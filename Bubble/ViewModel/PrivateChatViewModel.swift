@@ -7,6 +7,7 @@
 
 import Foundation
 import FirebaseAuth
+import FirebaseCore
 
 @Observable @MainActor
 class PrivateChatViewModel {
@@ -70,5 +71,12 @@ class PrivateChatViewModel {
             formatter.dateFormat = "dd-MM-yyyy"
             return formatter.string(from: date)
         }
+    }
+    
+    func formatTime(from timestamp: Timestamp) -> String {
+        let date = timestamp.dateValue()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
     }
 }
