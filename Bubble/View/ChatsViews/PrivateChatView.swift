@@ -42,6 +42,7 @@ struct PrivateChatView: View {
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
                                     .italic()
+
                                 }
                                 
                                 if message.type == .acceptedFriendRequest {
@@ -55,6 +56,11 @@ struct PrivateChatView: View {
                                 }
                             }
                         }
+                        .padding(.bottom, 20)
+                    }
+                    .onChange(of: privateChatViewModel.lastMessage) { _, lastMessage in
+                        withAnimation { }
+                        proxy.scrollTo(lastMessage, anchor: .bottom)
                     }
                 }
                 

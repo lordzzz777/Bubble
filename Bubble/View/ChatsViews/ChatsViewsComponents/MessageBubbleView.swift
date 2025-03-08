@@ -34,7 +34,7 @@ struct MessageBubbleView: View {
             )
         }
         .padding(.horizontal, 8)
-        .frame(maxWidth: .infinity, alignment: privateChatViewModel.checkIfMessageWasSentByCurrentUser(message) ? .leading : .trailing)
+        .frame(maxWidth: .infinity, alignment: privateChatViewModel.checkIfMessageWasSentByCurrentUser(message) ? .trailing : .leading)
     }
 }
 
