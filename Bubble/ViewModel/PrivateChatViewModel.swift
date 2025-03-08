@@ -16,7 +16,7 @@ class PrivateChatViewModel {
     var showError: Bool = false
     var errorTitle: String = ""
     var errorMessage: String = ""
-    
+    var lastMessage: MessageModel = .init(senderUserID: "", content: "", timestamp: .init(), type: MessageType.text)
 
     var groupedMessages: [(key: Date, value: [MessageModel])] {
         let calendar = Calendar.current

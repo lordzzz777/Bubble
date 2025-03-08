@@ -18,41 +18,49 @@ struct PrivateChatView: View {
     var body: some View {
         if let user = chatsViewModel.user {
             VStack {
-                ScrollView {
-                    LazyVStack {
-                        // Cada grupo de mensajes (por día)
-                        ForEach(privateChatViewModel.groupedMessages, id: \.key) { group in
-                            // Separador por día
-                            HStack(spacing: 8) {
-                                line
-                                Text(privateChatViewModel.dateHeader(for: group.key))
-                                line
-                            }
-                            .foregroundStyle(Color.secondary)
-                            .font(.caption2)
-                            .padding(.top, 20)
-                            .padding(.horizontal, 10)
-                            
-                            // Mensajes correspondientes a la fecha
-                            ForEach(group.value, id: \.self) { message in
-                                if message.type == .friendRequest {
-                                    Text(privateChatViewModel.checkIfMessageWasSentByCurrentUser(message)
-                                         ? "Le enviaste una solicitud a \(user.nickname)"
-                                         : "\(user.nickname) te envió una solicitud de amistad")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                                    .italic()
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack {
+                            // Cada grupo de mensajes (por día)
+                            ForEach(privateChatViewModel.groupedMessages, id: \.key) { group in
+                                // Separador por día
+                                HStack(spacing: 8) {
+                                    line
+                                    Text(privateChatViewModel.dateHeader(for: group.key))
+                                    line
                                 }
+                                .foregroundStyle(Color.secondary)
+                                .font(.caption2)
+                                .padding(.top, 20)
+                                .padding(.horizontal, 10)
                                 
-                                if message.type == .acceptedFriendRequest {
-                                    Text("Tú y \(user.nickname) ahora son amigos")
-                                        .font(.caption)
+                                // Mensajes correspondientes a la fecha
+                                ForEach(group.value, id: \.self) { message in
+                                    if message.type == .friendRequest {
+                                        Text(privateChatViewModel.checkIfMessageWasSentByCurrentUser(message)
+                                             ? "Le enviaste una solicitud a \(user.nickname)"
+                                             : "\(user.nickname) te envió una solicitud de amistad")
+                                        .font(.footnote)
                                         .foregroundStyle(.secondary)
+                                        .italic()
+                                    }
+                                    
+                                    if message.type == .acceptedFriendRequest {
+                                        Text("Tú y \(user.nickname) ahora son amigos")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    
+                                    if message.type == .text {
+                                        MessageBubbleView(message: message)
+                                    }
                                 }
-                                
-                                if message.type == .text {
-                                    MessageBubbleView(message: message)
-                                }
+                            }
+                        }
+                        .padding(.bottom, 20)
+                        .onChange(of: privateChatViewModel.lastMessage) { _, lastMessage in
+                            withAnimation {
+                                proxy.scrollTo(lastMessage, anchor: .bottom)
                             }
                         }
                     }
