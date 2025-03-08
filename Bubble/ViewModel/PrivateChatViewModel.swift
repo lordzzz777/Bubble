@@ -17,6 +17,7 @@ class PrivateChatViewModel {
     var errorTitle: String = ""
     var errorMessage: String = ""
     
+
     var groupedMessages: [(key: Date, value: [MessageModel])] {
         let calendar = Calendar.current
         let sortedMessages = messages.sorted { $0.timestamp.dateValue() < $1.timestamp.dateValue() }
@@ -33,6 +34,9 @@ class PrivateChatViewModel {
                 case .success(let messages):
                     self?.messages = messages
                     self?.messages.sort(by: { $0.timestamp.seconds < $1.timestamp.seconds })
+                    if let lastMessage = self?.messages.last {
+                        self?.lastMessage = lastMessage
+                    }
                 case .failure(let error):
                     self?.errorTitle = "Error al obtener mensajes"
                     self?.errorMessage = "Hubo un error al intentar obtener los mensajes. Por favor, inténtalo más tarde."
