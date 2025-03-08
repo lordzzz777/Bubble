@@ -76,6 +76,7 @@ class ChatsViewModel: AddNewFriendViewModel {
                 for try await chat in chatsService.getChats(){
                     guard !Task.isCancelled else { return }
                     self.chats = chat
+                    self.chats = self.chats.sorted(by: { $0.lastMessageTimestamp.seconds > $1.lastMessageTimestamp.seconds })
                 }
                 
             }catch{
