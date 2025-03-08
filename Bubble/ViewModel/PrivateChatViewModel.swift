@@ -7,6 +7,7 @@
 
 import Foundation
 import FirebaseAuth
+import FirebaseCore
 
 @Observable @MainActor
 class PrivateChatViewModel {
@@ -16,12 +17,17 @@ class PrivateChatViewModel {
     var errorTitle: String = ""
     var errorMessage: String = ""
     
+    var lastMessage: MessageModel = MessageModel(id: "", senderUserID: "", content: "", timestamp: .init(), type: MessageType.text)
+    
     func fetchMessages(chatID: String) {
          privateChatService.fetchMessagesFromChat(chatID: chatID) { [weak self] result in
                 switch result {
                 case .success(let messages):
                     self?.messages = messages
                     self?.messages.sort(by: { $0.timestamp.seconds < $1.timestamp.seconds })
+                    if let lastMessage = self?.messages.last {
+                        self?.lastMessage = lastMessage
+                    }
                 case .failure(let error):
                     self?.errorTitle = "Error al obtener mensajes"
                     self?.errorMessage = "Hubo un error al intentar obtener los mensajes. Por favor, inténtalo más tarde."

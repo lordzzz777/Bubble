@@ -18,25 +18,32 @@ struct PrivateChatView: View {
     var body: some View {
         if let user = chatsViewModel.user {
             VStack {
-                ScrollView {
-                    LazyVStack {
-                        ForEach(privateChatViewModel.messages, id: \.self) { message in
-                            if message.type == .friendRequest {
-                                Text(privateChatViewModel.checkIfMessageWasSentByCurrentUser(message) ? "Le enviaste una solicitud a \(user.nickname)" : "\(user.nickname) te envió una solicitud de amistad")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            
-                            if message.type == .acceptedFriendRequest {
-                                Text("Tú y \(user.nickname) ahora son amigos")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            
-                            if message.type == .text {
-                                MessageBubbleView(message: message)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack {
+                            ForEach(privateChatViewModel.messages, id: \.self) { message in
+                                if message.type == .friendRequest {
+                                    Text(privateChatViewModel.checkIfMessageWasSentByCurrentUser(message) ? "Le enviaste una solicitud a \(user.nickname)" : "\(user.nickname) te envió una solicitud de amistad")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                
+                                if message.type == .acceptedFriendRequest {
+                                    Text("Tú y \(user.nickname) ahora son amigos")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                
+                                if message.type == .text {
+                                    MessageBubbleView(message: message)
+                                }
                             }
                         }
+                        .padding(.bottom, 20)
+                    }
+                    .onChange(of: privateChatViewModel.lastMessage) { _, lastMessage in
+                        withAnimation { }
+                        proxy.scrollTo(lastMessage, anchor: .bottom)
                     }
                 }
                 
