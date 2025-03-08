@@ -18,14 +18,31 @@ struct PrivateChatView: View {
     var body: some View {
         if let user = chatsViewModel.user {
             VStack {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack {
-                            ForEach(privateChatViewModel.messages, id: \.self) { message in
+                ScrollView {
+                    LazyVStack {
+                        // Cada grupo de mensajes (por día)
+                        ForEach(privateChatViewModel.groupedMessages, id: \.key) { group in
+                            // Separador por día
+                            HStack(spacing: 8) {
+                                line
+                                Text(privateChatViewModel.dateHeader(for: group.key))
+                                line
+                            }
+                            .foregroundStyle(Color.secondary)
+                            .font(.caption2)
+                            .padding(.top, 20)
+                            .padding(.horizontal, 10)
+                            
+                            // Mensajes correspondientes a la fecha
+                            ForEach(group.value, id: \.self) { message in
                                 if message.type == .friendRequest {
-                                    Text(privateChatViewModel.checkIfMessageWasSentByCurrentUser(message) ? "Le enviaste una solicitud a \(user.nickname)" : "\(user.nickname) te envió una solicitud de amistad")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                    Text(privateChatViewModel.checkIfMessageWasSentByCurrentUser(message)
+                                         ? "Le enviaste una solicitud a \(user.nickname)"
+                                         : "\(user.nickname) te envió una solicitud de amistad")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .italic()
+
                                 }
                                 
                                 if message.type == .acceptedFriendRequest {
@@ -102,5 +119,10 @@ struct PrivateChatView: View {
                 }
             }
         }
+    }
+    
+    // Vista auxiliar para dibujar una línea
+    private var line: some View {
+           VStack { Divider() }
     }
 }

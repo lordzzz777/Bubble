@@ -17,7 +17,17 @@ class PrivateChatViewModel {
     var errorTitle: String = ""
     var errorMessage: String = ""
     
-    var lastMessage: MessageModel = MessageModel(id: "", senderUserID: "", content: "", timestamp: .init(), type: MessageType.text)
+
+    var groupedMessages: [(key: Date, value: [MessageModel])] {
+        let calendar = Calendar.current
+        let sortedMessages = messages.sorted { $0.timestamp.dateValue() < $1.timestamp.dateValue() }
+        let groups = Dictionary(grouping: sortedMessages) { message in
+            calendar.startOfDay(for: message.timestamp.dateValue())
+        }
+
+        return groups.sorted { $0.key < $1.key }
+    }
+
     
     func fetchMessages(chatID: String) {
          privateChatService.fetchMessagesFromChat(chatID: chatID) { [weak self] result in
@@ -50,5 +60,28 @@ class PrivateChatViewModel {
     
     func checkIfMessageWasSentByCurrentUser(_ message: MessageModel) -> Bool {
         return message.senderUserID == Auth.auth().currentUser?.uid
+    }
+    
+    /// Función que formatea la fecha de cabecera para cada grupo.
+    /// - Parameter date: La fecha correspondiente al grupo de mensajes.
+    /// - Returns: Un String formateado: "Hoy", "Ayer" o "dd-MM-yyyy".
+    func dateHeader(for date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) {
+            return "Hoy"
+        } else if calendar.isDateInYesterday(date) {
+            return "Ayer"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "dd-MM-yyyy"
+            return formatter.string(from: date)
+        }
+    }
+    
+    func formatTime(from timestamp: Timestamp) -> String {
+        let date = timestamp.dateValue()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
     }
 }

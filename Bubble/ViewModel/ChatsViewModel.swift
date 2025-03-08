@@ -134,17 +134,6 @@ class ChatsViewModel: AddNewFriendViewModel {
 
         return "El amigo no ha sido encontrado ..."
     }
-
-    /// Convierte un `Timestamp` de Firestore en una cadena de texto con formato de hora.
-    /// - Parameter timestamp: El `Timestamp` que se desea formatear.
-    /// - Returns: Una cadena de texto con la hora en formato `HH:mm`.
-    func formatTimestamp(_ timestamp: Timestamp) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm" // Formato personalizado
-        
-        return formatter.string(from: timestamp.dateValue())
-    }
-    
     
     func getFriendID(participants: [String]) -> String {
         return participants.filter { $0 != Auth.auth().currentUser?.uid ?? "" }.first ?? ""
@@ -152,5 +141,26 @@ class ChatsViewModel: AddNewFriendViewModel {
     
     func checkIfMessageWasSentByCurrentUser(senderUserID: String) -> Bool {
         return senderUserID == Auth.auth().currentUser?.uid
+    }
+    
+    func formatMessageTimestamp(_ timestamp: Timestamp) -> String {
+        let messageDate = timestamp.dateValue()
+        let calendar = Calendar.current
+
+        // Formateador para la hora: "HH:mm"
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+        let timeString = timeFormatter.string(from: messageDate)
+        
+        if calendar.isDateInToday(messageDate) {
+            return "\(timeString)"
+        } else if calendar.isDateInYesterday(messageDate) {
+            return "Ayer \n\(timeString)"
+        } else {
+            // Formateador para fecha completa: "dd-MM-yyyy HH:mm"
+            let fullFormatter = DateFormatter()
+            fullFormatter.dateFormat = "dd-MM-yy \nHH:mm"
+            return fullFormatter.string(from: messageDate)
+        }
     }
 }
