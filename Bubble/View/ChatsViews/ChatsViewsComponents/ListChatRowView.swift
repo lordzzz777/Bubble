@@ -91,8 +91,10 @@ struct ListChatRowView: View {
                             .buttonStyle(BorderlessButtonStyle())
                         }
                         
-                        Text(chatsViewModel.formatTimestamp(chat.lastMessageTimestamp))
+                        Text(chatsViewModel.formatMessageTimestamp(chat.lastMessageTimestamp))
                             .foregroundStyle(.secondary)
+                            .font(.caption2)
+                            .multilineTextAlignment(.trailing)
                     }
                 }
             } else {
