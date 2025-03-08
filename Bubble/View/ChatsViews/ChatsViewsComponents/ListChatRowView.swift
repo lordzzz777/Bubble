@@ -16,7 +16,7 @@ struct ListChatRowView: View {
     @State private var addNewFriendViewModel = AddNewFriendViewModel()
     
     var body: some View {
-        NavigationStack {
+        VStack {
             if let user = chatsViewModel.user {
                 NavigationLink {
                     PrivateChatView(user: user, chat: chat)

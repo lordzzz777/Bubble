@@ -21,7 +21,7 @@ struct ChatsView: View {
     var body: some View {
         NavigationStack {
             // Usamos un Picker con un estilo segmentado
-            VStack{
+            VStack {
                 Picker("Visibilidad", selection: $chatsViewModel.selectedVisibility) {
                     ForEach(chatsViewModel.visibilityOptions, id: \.self) { option in
                         Text(option)
@@ -41,9 +41,7 @@ struct ChatsView: View {
                     
                     Spacer()
                     
-                }else{
-                    Text(trashUserDefault.errorMessage)
-                  
+                } else {
                     List {
                         ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
                             ListChatRowView(chat: chat)
@@ -56,6 +54,7 @@ struct ChatsView: View {
                             }
                         }
                     }
+                    .listStyle(PlainListStyle())
                 }
             }
             .searchable(text: $chatsViewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
@@ -63,7 +62,6 @@ struct ChatsView: View {
                     Text(option).searchCompletion(option)
                 }
             }
-            
             .navigationTitle("Chats")
             .task {
                 await chatsViewModel.fetchCats()

@@ -57,7 +57,6 @@ struct PrivateChatView: View {
                                 }
                             }
                         }
-                        .padding(.bottom, 20)
                         .onChange(of: privateChatViewModel.lastMessage) { _, lastMessage in
                             withAnimation {
                                 proxy.scrollTo(lastMessage, anchor: .bottom)
@@ -66,16 +65,14 @@ struct PrivateChatView: View {
                     }
                 }
                 
-                Spacer()
-                
                 ZStack(alignment: .bottomTrailing) {
                     TextField("Escribe tu mensaje", text: $messageText)
                         .padding(.trailing, 20)
                         .onSubmit {
                             Task {
                                 if !messageText.isEmpty {
-                                    await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageText)
                                     messageText = ""
+                                    await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageText)
                                 }
                             }
                         }
