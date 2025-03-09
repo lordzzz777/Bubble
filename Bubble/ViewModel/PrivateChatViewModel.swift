@@ -16,7 +16,7 @@ class PrivateChatViewModel {
     var showError: Bool = false
     var errorTitle: String = ""
     var errorMessage: String = ""
-    
+    var lastMessage: MessageModel = .init(senderUserID: "", content: "", timestamp: .init(), type: MessageType.text)
 
     var groupedMessages: [(key: Date, value: [MessageModel])] {
         let calendar = Calendar.current
@@ -27,7 +27,6 @@ class PrivateChatViewModel {
 
         return groups.sorted { $0.key < $1.key }
     }
-
     
     func fetchMessages(chatID: String) {
          privateChatService.fetchMessagesFromChat(chatID: chatID) { [weak self] result in
