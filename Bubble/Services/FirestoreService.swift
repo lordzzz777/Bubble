@@ -36,20 +36,57 @@ actor FirestoreService {
         }
         
         do {
-            if try await checkIfUserExistsByID(userID: uid ) {
-                let newUserData: [String: Any] = ["nickname": user.nickname]
-                try await database.collection("users").document(uid).updateData(newUserData)
+            let document = try await database.collection("users").document(uid).getDocument()
+            
+            if let data = document.data(), let isDeleted = data["isDeleted"] as? Bool, isDeleted {
+                // 🔄 Si el usuario estaba marcado como eliminado, lo reactivamos
+                try await database.collection("users").document(uid).updateData([
+                    "isDeleted": false,
+                    "nickname": user.nickname,
+                    "lastConnectionTimeStamp": Timestamp(),
+                    "isOnline": true
+                ])
+                print("✅ Cuenta reactivada para UID: \(uid)")
             } else {
-                try await database.collection("users").document(uid).setData(user.dictionary)
+                // 🛠️ Manteniendo la lógica existente sin cambios
+                if try await checkIfUserExistsByID(userID: uid) {
+                    let newUserData: [String: Any] = ["nickname": user.nickname]
+                    try await database.collection("users").document(uid).updateData(newUserData)
+                } else {
+                    var userData = user.dictionary
+                    userData["isDeleted"] = false // Asegurar que la cuenta nueva no esté eliminada
+                    try await database.collection("users").document(uid).setData(userData)
+                }
             }
         } catch {
             throw FirestoreError.newAccountError
         }
     }
+
+//    func createUser(user: UserModel) async throws {
+//        guard let uid = Auth.auth().currentUser?.uid else {
+//            print("Error : No hay usuarios autenticados")
+//            return
+//        }
+//        
+//        do {
+//            if try await checkIfUserExistsByID(userID: uid ) {
+//                let newUserData: [String: Any] = ["nickname": user.nickname]
+//                try await database.collection("users").document(uid).updateData(newUserData)
+//            } else {
+//                try await database.collection("users").document(uid).setData(user.dictionary)
+//            }
+//        } catch {
+//            throw FirestoreError.newAccountError
+//        }
+//    }
     
     func checkIfNicknameNotExists(nickname: String) async throws -> Bool {
         do {
-            let querySnapshot = try await database.collection("users").whereField("nickname", isEqualTo: nickname).getDocuments()
+            let querySnapshot = try await database.collection("users")
+                .whereField("nickname", isEqualTo: nickname)
+                .whereField("isDeleted", isEqualTo: false)
+                .getDocuments()
             let documents = querySnapshot.documents.compactMap({$0})
             let userData = documents.map { $0.data() }.compactMap{$0}
             
@@ -61,10 +98,17 @@ actor FirestoreService {
     
     func checkIfUserExistsByID(userID: String) async throws -> Bool {
         do {
-            let querySnapshot = try await database.collection("users").whereField("id", isEqualTo: userID).getDocuments()
+            
+            let querySnapshot = try await database.collection("users")
+                .whereField("id", isEqualTo: userID)
+                .whereField("isDeleted", isEqualTo: false)
+                .getDocuments()
+            
             let documents = querySnapshot.documents
             print("Usuario existe: \(!documents.isEmpty)")
+            
             return !documents.isEmpty
+            
         } catch {
             print("Error: \(error)")
             return false
@@ -116,7 +160,8 @@ actor FirestoreService {
                     lastConnectionTimeStamp: Timestamp.init(),
                     isOnline: true,
                     chats: [],
-                    friends: []
+                    friends: [],
+                    isDeleted: false
                 )
                 
                 try await self.createUser(user: newUser)
@@ -155,7 +200,8 @@ actor FirestoreService {
                 lastConnectionTimeStamp: data["lastConnectionTimeStamp"] as? Timestamp ?? Timestamp(),
                 isOnline: data["isOnline"] as? Bool ?? false,
                 chats: data["chats"] as? [String] ?? [],
-                friends: data["friends"] as? [String] ?? []
+                friends: data["friends"] as? [String] ?? [],
+                isDeleted: false
             )
             
         } catch {
@@ -184,6 +230,19 @@ actor FirestoreService {
         }
     }
     
+    /// Esta funcion oculta la cuenta del usuario
+    func setUserInvisible() async throws {
+        guard let uid = self.uid else { throw FirestoreError.checkUserByIDError }
+        
+        do {
+            try await database.collection("users").document(uid).updateData(["isDeleted": true])
+            print("Cuenta marcada como eliminada (invisible)")
+        } catch {
+            print("Error al marcar la cuenta como invisible: \(error)")
+            throw error
+        }
+    }
+
 }
 
 

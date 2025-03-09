@@ -18,6 +18,15 @@ struct PrivateChatView: View {
     var body: some View {
         if let user = chatsViewModel.user {
             VStack {
+                if user.isDeleted{
+                    VStack{
+                        Text("Este usuario ha eliminado su cuenta.")
+                        Text("El chat ya no está disponible.")
+                    }
+                    .foregroundStyle(.red)
+                    .font(.footnote.bold())
+                    .padding()
+                }
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack {
@@ -67,38 +76,39 @@ struct PrivateChatView: View {
                 }
                 
                 Spacer()
-                
-                ZStack(alignment: .bottomTrailing) {
-                    TextField("Escribe tu mensaje", text: $messageText)
-                        .padding(.trailing, 20)
-                        .onSubmit {
-                            Task {
-                                if !messageText.isEmpty {
-                                    await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageText)
-                                    messageText = ""
+                if !user.isDeleted{
+                    ZStack(alignment: .bottomTrailing) {
+                        TextField("Escribe tu mensaje", text: $messageText)
+                            .padding(.trailing, 20)
+                            .onSubmit {
+                                Task {
+                                    if !messageText.isEmpty {
+                                        await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageText)
+                                        messageText = ""
+                                    }
                                 }
                             }
-                        }
-                    
-                    if !messageText.isEmpty {
-                        Button {
-                            messageText = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.gray)
+                        
+                        if !messageText.isEmpty {
+                            Button {
+                                messageText = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.gray)
+                            }
                         }
                     }
+                    .padding(8)
+                    .clipShape(
+                        RoundedRectangle(cornerRadius: 8)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(.gray, lineWidth: 0.3)
+                    )
+                    .padding(.bottom, 8)
+                    .padding(.horizontal, 4)
                 }
-                .padding(8)
-                .clipShape(
-                    RoundedRectangle(cornerRadius: 8)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(.gray, lineWidth: 0.3)
-                )
-                .padding(.bottom, 8)
-                .padding(.horizontal, 4)
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -128,3 +138,5 @@ struct PrivateChatView: View {
            VStack { Divider() }
     }
 }
+
+

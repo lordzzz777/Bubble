@@ -78,7 +78,8 @@ struct NewAccountView: View {
                                         imgUrl: "",
                                         lastConnectionTimeStamp: Timestamp.init(),
                                         isOnline: true, chats: [],
-                                        friends: [])
+                                        friends: [],
+                                        isDeleted: false)
                                 )
                                 
                                 // 🔹 Una vez registrado el nickname, cambiar el estado a `.hasNickname`

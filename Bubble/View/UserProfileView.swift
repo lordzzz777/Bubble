@@ -12,6 +12,11 @@ import FirebaseCore
 struct UserProfileView: View {
     @Bindable var userProfileView: NewAccountViewModel = .init()
     
+    @State private var trashUserDefault = LoginViewModel()
+
+    
+    @AppStorage("LoginFlowState") private var loginFlowState: UserLoginState = .loggedIn
+    
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImage: Image?
     @State private var newNickname: String = ""
@@ -19,6 +24,7 @@ struct UserProfileView: View {
     @State private var nickNameNotExists: Bool = false
     @State private var checkingNickName: Bool = false
     @State private var isEditingNickname: Bool = false
+    @State private var isShowDeleteAlert = false
     
     var body: some View {
         NavigationStack{
@@ -64,8 +70,13 @@ struct UserProfileView: View {
                         .font(.title2)
                         .bold()
                 }
-                
                 Spacer()
+                Button(role: .destructive,action: {
+                    isShowDeleteAlert = true
+                }, label: {
+                    Text("Eliminar cuenta")
+                }).buttonStyle(.borderedProminent)
+               
             }.padding()
             
                 .task {
@@ -85,7 +96,23 @@ struct UserProfileView: View {
                 } message: {
                     Text(userProfileView.temporaryMessagesAlert)
                 }
-                 
+            
+                .alert("¿Estás seguro?", isPresented: $isShowDeleteAlert) {
+                    
+                    Button("Cancelar", role: .cancel) { }
+                    Button("Eliminar", role: .destructive) {
+                        // Logica para eliminar cuenta
+                        Task{
+                            await userProfileView.deleteUserAccount()
+                            trashUserDefault.logoutUser()
+                            loginFlowState = .loggedOut
+                        }
+                    }
+                    
+                } message: {
+                    Text("Si eliminas tu cuenta, ya no aparecerás en los chats ni en la lista de amigos. Tus datos se ocultarán, pero podrás recuperar tu cuenta iniciando sesión de nuevo.")
+                }
+            
                 /// Zona de barra de navegación
                 .toolbar{
                     ToolbarItem(placement: .automatic, content: {
