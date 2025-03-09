@@ -19,10 +19,13 @@ struct PrivateChatView: View {
         if let user = chatsViewModel.user {
             VStack {
                 if user.isDeleted{
-                    Text("Este usuario ha eliminado su cuenta. Ya no puedes enviar mensajes.")
-                        .foregroundColor(.red)
-                        .font(.footnote)
-                        .padding()
+                    VStack{
+                        Text("Este usuario ha eliminado su cuenta.")
+                        Text("El chat ya no está disponible.")
+                    }
+                    .foregroundStyle(.red)
+                    .font(.footnote.bold())
+                    .padding()
                 }
                 ScrollViewReader { proxy in
                     ScrollView {
