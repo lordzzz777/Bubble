@@ -135,6 +135,29 @@ class ChatsViewModel: AddNewFriendViewModel {
         return "El amigo no ha sido encontrado ..."
     }
     
+//    func getFriendID(_ ids: [String]) async -> String {
+//        let currentUserID = Auth.auth().currentUser?.uid ?? ""
+//        
+//        //Buscar el primer ID que NO sea el del usuario actual
+//        for id in ids {
+//            if id != currentUserID {
+//                do{
+//                    let user = try await Firestore.firestore().collection("users").document(id).getDocument(as: UserModel.self)
+//                    if  !user.isDeleted{
+//                        return id //Retorna el ID del amigo
+//                    }
+//                }catch{
+//                    print("Error al obtener usuario \(id): \(error.localizedDescription)")
+//                }
+//            }
+//        }
+//        if let friendID = ids.first{
+//            return friendID
+//        }
+//        
+//        return "El amigo no ha sido encontrado ..."
+//    }
+    
     func getFriendID(participants: [String]) -> String {
         return participants.filter { $0 != Auth.auth().currentUser?.uid ?? "" }.first ?? ""
     }
