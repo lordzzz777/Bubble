@@ -21,6 +21,9 @@ enum FirestoreError: Error {
 actor FirestoreService {
     private let database = Firestore.firestore()
    
+    /// Obtiene el UID del usuario autenticado en Firebase.
+    ///
+    /// - Returns: El UID del usuario autenticado si existe, `nil` si no hay usuario autenticado.
     var uid: String? {
         guard let user = Auth.auth().currentUser else {
             print("Intento de acceder a Firebase sin usuario autenticado.")
@@ -29,6 +32,10 @@ actor FirestoreService {
         return user.uid
     }
     
+    /// Crea o actualiza un usuario en Firestore.
+    ///
+    /// - Parameter user: El modelo de usuario que se desea almacenar.
+    /// - Throws: Lanza un error `FirestoreError.newAccountError` en caso de fallo en la escritura de datos.
     func createUser(user: UserModel) async throws {
         guard let uid = Auth.auth().currentUser?.uid else {
             print("Error : No hay usuarios autenticados")
@@ -47,6 +54,11 @@ actor FirestoreService {
         }
     }
     
+    /// Verifica si un nickname ya está en uso en la colección de usuarios de Firestore.
+    ///
+    /// - Parameter nickname: El nickname que se desea verificar.
+    /// - Returns: `true` si el nickname no existe en la base de datos, `false` si ya está en uso.
+    /// - Throws: Lanza un error `FirestoreError.checkNicknameError` en caso de fallo en la consulta.
     func checkIfNicknameNotExists(nickname: String) async throws -> Bool {
         do {
             let querySnapshot = try await database.collection("users").whereField("nickname", isEqualTo: nickname).getDocuments()
@@ -59,6 +71,11 @@ actor FirestoreService {
         }
     }
     
+    /// Verifica si un usuario con un ID específico existe en la base de datos de Firestore.
+    ///
+    /// - Parameter userID: El identificador único del usuario a verificar.
+    /// - Returns: `true` si el usuario existe en la base de datos, `false` si no existe.
+    /// - Throws: En caso de un error en la consulta, se captura y devuelve `false` en lugar de propagar la excepción.
     func checkIfUserExistsByID(userID: String) async throws -> Bool {
         do {
             let querySnapshot = try await database.collection("users").whereField("id", isEqualTo: userID).getDocuments()
@@ -71,6 +88,11 @@ actor FirestoreService {
         }
     }
     
+    /// Guarda una imagen en Firebase Storage y actualiza la URL en Firestore.
+    ///
+    /// - Parameter image: La imagen `UIImage` que se desea almacenar.
+    /// - Throws: Lanza un error `FirestoreError.uploadImageError` si falla la carga,
+    ///           o `FirestoreError.updateImageURLInDatabaseError` si falla la actualización en Firestore.
     func saveImage(image: UIImage) async throws {
         guard let uid = Auth.auth().currentUser?.uid else {
             print("Error : No hay usuarios autenticados")
@@ -129,7 +151,10 @@ actor FirestoreService {
         }
     }
     
-    /// Obtiene los datos del usuario autenticado
+    /// Obtiene los datos del usuario autenticado desde Firestore.
+    ///
+    /// - Returns: Un objeto `UserModel` con los datos del usuario si existe, `nil` si el usuario no está en la base de datos.
+    /// - Throws: Lanza un error `FirestoreError.checkUserByIDError` si ocurre un problema al obtener los datos.
     func getUserData() async throws -> UserModel? {
         guard let uid = self.uid else {
             throw FirestoreError.checkUserByIDError
@@ -164,7 +189,10 @@ actor FirestoreService {
         }
     }
     
-    /// Actualizar el nicname del usuario si no esta en uso
+    /// Actualiza el nickname del usuario si no está en uso.
+    ///
+    /// - Parameter newNickname: El nuevo nickname que se desea asignar.
+    /// - Throws: Lanza un error `FirestoreError.checkNicknameError` si ocurre un problema en la validación o actualización.
     func updateNickname(newNickname: String ) async throws {
         guard let uid = self.uid else {
             print("Error: no hay usuaria autenticado")
