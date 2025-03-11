@@ -293,7 +293,19 @@ actor FirestoreService {
             throw error
         }
     }
-
+    
+    /// Esta funcion oculta la cuenta del usuario
+    func setUserInvisible() async throws {
+        guard let uid = self.uid else { throw FirestoreError.checkUserByIDError }
+        
+        do {
+            try await database.collection("users").document(uid).updateData(["isDeleted": true])
+            print("Cuenta marcada como eliminada (invisible)")
+        } catch {
+            print("Error al marcar la cuenta como invisible: \(error)")
+            throw error
+        }
+    }
 }
 
 
