@@ -11,7 +11,9 @@ import FirebaseCore
 
 @Observable @MainActor
 class PrivateChatViewModel {
+    
     private let privateChatService: PrivateChatService = PrivateChatService()
+    
     var messages: [MessageModel] = []
     var showError: Bool = false
     var errorTitle: String = ""
@@ -28,6 +30,9 @@ class PrivateChatViewModel {
         return groups.sorted { $0.key < $1.key }
     }
     
+    /// Obtiene los mensajes de un chat privado y los ordena por timestamp.
+    ///
+    /// - Parameter chatID: El identificador del chat del cual se desean obtener los mensajes.
     func fetchMessages(chatID: String) {
          privateChatService.fetchMessagesFromChat(chatID: chatID) { [weak self] result in
                 switch result {
@@ -46,6 +51,11 @@ class PrivateChatViewModel {
             }
     }
     
+    /// Envía un mensaje en un chat privado.
+    ///
+    /// - Parameters:
+    ///   - chatID: El identificador del chat en el que se enviará el mensaje.
+    ///   - messageText: El contenido del mensaje que se desea enviar.
     func sendMessage(chatID: String, messageText: String) async {
         do {
             try await privateChatService.sendMessage(chatID: chatID, messageText: messageText)
@@ -57,6 +67,10 @@ class PrivateChatViewModel {
         }
     }
     
+    /// Verifica si un mensaje fue enviado por el usuario autenticado.
+    ///
+    /// - Parameter message: El mensaje que se desea comprobar.
+    /// - Returns: `true` si el mensaje fue enviado por el usuario autenticado, `false` en caso contrario.
     func checkIfMessageWasSentByCurrentUser(_ message: MessageModel) -> Bool {
         return message.senderUserID == Auth.auth().currentUser?.uid
     }

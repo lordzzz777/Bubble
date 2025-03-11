@@ -65,7 +65,7 @@ actor ChatsService {
             }
         }
     }
-    
+
     /// Obtiene los chats en tiempo real en los que el usuario participa.
     /// - Returns: Un `AsyncThrowingStream` que emite un array de `ChatModel` y maneja errores.
     nonisolated func getChats() -> AsyncThrowingStream<[ChatModel], Error>  {

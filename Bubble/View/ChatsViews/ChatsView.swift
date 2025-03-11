@@ -44,19 +44,23 @@ struct ChatsView: View {
                     
                 }else{
                     Text(trashUserDefault.errorMessage)
-                  
-                    List {
-                        ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
+                    if chatsViewModel.selectedVisibility == "privado" {
                         
-                            ListChatRowView(chat: chat)
-                            .swipeActions {
-                                Button("Borrar", systemImage: "trash.fill") {
-                                    chatIdSelected = chat.id
-                                    isMessageDestructive = true
-                                }
-                                .tint(.red)
+                        List {
+                            ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
+                                ListChatRowView(chat: chat)
+                                    .swipeActions {
+                                        Button("Borrar", systemImage: "trash.fill") {
+                                            chatIdSelected = chat.id
+                                            isMessageDestructive = true
+                                        }
+                                        .tint(.red)
+                                    }
                             }
                         }
+                        
+                    }else{
+                        PublicChatView()
                     }
                 }
             }
@@ -70,7 +74,7 @@ struct ChatsView: View {
             .task {
                 await chatsViewModel.fetchCats()
             }
-
+            
             // Alerta de Error
             .alert(isPresented: $chatsViewModel.isfetchChatsError) {
                 Alert(title: Text(chatsViewModel.errorTitle), message: Text(chatsViewModel.errorDescription), dismissButton: .default(Text("OK"))
@@ -109,7 +113,7 @@ struct ChatsView: View {
             }
         }
     }
-
+    
 }
 
 #Preview {
