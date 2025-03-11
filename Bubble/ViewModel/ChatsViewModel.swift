@@ -205,7 +205,8 @@ class ChatsViewModel: AddNewFriendViewModel {
                     print("Error al enviar mensaje: \(error.localizedDescription)")
                 }
             }
-
+    }
+    
     func formatMessageTimestamp(_ timestamp: Timestamp) -> String {
         let messageDate = timestamp.dateValue()
         let calendar = Calendar.current
