@@ -63,33 +63,17 @@ actor FirestoreService {
                     var userData = user.dictionary
                     userData["isDeleted"] = false // Asegurar que la cuenta nueva no esté eliminada
                     try await database.collection("users").document(uid).setData(userData)
+                    try await addUserToPublicChat(userID: uid)
                 }
-                try await database.collection("users").document(uid).setData(user.dictionary)
+                //try await database.collection("users").document(uid).setData(user.dictionary)
                 
-                try await addUserToPublicChat(userID: uid)
+               
             }
         } catch {
             throw FirestoreError.newAccountError
         }
     }
 
-//    func createUser(user: UserModel) async throws {
-//        guard let uid = Auth.auth().currentUser?.uid else {
-//            print("Error : No hay usuarios autenticados")
-//            return
-//        }
-//        
-//        do {
-//            if try await checkIfUserExistsByID(userID: uid ) {
-//                let newUserData: [String: Any] = ["nickname": user.nickname]
-//                try await database.collection("users").document(uid).updateData(newUserData)
-//            } else {
-//                try await database.collection("users").document(uid).setData(user.dictionary)
-//            }
-//        } catch {
-//            throw FirestoreError.newAccountError
-//        }
-//    }
     
     /// Verifica si un nickname ya está en uso en la colección de usuarios de Firestore.
     ///
