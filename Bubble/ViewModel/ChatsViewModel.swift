@@ -204,4 +204,25 @@ class ChatsViewModel: AddNewFriendViewModel {
                 }
             }
     }
+    
+    func formatMessageTimestamp(_ timestamp: Timestamp) -> String {
+        let messageDate = timestamp.dateValue()
+        let calendar = Calendar.current
+        
+        // Formateador para la hora: "HH:mm"
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+        let timeString = timeFormatter.string(from: messageDate)
+        
+        if calendar.isDateInToday(messageDate) {
+            return "\(timeString)"
+        } else if calendar.isDateInYesterday(messageDate) {
+            return "Ayer \n\(timeString)"
+        } else {
+            // Formateador para fecha completa: "dd-MM-yyyy HH:mm"
+            let fullFormatter = DateFormatter()
+            fullFormatter.dateFormat = "dd-MM-yy \nHH:mm"
+            return fullFormatter.string(from: messageDate)
+        }
+    }
 }
