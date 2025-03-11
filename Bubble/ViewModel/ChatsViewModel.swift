@@ -78,6 +78,7 @@ class ChatsViewModel: AddNewFriendViewModel {
                 for try await chat in chatsService.getChats(){
                     guard !Task.isCancelled else { return }
                     self.chats = chat
+                    self.chats = self.chats.sorted(by: { $0.lastMessageTimestamp.seconds > $1.lastMessageTimestamp.seconds })
                 }
                 
             }catch{
@@ -136,6 +137,7 @@ class ChatsViewModel: AddNewFriendViewModel {
         return "El amigo no ha sido encontrado ..."
     }
 
+
     /// Convierte un `Timestamp` de Firestore en una cadena de texto con formato de hora.
     /// - Parameter timestamp: El `Timestamp` que se desea formatear.
     /// - Returns: Una cadena de texto con la hora en formato `HH:mm`.
@@ -149,7 +151,7 @@ class ChatsViewModel: AddNewFriendViewModel {
     /// Obtiene el ID del amigo en un chat de dos participantes.
     ///
     /// - Parameter participants: Lista de identificadores de los participantes del chat.
-    /// - Returns: El ID del amigo (el participante que no es el usuario actual). Si no se encuentra, devuelve una cadena vacía.
+    /// - Returns: El ID del amigo (el participante que no es el usuario actual). Si no se encuentra, devuelve una cadena vac
     func getFriendID(participants: [String]) -> String {
         return participants.filter { $0 != Auth.auth().currentUser?.uid ?? "" }.first ?? ""
     }
@@ -162,6 +164,7 @@ class ChatsViewModel: AddNewFriendViewModel {
         return senderUserID == Auth.auth().currentUser?.uid
     }
     
+
     /// Escucha en tiempo real los mensajes del chat público y actualiza la lista de mensajes.
     ///
     /// - Nota: Utiliza un `SnapshotListener` para recibir actualizaciones en tiempo real.
@@ -202,5 +205,26 @@ class ChatsViewModel: AddNewFriendViewModel {
                     print("Error al enviar mensaje: \(error.localizedDescription)")
                 }
             }
+
+    func formatMessageTimestamp(_ timestamp: Timestamp) -> String {
+        let messageDate = timestamp.dateValue()
+        let calendar = Calendar.current
+
+        // Formateador para la hora: "HH:mm"
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+        let timeString = timeFormatter.string(from: messageDate)
+        
+        if calendar.isDateInToday(messageDate) {
+            return "\(timeString)"
+        } else if calendar.isDateInYesterday(messageDate) {
+            return "Ayer \n\(timeString)"
+        } else {
+            // Formateador para fecha completa: "dd-MM-yyyy HH:mm"
+            let fullFormatter = DateFormatter()
+            fullFormatter.dateFormat = "dd-MM-yy \nHH:mm"
+            return fullFormatter.string(from: messageDate)
+        }
+
     }
 }
