@@ -48,6 +48,8 @@ actor FirestoreService {
                 try await database.collection("users").document(uid).updateData(newUserData)
             } else {
                 try await database.collection("users").document(uid).setData(user.dictionary)
+                
+                try await addUserToPublicChat(userID: uid)
             }
         } catch {
             throw FirestoreError.newAccountError
@@ -211,7 +213,56 @@ actor FirestoreService {
             throw FirestoreError.checkNicknameError
         }
     }
-    
+   
+    /// Agrega un usuario al chat público "global_chat". Si el chat no existe, lo crea.
+    ///
+    /// - Parameter userID: El identificador del usuario que se agregará al chat.
+    /// - Throws: Lanza un error si la operación en Firestore falla.
+    func addUserToPublicChat(userID: String) async throws {
+        
+        // Referencia al documento del chat público en Firestore.
+        let chatRef = Firestore.firestore().collection("public_chats").document("global_chat")
+        
+        do {
+            // Obtiene el documento del chat público
+            let chatDoc = try await chatRef.getDocument()
+            if chatDoc.exists {
+                
+                // Si el chat ya existe, obtiene la lista actual de participantes.
+                var participants = chatDoc["participants"] as? [String] ?? []
+                
+                // Verifica si el usuario ya está en la lista antes de agregarlo.
+                if !participants.contains(userID) {
+                    participants.append(userID)
+                    
+                    // Actualiza la lista de participantes en Firestore.
+                    try await chatRef.updateData(["participants": participants])
+                    print("Usuario \(userID) agregado al chat público.")
+                }
+                
+            } else {
+                
+                // Si el chat no existe, se crea con el usuario como primer participante.
+                let publicChat = PublicChatModel(
+                    id: "global_chat",
+                    participants: [userID],
+                    lastMessage: "Bienvenidos al chat público!",
+                    lastMessageTimestamp: Timestamp(),
+                    messages: []
+                )
+                
+                // Guarda el nuevo chat en Firestore.
+                try await chatRef.setData(publicChat.dictionary)
+                print("Chat público creado y usuario agregado.")
+            }
+            
+        } catch {
+            // Manejo de errores si ocurre un fallo al acceder o modificar Firestore.
+            print("Error al agregar usuario al chat público: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
 }
 
 

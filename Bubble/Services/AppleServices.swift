@@ -90,8 +90,6 @@ class AppleServices {
         }
     }
 
-
-
     /// Cierra sesión del usuario en Firebase.
     ///
     /// Si ocurre un error durante el cierre de sesión, se imprime un mensaje en la consola.
