@@ -116,4 +116,17 @@ class NewAccountViewModel {
                 isShowTemporaryAlert = false
             }
     }
+    
+    /// Marca la cuenta del usuario como invisible
+    func deleteUserAccount() async {
+        do {
+            try await firestoreService.setUserInvisible()
+            print("Cuenta marcada como eliminada (invisible)")
+        } catch {
+            showError = true
+            errorTitle = "Error"
+            errorDescription = "No se pudo eliminar la cuenta"
+            print("Error al eliminar la cuenta: \(error)")
+        }
+    }
 }

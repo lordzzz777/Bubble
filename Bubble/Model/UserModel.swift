@@ -16,9 +16,18 @@ struct UserModel: Codable {
     var isOnline: Bool
     var chats: [String]
     var friends: [String]
+    var isDeleted: Bool
     
     var dictionary: [String: Any] {
-        return ["id": id, "nickname": nickname, "imgUrl": imgUrl, "lastConnectionTimeStamp": lastConnectionTimeStamp, "isOnline": isOnline, "chats": chats, "friends": friends]
+        return ["id": id,
+                "nickname": nickname,
+                "imgUrl": imgUrl,
+                "lastConnectionTimeStamp": lastConnectionTimeStamp,
+                "isOnline": isOnline,
+                "chats": chats,
+                "friends": friends,
+                "isDeleted": isDeleted
+        ]
     }
 }
 
