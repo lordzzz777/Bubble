@@ -32,7 +32,7 @@ struct ChatModel: Codable, Hashable {
 
 /// Modelo que representa un chat público donde múltiples usuarios pueden participar.
 struct PublicChatModel: Codable, Identifiable {
-    @DocumentID var id: String? = UUID().uuidString
+    var id: String = ""
     var participants: [String] // Lista de IDs de los usuarios en el chat
     var lastMessage: String
     var lastMessageTimestamp: Timestamp
@@ -40,7 +40,7 @@ struct PublicChatModel: Codable, Identifiable {
     
     var dictionary: [String: Any] {
         return [
-            "id": id ?? UUID().uuidString,
+            "id": id,
             "participants": participants,
             "lastMessage": lastMessage,
             "lastMessageTimestamp": lastMessageTimestamp,

@@ -44,8 +44,10 @@ struct PublicChatView: View {
                 
                 Button(action: {
                     if !messageText.isEmpty {
-                        publicChatViewModel.sendMessage(messageText)
-                        messageText = ""
+                        Task {
+                            await publicChatViewModel.sendPublicMessage(messageText)
+                            messageText = ""
+                        }
                     }
                 }) {
                     Image(systemName: "paperplane.fill")
@@ -57,7 +59,7 @@ struct PublicChatView: View {
         .navigationTitle("Chat Público")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            publicChatViewModel.fetchMessages()
+            publicChatViewModel.fetchPublicChatMessages()
         }
     }
 }

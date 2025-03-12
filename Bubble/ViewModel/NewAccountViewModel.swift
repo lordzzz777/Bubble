@@ -136,7 +136,9 @@ class NewAccountViewModel {
             }
     }
     
-    /// Marca la cuenta del usuario como invisible
+    /// Marca la cuenta del usuario como invisible en Firestore en lugar de eliminarla permanentemente.
+    ///
+    /// - Nota: Este método no elimina la cuenta, solo la oculta en la base de datos.
     func deleteUserAccount() async {
         do {
             try await firestoreService.setUserInvisible()

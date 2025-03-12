@@ -20,11 +20,12 @@ class ChatsViewModel: AddNewFriendViewModel {
     
     // Datos del usuario y chats
     var user: UserModel?
-   // var chats: [ChatModel] = []
+    var users:[UserModel] = []
     var messages: [MessageModel] = []
     
     // Tareas de escucha
     private var chatTask: Task<Void, Never>?
+    private var publicChatTask: Task<Void, Never>?
     private var userTask: Task<Void, Never>?
     
     // Opciones de visibilidad para los chats
@@ -32,8 +33,6 @@ class ChatsViewModel: AddNewFriendViewModel {
     var selectedVisibility = "privado"
     
     var searchQuery = "" // Variables para la búsqueda
-   // var errorTitle = ""  // Manejo de errores
-   // var errorDescription = ""
     var isfetchChatsError = false
     var showAddFriendView: Bool = false
     
@@ -66,10 +65,54 @@ class ChatsViewModel: AddNewFriendViewModel {
         }
     }
     
+    /// Obtiene los mensajes del chat público en tiempo real.
+    ///
+    /// - Nota: Usa `Task` para manejar el flujo asíncrono y cancelar la tarea si es necesario.
+    func fetchPublicChatMessages() {
+        publicChatTask?.cancel()
+        publicChatTask = Task { [weak self] in
+            guard let self = self else { return }
+            do {
+                for try await messages in await chatsService.fetchPublicChatMessages() {
+                    guard !Task.isCancelled else { return }
+                    await MainActor.run {
+                        self.messages = messages
+                    }
+                }
+            } catch {
+                print("Error al obtener mensajes del chat público: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    /// Envía un mensaje al chat público.
+    ///
+    /// - Parameter text: El contenido del mensaje que se enviará.
+    func sendPublicMessage(_ text: String) async {
+        // Verifica si hay un usuario autenticado antes de enviar el mensaje.
+        guard let userID = Auth.auth().currentUser?.uid else {
+            print("Error: No hay usuario autenticado.")
+            return
+        }
+        // Crea un nuevo mensaje con un ID único y los datos del usuario.
+        let message = MessageModel(id: UUID().uuidString,
+                                   senderUserID: userID,
+                                   content: text, timestamp: Timestamp(),
+                                   type: .text)
+        
+        do {
+            // Intenta enviar el mensaje al servicio de chats públicos.
+            try await chatsService.sendPublicMessage(message)
+        } catch {
+            // Manejo de errores si el envío del mensaje falla.
+            print("Error al enviar mensaje público: \(error.localizedDescription)")
+        }
+    }
+    
     /// Obtiene la lista de chats en los que el usuario participa y los almacena en la variable `chats`.
     /// Esta función escucha cambios en tiempo real.
     /// - Note: Cancela cualquier tarea en ejecución antes de iniciar una nueva.
-    func fetchCats() async{
+    func fetchChats() async{
         chatTask?.cancel()
         
         chatTask = Task {[weak self] in
@@ -205,6 +248,10 @@ class ChatsViewModel: AddNewFriendViewModel {
             }
     }
     
+    /// Formatea un `Timestamp` de Firebase en una cadena legible según su antigüedad.
+    ///
+    /// - Parameter timestamp: El `Timestamp` del mensaje.
+    /// - Returns: Una cadena formateada con la fecha y la hora en diferentes estilos según la antigüedad del mensaje.
     func formatMessageTimestamp(_ timestamp: Timestamp) -> String {
         let messageDate = timestamp.dateValue()
         let calendar = Calendar.current

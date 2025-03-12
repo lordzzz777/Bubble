@@ -32,7 +32,7 @@ struct ChatsView: View {
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
                 
-                if $chatsViewModel.chats.isEmpty {
+                if $chatsViewModel.chats.isEmpty && chatsViewModel.selectedVisibility == "privado" {
                     Text("No tienes chats aún")
                         .font(.largeTitle.bold())
                         .padding(.bottom, 20)
@@ -72,7 +72,7 @@ struct ChatsView: View {
             
             .navigationTitle("Chats")
             .task {
-                await chatsViewModel.fetchCats()
+                await chatsViewModel.fetchChats()
             }
             
             // Alerta de Error

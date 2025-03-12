@@ -20,6 +20,9 @@ class PrivateChatViewModel {
     var errorMessage: String = ""
     var lastMessage: MessageModel = .init(senderUserID: "", content: "", timestamp: .init(), type: MessageType.text)
 
+    /// Agrupa los mensajes por fecha y los ordena cronológicamente.
+    ///
+    /// - Returns: Un array de tuplas donde la clave es la fecha (`Date`) y el valor es una lista de mensajes (`[MessageModel]`).
     var groupedMessages: [(key: Date, value: [MessageModel])] {
         let calendar = Calendar.current
         let sortedMessages = messages.sorted { $0.timestamp.dateValue() < $1.timestamp.dateValue() }
@@ -91,6 +94,10 @@ class PrivateChatViewModel {
         }
     }
     
+    /// Formatea un `Timestamp` de Firebase en una cadena de hora en formato `HH:mm`.
+    ///
+    /// - Parameter timestamp: El `Timestamp` que se desea formatear.
+    /// - Returns: Una cadena con la hora en formato `HH:mm`.
     func formatTime(from timestamp: Timestamp) -> String {
         let date = timestamp.dateValue()
         let formatter = DateFormatter()

@@ -38,7 +38,7 @@ actor FirestoreService {
     /// - Throws: Lanza un error `FirestoreError.newAccountError` en caso de fallo en la escritura de datos.
     func createUser(user: UserModel) async throws {
         guard let uid = Auth.auth().currentUser?.uid else {
-            print("Error : No hay usuarios autenticados")
+            print("❌ Error: No hay usuario autenticado.")
             return
         }
         
@@ -46,34 +46,33 @@ actor FirestoreService {
             let document = try await database.collection("users").document(uid).getDocument()
             
             if let data = document.data(), let isDeleted = data["isDeleted"] as? Bool, isDeleted {
-                // 🔄 Si el usuario estaba marcado como eliminado, lo reactivamos
+                // 🔄 Reactivar usuario si estaba eliminado
                 try await database.collection("users").document(uid).updateData([
                     "isDeleted": false,
                     "nickname": user.nickname,
+                    "imgUrl": user.imgUrl,
                     "lastConnectionTimeStamp": Timestamp(),
-                    "isOnline": true
+                    "isOnline": true,
                 ])
                 print("✅ Cuenta reactivada para UID: \(uid)")
             } else {
-                // 🛠️ Manteniendo la lógica existente sin cambios
                 if try await checkIfUserExistsByID(userID: uid) {
-                    let newUserData: [String: Any] = ["nickname": user.nickname]
-                    try await database.collection("users").document(uid).updateData(newUserData)
+                    try await database.collection("users").document(uid).updateData(["nickname": user.nickname])
                 } else {
                     var userData = user.dictionary
                     userData["isDeleted"] = false // Asegurar que la cuenta nueva no esté eliminada
                     try await database.collection("users").document(uid).setData(userData)
-                    try await addUserToPublicChat(userID: uid)
                 }
-                //try await database.collection("users").document(uid).setData(user.dictionary)
-                
-               
             }
+            
+            // 🔹 Agregar usuario al chat público asegurando que se cree si no existe
+            try await addUserToPublicChat(userID: uid)
+            
         } catch {
+            print("❌ Error al crear usuario: \(error.localizedDescription)")
             throw FirestoreError.newAccountError
         }
     }
-
     
     /// Verifica si un nickname ya está en uso en la colección de usuarios de Firestore.
     ///
@@ -250,51 +249,43 @@ actor FirestoreService {
     /// - Parameter userID: El identificador del usuario que se agregará al chat.
     /// - Throws: Lanza un error si la operación en Firestore falla.
     func addUserToPublicChat(userID: String) async throws {
-        
-        // Referencia al documento del chat público en Firestore.
-        let chatRef = Firestore.firestore().collection("public_chats").document("global_chat")
+        let chatRef = database.collection("public_chats").document("global_chat")
         
         do {
-            // Obtiene el documento del chat público
             let chatDoc = try await chatRef.getDocument()
+            
             if chatDoc.exists {
-                
-                // Si el chat ya existe, obtiene la lista actual de participantes.
+                // 🔹 Si el chat ya existe, obtenemos los participantes
                 var participants = chatDoc["participants"] as? [String] ?? []
                 
-                // Verifica si el usuario ya está en la lista antes de agregarlo.
                 if !participants.contains(userID) {
+                    // 🔹 Agregar usuario si no está en la lista
                     participants.append(userID)
-                    
-                    // Actualiza la lista de participantes en Firestore.
                     try await chatRef.updateData(["participants": participants])
-                    print("Usuario \(userID) agregado al chat público.")
+                    print("✅ Usuario \(userID) agregado al chat público.")
+                } else {
+                    print("⚠️ Usuario \(userID) ya está en el chat público.")
                 }
-                
             } else {
-                
-                // Si el chat no existe, se crea con el usuario como primer participante.
-                let publicChat = PublicChatModel(
-                    id: "global_chat",
-                    participants: [userID],
-                    lastMessage: "Bienvenidos al chat público!",
-                    lastMessageTimestamp: Timestamp(),
-                    messages: []
-                )
-                
-                // Guarda el nuevo chat en Firestore.
-                try await chatRef.setData(publicChat.dictionary)
-                print("Chat público creado y usuario agregado.")
+                // 🔹 Si el chat público NO EXISTE, lo creamos y agregamos al usuario
+                let publicChatData: [String: Any] = [
+                    "id": "global_chat",
+                    "participants": [userID],
+                    "lastMessage": "Bienvenidos al chat público!",
+                    "lastMessageTimestamp": Timestamp()
+                ]
+                try await chatRef.setData(publicChatData)
+                print("✅ Chat público creado y usuario \(userID) agregado.")
             }
-            
         } catch {
-            // Manejo de errores si ocurre un fallo al acceder o modificar Firestore.
-            print("Error al agregar usuario al chat público: \(error.localizedDescription)")
-            throw error
+            print("❌ Error al agregar usuario al chat público: \(error.localizedDescription)")
+            throw FirestoreError.newAccountError
         }
     }
-    
-    /// Esta funcion oculta la cuenta del usuario
+
+    /// Oculta la cuenta del usuario marcándola como eliminada en Firestore.
+    ///
+    /// - Throws: Lanza un error si no se puede actualizar el estado del usuario en Firestore.
     func setUserInvisible() async throws {
         guard let uid = self.uid else { throw FirestoreError.checkUserByIDError }
         
