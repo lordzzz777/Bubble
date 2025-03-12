@@ -13,6 +13,7 @@ import FirebaseAuth
 struct ChatsView: View {
     @State private var chatsViewModel = ChatsViewModel()
     @State private var trashUserDefault = LoginViewModel()
+    @State private var createCommunityViewModel = CreateCommunityViewModel()
     @State private var isMessageDestructive = false
     
     // Esta es la variable que almacenará el valor seleccionado del Picker
@@ -93,7 +94,7 @@ struct ChatsView: View {
                         }
                         
                         Button("Crear comunidad", systemImage: "person.2.badge.plus.fill") {
-                            
+                            createCommunityViewModel.showCreateNewCommunity.toggle()
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -102,6 +103,9 @@ struct ChatsView: View {
             }
             .fullScreenCover(isPresented: $chatsViewModel.showAddFriendView) {
                 AddNewFriendView()
+            }
+            .sheet(isPresented: $createCommunityViewModel.showCreateNewCommunity) {
+                CreateCommunityView()
             }
         }
     }
