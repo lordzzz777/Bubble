@@ -62,7 +62,7 @@ struct PrivateChatView: View {
                                     }
                                     
                                     if message.type == .text {
-                                        MessageBubbleView(message: message, user: user)
+                                        MessageBubbleView(message: message)
                                     }
                                 }
                             }
