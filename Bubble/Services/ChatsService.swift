@@ -18,6 +18,8 @@ actor ChatsService {
     private var listenerRegistration: ListenerRegistration?
     
     /// Detiene la escucha activa en Firestore y libera la referencia del listener.
+    ///
+    /// - Nota: Si no hay un listener activo, imprime un mensaje en la consola.
     func removeListener() {
         guard let listener = listenerRegistration else {
             print("No hay listener activo")
@@ -65,7 +67,7 @@ actor ChatsService {
             }
         }
     }
-    
+
     /// Obtiene los chats en tiempo real en los que el usuario participa.
     /// - Returns: Un `AsyncThrowingStream` que emite un array de `ChatModel` y maneja errores.
     nonisolated func getChats() -> AsyncThrowingStream<[ChatModel], Error>  {
@@ -98,6 +100,45 @@ actor ChatsService {
             }
         }
 
+    }
+
+    /// Obtiene los mensajes del chat público en tiempo real utilizando `AsyncThrowingStream`.
+    ///
+    /// - Returns: Un flujo asíncrono (`AsyncThrowingStream`) que emite listas de `MessageModel` actualizadas en tiempo real.
+    /// - Throws: Si ocurre un error en la suscripción a Firestore, el flujo finaliza con una excepción.
+    func fetchPublicChatMessages() -> AsyncThrowingStream<[MessageModel], Error> {
+        let chatRef = database.collection("public_chats").document("global_chat")
+        
+        return AsyncThrowingStream { continuation in
+            chatRef.collection("messages")
+                .order(by: "timestamp", descending: false)
+                .addSnapshotListener { snapshot, error in
+                    if let error = error {
+                        continuation.finish(throwing: error)
+                        return
+                    }
+                    
+                    guard let documents = snapshot?.documents else {
+                        continuation.yield(with: .success([]))
+                        return
+                    }
+                    
+                    let messages = documents.compactMap { try? $0.data(as: MessageModel.self) }
+                    continuation.yield(with: .success(messages))
+                }
+            
+            // Cancelación segura dentro del actor
+            continuation.onTermination = { _ in }
+        }
+    }
+    
+    /// Envía un mensaje al chat público en Firestore.
+    ///
+    /// - Parameter message: El mensaje `MessageModel` que se enviará.
+    /// - Throws: Lanza un error si la operación en Firestore falla.
+    func sendPublicMessage(_ message: MessageModel) async throws {
+        let chatRef = database.collection("public_chats").document("global_chat").collection("messages")
+        try await chatRef.addDocument(data: message.dictionary)
     }
     
     /// Elimina un chat específico en Firestore.
@@ -139,4 +180,6 @@ actor ChatsService {
 
         }
     }
+    
+    
 }

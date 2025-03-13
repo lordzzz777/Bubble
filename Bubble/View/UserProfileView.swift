@@ -129,7 +129,7 @@ struct UserProfileView: View {
     
     // Funcion que activa el PhotosPicker y actualiza las imagen de perfil
     @ViewBuilder
-    func profileImage() -> some View {
+    private func profileImage() -> some View {
         VStack {
             if let selectedImage = selectedImage {
                 PhotosPicker(selection: $selectedItem, photoLibrary: .shared()) {

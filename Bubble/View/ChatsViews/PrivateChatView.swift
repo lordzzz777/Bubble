@@ -12,6 +12,7 @@ struct PrivateChatView: View {
     @Environment(ChatsViewModel.self) private var chatsViewModel
     @State private var privateChatViewModel = PrivateChatViewModel()
     @State private var messageText: String = ""
+    
     var user: UserModel
     var chat: ChatModel
 
