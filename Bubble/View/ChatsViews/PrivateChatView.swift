@@ -80,8 +80,9 @@ struct PrivateChatView: View {
                         .onSubmit {
                             Task {
                                 if !messageText.isEmpty {
+                                    let messageCopy = messageText
                                     messageText = ""
-                                    await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageText)
+                                    await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageCopy)
                                 }
                             }
                         
