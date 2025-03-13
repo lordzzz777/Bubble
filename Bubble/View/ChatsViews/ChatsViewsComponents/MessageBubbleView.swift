@@ -21,10 +21,10 @@ struct MessageBubbleView: View {
             
             HStack {
                 VStack(alignment: .leading) {
-                    HStack{
-                        profileImage().padding(6)
-                        Text(user?.nickname ?? "").bold()
-                    }.padding(.vertical, 5)
+//                    HStack{
+//                        profileImage().padding(6)
+//                        Text(user?.nickname ?? "").bold()
+//                    }.padding(.vertical, 5)
                     Text(message.content)
                     
                 }
