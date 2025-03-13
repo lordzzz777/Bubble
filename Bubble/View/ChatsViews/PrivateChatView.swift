@@ -80,32 +80,31 @@ struct PrivateChatView: View {
                         .onSubmit {
                             Task {
                                 if !messageText.isEmpty {
-                                    let messageCopy = messageText
+                                    await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageText)
                                     messageText = ""
-                                    await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageCopy)
                                 }
                             }
-                        
-                        if !messageText.isEmpty {
-                            Button {
-                                messageText = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.gray)
-                            }
+                        }
+                    
+                    if !messageText.isEmpty {
+                        Button {
+                            messageText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.gray)
                         }
                     }
-                    .padding(8)
-                    .clipShape(
-                        RoundedRectangle(cornerRadius: 8)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(.gray, lineWidth: 0.3)
-                    )
-                    .padding(.bottom, 8)
-                    .padding(.horizontal, 4)
                 }
+                .padding(8)
+                .clipShape(
+                    RoundedRectangle(cornerRadius: 8)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(.gray, lineWidth: 0.3)
+                )
+                .padding(.bottom, 8)
+                .padding(.horizontal, 4)
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
