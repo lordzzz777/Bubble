@@ -17,7 +17,9 @@ struct AddNewFriendView: View {
         NavigationStack {
             List {
                 ForEach(addNewFriendViewModel.matchedUsers, id: \.id) { user in
-                    MatchedFriendRowView(user: user)
+                    if user.isDeleted == false {
+                        MatchedFriendRowView(user: user)
+                    }
                 }
             }
             .searchable(text: $addNewFriendViewModel.friendNickname, placement: .automatic, prompt: Text("Busca por el nickname de tu amigo"))
