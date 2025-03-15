@@ -15,7 +15,7 @@ import FirebaseFirestore
 class LoginViewModel {
     private let googleService = GoogleService()
     private let firestoreService = FirestoreService()
-    private let uid = Auth.auth().currentUser?.uid
+    private let uid = Auth.auth().currentUser?.uid ?? ""
     
     var errorTitle: String = ""
     var errorMessage: String = ""
@@ -42,16 +42,11 @@ class LoginViewModel {
 
     
     /// Inicia sesión con Google
-    func signInWithGoogle() {
-        guard let userID = Auth.auth().currentUser?.uid else {
-            print("Error: No hay usuario autenticado.")
-            return
-        }
-        
+    func signInWithGoogle() {        
         Task {
             do {
                 // Verivicar si el usuario exite
-                let user = try await firestoreService.checkIfUserExistsByID(userID: userID)
+                let user = try await firestoreService.checkIfUserExistsByID(userID: uid)
                 let success = try await googleService.authenticate()// autentica al usuario
                 
                 if success == true {
