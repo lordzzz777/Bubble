@@ -28,26 +28,23 @@ struct BubbleApp: App {
     
     var body: some Scene {
         WindowGroup {
-            NavigationStack{
-                switch loginFlowState {
-                case .loggedOut:
-                    WelcomeView()
-                    
-                case .hasNickname:
-                    NewAccountView()
-                    
-                case .loggedIn:
-                    ContentView()
-                    
-                }
-            }
-            .onOpenURL { url in
-                if GIDSignIn.sharedInstance.hasPreviousSignIn() {
-                    GIDSignIn.sharedInstance.handle(url)
-                }
-            }
-            .id(loginFlowState.rawValue)
-        }
+            switch loginFlowState {
+            case .loggedOut:
+                WelcomeView()
+                    .onOpenURL { url in
+                        if GIDSignIn.sharedInstance.hasPreviousSignIn() {
+                            GIDSignIn.sharedInstance.handle(url)
+                        }
+                    }
+                    .id(loginFlowState.rawValue)
+                
+            case .hasNickname:
+                NewAccountView()
+                
+            case .loggedIn:
+                ContentView()
+                
+            }        }
     }
     
     /// Desactiva logs de `gRPC` en Firebase

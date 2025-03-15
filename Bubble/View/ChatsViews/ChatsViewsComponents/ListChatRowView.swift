@@ -12,7 +12,7 @@ struct ListChatRowView: View {
     
     let chat: ChatModel
     @State private var chatsViewModel = ChatsViewModel()
-    
+    @State private var addNewFriendViewModel = AddNewFriendViewModel()
     var body: some View {
         VStack {
             if let user = chatsViewModel.user {
@@ -65,13 +65,47 @@ struct ListChatRowView: View {
                                     .font(.footnote)
                                     .foregroundColor(.red)
                             } else {
-                                Text(chat.lastMessage)
+                                // Aquí para manejar los diferentes tipos de mensajes que pueden venir
+                                switch chat.lastMessageType {
+                                case .text:
+                                    HStack(spacing: 0) {
+                                        if chatsViewModel.checkIfMessageWasSentByCurrentUser(senderUserID: chat.lastMessageSenderUserID) {
+                                            Text("Tú: ")
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        
+                                        Text(chat.lastMessage)
+                                            .font(.footnote)
+                                    }
                                     .font(.footnote)
+                                case .friendRequest:
+                                    Text("Quiere ser tu amigo/a")
+                                        .font(.footnote)
+                                case .acceptedFriendRequest:
+                                    Text("Tú y \(user.nickname) ahora son amigos")
+                                        .font(.footnote)
+                                case .image:
+                                    Text("Te ha enviado una imagen")
+                                        .font(.footnote)
+                                case .video:
+                                    Text("Te ha enviado un video")
+                                        .font(.footnote)
+                                }
                             }
                         }
                         
                         Spacer()
-                        
+                        if chat.lastMessageType == .friendRequest {
+                            Button {
+                                Task {
+                                    await addNewFriendViewModel.acceptFriendRequest(chatID: chat.id, senderUID: chat.lastMessageSenderUserID)
+                                }
+                            } label: {
+                                Text("Aceptar")
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                            .buttonStyle(BorderlessButtonStyle())
+                        }
                         Text(chatsViewModel.formatMessageTimestamp(chat.lastMessageTimestamp))
                             .foregroundStyle(.secondary)
                             .font(.caption2)

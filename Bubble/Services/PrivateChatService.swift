@@ -19,6 +19,12 @@ class PrivateChatService {
     private let database = Firestore.firestore()
     private let uid = Auth.auth().currentUser?.uid ?? ""
     
+    /// Obtiene los mensajes de un chat en tiempo real usando un `SnapshotListener`.
+    ///
+    /// - Parameters:
+    ///   - chatID: El identificador único del chat del cual se desean obtener los mensajes.
+    ///   - completionHandler: Un bloque de finalización que devuelve un `Result<[MessageModel], Error>`,
+    ///                        donde se entrega la lista de mensajes o un error en caso de fallo.
     func fetchMessagesFromChat(chatID: String, completionHandler: @escaping (Result<[MessageModel], Error>) -> Void) {
         database.collection("chats").document(chatID).collection("messages").addSnapshotListener {  query, error in
             if let error = error {
@@ -42,8 +48,13 @@ class PrivateChatService {
         }
     }
     
-    @MainActor
-    func sendMessage(chatID: String, messageText: String) async throws {
+    /// Envía un mensaje en un chat y actualiza la información del chat en Firestore.
+    ///
+    /// - Parameters:
+    ///   - chatID: El identificador único del chat al que se enviará el mensaje.
+    ///   - messageText: El contenido del mensaje a enviar.
+    /// - Throws: Lanza un error `PrivateChatServiceError.sendMessageFailed` si ocurre un problema al enviar el mensaje o actualizar el chat.
+    @MainActor func sendMessage(chatID: String, messageText: String) async throws {
         do {
             // Enviando mensaje en el chat
             let message = MessageModel(senderUserID: uid, content: messageText, timestamp: .init(), type: MessageType.text)

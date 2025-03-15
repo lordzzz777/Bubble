@@ -15,14 +15,17 @@ class ChatsViewModel: AddNewFriendViewModel {
     // Servicios
     private var chatsService = ChatsService()
     private var firestoreService = FirestoreService()
-   
+    private let chatID = "global_chat"
+    private let database = Firestore.firestore()
+    
     // Datos del usuario y chats
     var user: UserModel?
-   // var chats: [ChatModel] = []
+    var users:[UserModel] = []
     var messages: [MessageModel] = []
     
     // Tareas de escucha
     private var chatTask: Task<Void, Never>?
+    private var publicChatTask: Task<Void, Never>?
     private var userTask: Task<Void, Never>?
     
     // Opciones de visibilidad para los chats
@@ -30,8 +33,6 @@ class ChatsViewModel: AddNewFriendViewModel {
     var selectedVisibility = "privado"
     
     var searchQuery = "" // Variables para la búsqueda
-   // var errorTitle = ""  // Manejo de errores
-   // var errorDescription = ""
     var isfetchChatsError = false
     var showAddFriendView: Bool = false
     
@@ -64,10 +65,54 @@ class ChatsViewModel: AddNewFriendViewModel {
         }
     }
     
+    /// Obtiene los mensajes del chat público en tiempo real.
+    ///
+    /// - Nota: Usa `Task` para manejar el flujo asíncrono y cancelar la tarea si es necesario.
+    func fetchPublicChatMessages() {
+        publicChatTask?.cancel()
+        publicChatTask = Task { [weak self] in
+            guard let self = self else { return }
+            do {
+                for try await messages in await chatsService.fetchPublicChatMessages() {
+                    guard !Task.isCancelled else { return }
+                    await MainActor.run {
+                        self.messages = messages
+                    }
+                }
+            } catch {
+                print("Error al obtener mensajes del chat público: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    /// Envía un mensaje al chat público.
+    ///
+    /// - Parameter text: El contenido del mensaje que se enviará.
+    func sendPublicMessage(_ text: String) async {
+        // Verifica si hay un usuario autenticado antes de enviar el mensaje.
+        guard let userID = Auth.auth().currentUser?.uid else {
+            print("Error: No hay usuario autenticado.")
+            return
+        }
+        // Crea un nuevo mensaje con un ID único y los datos del usuario.
+        let message = MessageModel(id: UUID().uuidString,
+                                   senderUserID: userID,
+                                   content: text, timestamp: Timestamp(),
+                                   type: .text)
+        
+        do {
+            // Intenta enviar el mensaje al servicio de chats públicos.
+            try await chatsService.sendPublicMessage(message)
+        } catch {
+            // Manejo de errores si el envío del mensaje falla.
+            print("Error al enviar mensaje público: \(error.localizedDescription)")
+        }
+    }
+    
     /// Obtiene la lista de chats en los que el usuario participa y los almacena en la variable `chats`.
     /// Esta función escucha cambios en tiempo real.
     /// - Note: Cancela cualquier tarea en ejecución antes de iniciar una nueva.
-    func fetchCats() async{
+    func fetchChats() async{
         chatTask?.cancel()
         
         chatTask = Task {[weak self] in
@@ -134,19 +179,83 @@ class ChatsViewModel: AddNewFriendViewModel {
 
         return "El amigo no ha sido encontrado ..."
     }
+
+    /// Convierte un `Timestamp` de Firestore en una cadena de texto con formato de hora.
+    /// - Parameter timestamp: El `Timestamp` que se desea formatear.
+    /// - Returns: Una cadena de texto con la hora en formato `HH:mm`.
+    func formatTimestamp(_ timestamp: Timestamp) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm" // Formato personalizado
+        
+        return formatter.string(from: timestamp.dateValue())
+    }
     
+    /// Obtiene el ID del amigo en un chat de dos participantes.
+    ///
+    /// - Parameter participants: Lista de identificadores de los participantes del chat.
+    /// - Returns: El ID del amigo (el participante que no es el usuario actual). Si no se encuentra, devuelve una cadena vacía.
     func getFriendID(participants: [String]) -> String {
         return participants.filter { $0 != Auth.auth().currentUser?.uid ?? "" }.first ?? ""
     }
     
+    /// Verifica si un mensaje fue enviado por el usuario autenticado.
+    ///
+    /// - Parameter senderUserID: El ID del usuario que envió el mensaje.
+    /// - Returns: `true` si el mensaje fue enviado por el usuario autenticado, `false` en caso contrario.
     func checkIfMessageWasSentByCurrentUser(senderUserID: String) -> Bool {
         return senderUserID == Auth.auth().currentUser?.uid
     }
     
+    /// Escucha en tiempo real los mensajes del chat público y actualiza la lista de mensajes.
+    ///
+    /// - Nota: Utiliza un `SnapshotListener` para recibir actualizaciones en tiempo real.
+    func fetchMessages() {
+        database.collection("public_chats").document(chatID)
+            .collection("messages")
+            .order(by: "timestamp", descending: false)
+            .addSnapshotListener { snapshot, error in
+                guard let documents = snapshot?.documents else {
+                    print("Error al obtener mensajes: \(error?.localizedDescription ?? "Desconocido")")
+                    return
+                }
+                
+                self.messages = documents.compactMap { doc in
+                    try? doc.data(as: MessageModel.self)
+                }
+            }
+    }
+    
+    /// Envía un nuevo mensaje al chat público.
+    ///
+    /// - Parameter text: El contenido del mensaje a enviar.
+    func sendMessage(_ text: String) {
+        guard let userID = Auth.auth().currentUser?.uid else { return }
+        
+        let newMessage = MessageModel(
+            id: UUID().uuidString,
+            senderUserID: userID,
+            content: text,
+            timestamp: Timestamp(),
+            type: .text
+        )
+        
+        database.collection("public_chats").document(chatID)
+            .collection("messages")
+            .addDocument(data: newMessage.dictionary) { error in
+                if let error = error {
+                    print("Error al enviar mensaje: \(error.localizedDescription)")
+                }
+            }
+    }
+    
+    /// Formatea un `Timestamp` de Firebase en una cadena legible según su antigüedad.
+    ///
+    /// - Parameter timestamp: El `Timestamp` del mensaje.
+    /// - Returns: Una cadena formateada con la fecha y la hora en diferentes estilos según la antigüedad del mensaje.
     func formatMessageTimestamp(_ timestamp: Timestamp) -> String {
         let messageDate = timestamp.dateValue()
         let calendar = Calendar.current
-
+        
         // Formateador para la hora: "HH:mm"
         let timeFormatter = DateFormatter()
         timeFormatter.dateFormat = "HH:mm"

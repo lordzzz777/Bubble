@@ -9,6 +9,7 @@ import Foundation
 import FirebaseFirestore
 import FirebaseCore
 
+/// Modelo que representa un chat privado entre usuarios.
 struct ChatModel: Codable, Hashable {
     var id: String = ""
     var participants: [String] = []
@@ -29,6 +30,26 @@ struct ChatModel: Codable, Hashable {
     }
 }
 
+/// Modelo que representa un chat público donde múltiples usuarios pueden participar.
+struct PublicChatModel: Codable, Identifiable {
+    var id: String = ""
+    var participants: [String] // Lista de IDs de los usuarios en el chat
+    var lastMessage: String
+    var lastMessageTimestamp: Timestamp
+    var messages: [MessageModel]
+    
+    var dictionary: [String: Any] {
+        return [
+            "id": id,
+            "participants": participants,
+            "lastMessage": lastMessage,
+            "lastMessageTimestamp": lastMessageTimestamp,
+            "messages": messages.map { $0.dictionary }
+        ]
+    }
+}
+
+/// Modelo que representa un mensaje dentro de un chat.
 struct MessageModel: Codable, Hashable {
     var id: String = ""
     var senderUserID: String
@@ -47,6 +68,7 @@ struct MessageModel: Codable, Hashable {
     }
 }
 
+/// Enum que define los diferentes tipos de mensajes en el chat.
 enum MessageType: String, Codable {
     case text
     case friendRequest
