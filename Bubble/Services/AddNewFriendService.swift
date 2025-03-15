@@ -118,9 +118,12 @@ actor AddNewFriendService {
             try await chatRef.updateData(updateChatInfo.dictionary)
             
             // Agregando los id de los usuarios a los amigos
-            try await database.collection("users").document(uid).setData(["friends": [senderUID]], merge: true)
-            try await database.collection("users").document(senderUID).setData(["friends": [uid]], merge: true)
-            print("Solicitud aceptada")
+            try await database.collection("users").document(uid).updateData([
+                "friends": FieldValue.arrayUnion([senderUID])
+            ])
+            try await database.collection("users").document(senderUID).updateData([
+                "friends": FieldValue.arrayUnion([uid])
+            ])
         } catch {
             print("Error al aceptar la solicitud: \(error.localizedDescription)")
             throw error
