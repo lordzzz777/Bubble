@@ -70,7 +70,7 @@ final class CreateCommunityService {
             let documents = querySnapshot.documents.compactMap({$0})
             let communitiesData = documents.map { $0.data() }.compactMap{$0}
             
-            return communitiesData.isEmpty
+            return !communitiesData.isEmpty
         } catch {
             throw CreateCommunityError.communityCheckingNameError
         }
