@@ -42,14 +42,9 @@ struct ChatsView: View {
                         .font(.system(size: 100))
                     
                     Spacer()
-                    
                 } else {
-                    List {
-                        ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
-                }else{
                     Text(trashUserDefault.errorMessage)
                     if chatsViewModel.selectedVisibility == "privado" {
-                        
                         List {
                             ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
                                 ListChatRowView(chat: chat)
@@ -62,11 +57,10 @@ struct ChatsView: View {
                                     }
                             }
                         }
-                        
-                    }else{
+                        .listStyle(PlainListStyle())
+                    } else {
                         PublicChatView()
                     }
-                    .listStyle(PlainListStyle())
                 }
             }
             .searchable(text: $chatsViewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
