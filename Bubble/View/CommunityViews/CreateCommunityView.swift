@@ -15,36 +15,52 @@ struct CreateCommunityView: View {
     @State private var selectedImage: Image? = nil
     @State private var communityName: String = ""
     
+    @Environment(\.dismiss) private var dismiss
+    
     var body: some View {
-        List {
-            Section() {
-                SelectAvatarView()
-                    .frame(maxWidth: .infinity, alignment: .center)
-            } header: {
-                Text("Imagen de la comunidad")
-            }
-            
-            Section {
-                TextField("Nombre de la comunidad", text: $communityName)
-                    .onChange(of: communityName) {
-                        
-                    }
-            } header: {
-                Text("Elige el nombre de tu comunidad")
-            }
-            
-            Section {
-                ForEach(createCommunityViewModel.friendsToInvite, id: \.nickname) { friend in
-                    FriendToInviteView(friend: friend)
+        NavigationStack {
+            List {
+                Section() {
+                    SelectAvatarView()
+                        .frame(maxWidth: .infinity, alignment: .center)
+                } header: {
+                    Text("Imagen de la comunidad")
                 }
-            } header: {
-                Text("Elige a los amigos que quieres invitar")
+                .listRowBackground(Color.clear)
+                
+                Section {
+                    TextField("Nombre de la comunidad", text: $communityName)
+                        .onChange(of: communityName) {
+                            
+                        }
+                } header: {
+                    Text("Elige el nombre de tu comunidad")
+                }
+                
+                Section {
+                    ForEach(createCommunityViewModel.friendsToInvite, id: \.nickname) { friend in
+                        FriendToInviteView(friend: friend)
+                    }
+                } header: {
+                    Text("Elige a los amigos que quieres invitar")
+                }
             }
-        }
-        .navigationTitle("Crear comunidad")
-        .task {
-            createCommunityViewModel.friendsToInvite = await createCommunityViewModel.fetchFriends()
-            print(createCommunityViewModel.friendsToInvite)
+            .navigationTitle("Crear comunidad")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "x.circle.fill")
+                            .foregroundStyle(.gray)
+                    }
+                }
+            }
+            .task {
+                createCommunityViewModel.friendsToInvite = await createCommunityViewModel.fetchFriends()
+                print(createCommunityViewModel.friendsToInvite)
+            }
         }
     }
     

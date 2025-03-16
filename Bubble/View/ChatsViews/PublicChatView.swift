@@ -56,8 +56,7 @@ struct PublicChatView: View {
             }
             .padding()
         }
-        .navigationTitle("Chat Público")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("Chat público")
         .onAppear {
             publicChatViewModel.fetchPublicChatMessages()
         }
