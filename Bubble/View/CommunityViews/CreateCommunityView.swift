@@ -34,7 +34,7 @@ struct CreateCommunityView: View {
             }
             
             Section {
-                ForEach(createCommunityViewModel.friends, id: \.nickname) { friend in
+                ForEach(createCommunityViewModel.friendsToInvite, id: \.nickname) { friend in
                     FriendToInviteView(friend: friend)
                 }
             } header: {
@@ -43,8 +43,8 @@ struct CreateCommunityView: View {
         }
         .navigationTitle("Crear comunidad")
         .task {
-            createCommunityViewModel.friends = await createCommunityViewModel.fetchFriends()
-            print(createCommunityViewModel.friends)
+            createCommunityViewModel.friendsToInvite = await createCommunityViewModel.fetchFriends()
+            print(createCommunityViewModel.friendsToInvite)
         }
     }
     
@@ -76,11 +76,11 @@ struct CreateCommunityView: View {
                 if let data = try? await newItem?.loadTransferable(type: Data.self),
                    let uiImage = UIImage(data: data) {
                     selectedImage = Image(uiImage: uiImage)
-//                    await newAccountViewModel.saveImage(image: uiImage)
-//                    
-//                    if newAccountViewModel.showImageUploadError {
-//                        selectedImage = nil
-//                    }
+                    await createCommunityViewModel.uploadImage(image: uiImage)
+
+                    if createCommunityViewModel.showError {
+                        selectedImage = nil
+                    }
                 }
             }
         }
