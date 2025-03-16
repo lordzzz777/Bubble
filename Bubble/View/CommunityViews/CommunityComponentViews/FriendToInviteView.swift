@@ -11,6 +11,7 @@ import FirebaseCore
 struct FriendToInviteView: View {
     @State private var createCommunityViewModel: CreateCommunityViewModel = .init()
     var friend: UserModel
+    @State private var isFriendAdded: Bool = false
     
     var body: some View {
         HStack {
@@ -36,14 +37,25 @@ struct FriendToInviteView: View {
             Spacer()
             
             Button {
-                Task {
-//                    await addNewFriendViewModel.sendFriendRequest(friendUID: user.id)
+                withAnimation(.bouncy(duration: 0.2)) {
+                    isFriendAdded.toggle()
+                    
+                    if !isFriendAdded {
+                        createCommunityViewModel.community.members.append(friend.id)
+                    } else {
+                        createCommunityViewModel.community.members.removeAll(where: {$0 == friend.id})
+                    }
                 }
             } label: {
-                Text("Invitar")
+                Text(!isFriendAdded ? "Seleccionar" : "Cancelar")
             }
-            .buttonStyle(BorderedProminentButtonStyle())
-            .clipShape(.capsule)
+            .foregroundStyle(!isFriendAdded ? Color.white : Color.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 50)
+                    .fill(!isFriendAdded ? Color.accentColor : Color.gray)
+            )
         }
         .padding(.horizontal, 10)
     }

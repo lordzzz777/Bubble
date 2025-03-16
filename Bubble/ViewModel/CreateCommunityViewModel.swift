@@ -54,4 +54,10 @@ class CreateCommunityViewModel {
             return false
         }
     }
+    
+    func checkIfFriendIsSelected(friendID: String) -> Bool {
+        withAnimation(.bouncy) {
+            return community.members.contains(where: { $0 == friendID })
+        }
+    }
 }
