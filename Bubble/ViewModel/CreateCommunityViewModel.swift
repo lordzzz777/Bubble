@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 
 @Observable
+@MainActor
 class CreateCommunityViewModel {
     private let createCommunityService: CreateCommunityService = CreateCommunityService()
     var community: CommunityModel = CommunityModel(name: "", imgUrl: "", createdAt: .init(), ownerUID: "", lastMessage: "", messages: [], admins: [], members: [], blockedUsers: [])
@@ -19,7 +20,6 @@ class CreateCommunityViewModel {
     var errorTitle: String = ""
     var errorMessage: String = ""
     
-    @MainActor
     func fetchFriends() async -> [UserModel] {
         var friends: [UserModel] = []
         do {
@@ -33,7 +33,6 @@ class CreateCommunityViewModel {
         return friends
     }
     
-    @MainActor
     func uploadImage(image: UIImage) async {
         do {
             let imageURL = try await createCommunityService.uploadImage(image: image, communityID: community.id)
@@ -42,6 +41,17 @@ class CreateCommunityViewModel {
             errorTitle = "Hubo un error al subir la imagen"
             errorMessage = "Lo sentimos. Hubo un error al intentar subir la imagen al servidor. Por favor, intenta más tarde."
             showError = true
+        }
+    }
+    
+    func checkIfCommunityNameExists(communityName: String) async -> Bool {
+        do {
+            return try await createCommunityService.checkIfCommunityNotExistsBy(name: communityName)
+        } catch {
+            errorTitle = "Error al validar el nombre de la comunidad"
+            errorMessage = "Hubo un error al intentar validar el nombre de la comunidad. Por favor, intenta más tarde."
+            showError = true
+            return false
         }
     }
 }

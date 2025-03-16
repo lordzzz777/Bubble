@@ -14,6 +14,9 @@ struct CreateCommunityView: View {
     @State private var selectedItem: PhotosPickerItem? = nil
     @State private var selectedImage: Image? = nil
     @State private var communityName: String = ""
+    @State private var showFinishButton: Bool = false
+    @State private var showCheckingNameLoading: Bool = false
+    @State private var isCommunityNameNotAvailable: Bool = false
     
     @Environment(\.dismiss) private var dismiss
     
@@ -29,12 +32,34 @@ struct CreateCommunityView: View {
                 .listRowBackground(Color.clear)
                 
                 Section {
-                    TextField("Nombre de la comunidad", text: $communityName)
-                        .onChange(of: communityName) {
-                            
+                    ZStack(alignment: .trailing) {
+                        TextField("Nombre de la comunidad", text: $communityName)
+                            .onChange(of: communityName) {
+                                Task {
+                                    showCheckingNameLoading = true
+                                    isCommunityNameNotAvailable = await createCommunityViewModel.checkIfCommunityNameExists(communityName: communityName)
+                                    showCheckingNameLoading = false
+                                    
+                                    if isCommunityNameNotAvailable && !communityName.isEmpty {
+                                        showFinishButton = true
+                                    } else {
+                                        showFinishButton = false
+                                    }
+                                }
+                            }
+                        
+                        if showCheckingNameLoading {
+                            ProgressView()
                         }
+                    }
+                    .frame(maxWidth: .infinity)
                 } header: {
-                    Text("Elige el nombre de tu comunidad")
+                    Text("Nombre de la comunidad")
+                } footer: {
+                    if isCommunityNameNotAvailable {
+                        Text("\(communityName) ya se encuentra en uso")
+                            .foregroundStyle(Color.red)
+                    }
                 }
                 
                 Section {
@@ -42,7 +67,7 @@ struct CreateCommunityView: View {
                         FriendToInviteView(friend: friend)
                     }
                 } header: {
-                    Text("Elige a los amigos que quieres invitar")
+                    Text("Selecciona a quien quieres invitar")
                 }
             }
             .navigationTitle("Crear comunidad")
@@ -54,6 +79,16 @@ struct CreateCommunityView: View {
                     } label: {
                         Image(systemName: "x.circle.fill")
                             .foregroundStyle(.gray)
+                    }
+                }
+                
+                if showFinishButton {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            
+                        } label: {
+                            Text("Crear")
+                        }
                     }
                 }
             }

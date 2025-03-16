@@ -13,13 +13,14 @@ import FirebaseAuth
 
 enum CreateCommunityError: Error {
     case uploadImageError
+    case communityCheckingNameError
 }
 
+@MainActor
 final class CreateCommunityService {
     private let database = Firestore.firestore()
     private let uid = Auth.auth().currentUser?.uid ?? ""
     
-    @MainActor
     func fetchFriends() async throws -> [UserModel] {
         do {
             // Obteniendo la información del usuario
@@ -41,7 +42,6 @@ final class CreateCommunityService {
         }
     }
     
-    @MainActor
     func uploadImage(image: UIImage, communityID: String) async throws -> String {
         let storage = Storage.storage()
         let storageRef = storage.reference().child("communities/\(communityID).jpg")
@@ -61,6 +61,18 @@ final class CreateCommunityService {
         } catch {
             print("Error: \(error.localizedDescription)")
             throw CreateCommunityError.uploadImageError
+        }
+    }
+    
+    func checkIfCommunityNotExistsBy(name: String) async throws -> Bool {
+        do {
+            let querySnapshot = try await database.collection("communities").whereField("name", isEqualTo: name).getDocuments()
+            let documents = querySnapshot.documents.compactMap({$0})
+            let communitiesData = documents.map { $0.data() }.compactMap{$0}
+            
+            return communitiesData.isEmpty
+        } catch {
+            throw CreateCommunityError.communityCheckingNameError
         }
     }
 }
