@@ -10,7 +10,7 @@ import PhotosUI
 import FirebaseCore
 
 struct CreateCommunityView: View {
-    @State private var createCommunityViewModel = CreateCommunityViewModel()
+    @State var createCommunityViewModel: CreateCommunityViewModel
     @State private var selectedItem: PhotosPickerItem? = nil
     @State private var selectedImage: Image? = nil
     @State private var communityName: String = ""
@@ -85,7 +85,11 @@ struct CreateCommunityView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button {
-                        dismiss()
+                        Task {
+                            await createCommunityViewModel.removeImageFromFirebaseStorage(imageURL: createCommunityViewModel.community.imgUrl)
+                            
+                            dismiss()
+                        }
                     } label: {
                         Image(systemName: "x.circle.fill")
                             .foregroundStyle(.gray)
@@ -149,5 +153,5 @@ struct CreateCommunityView: View {
 }
 
 #Preview {
-    CreateCommunityView()
+    CreateCommunityView(createCommunityViewModel: CreateCommunityViewModel())
 }

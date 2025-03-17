@@ -109,8 +109,12 @@ struct ChatsView: View {
             .fullScreenCover(isPresented: $chatsViewModel.showAddFriendView) {
                 AddNewFriendView()
             }
-            .sheet(isPresented: $createCommunityViewModel.showCreateNewCommunity) {
-                CreateCommunityView()
+            .sheet(isPresented: $createCommunityViewModel.showCreateNewCommunity, onDismiss: {
+                Task {
+                    await createCommunityViewModel.removeImageFromFirebaseStorage(imageURL: createCommunityViewModel.community.imgUrl)
+                }
+            }) {
+                CreateCommunityView(createCommunityViewModel: createCommunityViewModel)
             }
         }
     }

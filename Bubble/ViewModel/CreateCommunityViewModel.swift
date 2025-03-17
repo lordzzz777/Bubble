@@ -60,4 +60,15 @@ class CreateCommunityViewModel {
             return community.members.contains(where: { $0 == friendID })
         }
     }
+    
+    func removeImageFromFirebaseStorage(imageURL: String) async {
+        do {
+            try await createCommunityService.removeImageFromFirebaseStorage(imageURL: imageURL)
+            print("Imagen de comunidad eliminada con éxito")
+        } catch {
+            errorTitle = "Error al eliminar imagen de la communidad"
+            errorMessage = "Hubo un error al intentar validar el nombre de la comunidad. Por favor, intenta más tarde."
+            print("Error al eliminar imagen de la communidad: \(error.localizedDescription)")
+        }
+    }
 }

@@ -14,6 +14,7 @@ import FirebaseAuth
 enum CreateCommunityError: Error {
     case uploadImageError
     case communityCheckingNameError
+    case deleteImageFromStorageError
 }
 
 @MainActor
@@ -73,6 +74,21 @@ final class CreateCommunityService {
             return !communitiesData.isEmpty
         } catch {
             throw CreateCommunityError.communityCheckingNameError
+        }
+    }
+    
+    
+    func removeImageFromFirebaseStorage(imageURL: String) async throws {
+        guard let url = URL(string: imageURL) else {
+            print("Error: Could not convert string to URL")
+            return
+        }
+        
+        let storageRef = Storage.storage().reference(forURL: url.absoluteString)
+        do {
+            try await storageRef.delete()
+        } catch {
+            throw CreateCommunityError.deleteImageFromStorageError
         }
     }
 }
