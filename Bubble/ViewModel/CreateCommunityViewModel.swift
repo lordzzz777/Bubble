@@ -12,10 +12,11 @@ import SwiftUI
 @MainActor
 class CreateCommunityViewModel {
     private let createCommunityService: CreateCommunityService = CreateCommunityService()
-    var community: CommunityModel = CommunityModel(name: "", imgUrl: "", createdAt: .init(), ownerUID: "", lastMessage: "", messages: [], admins: [], members: [], blockedUsers: [])
+    var community: CommunityModel = CommunityModel(name: "", imgUrl: "", createdAt: .init(), ownerUID: "", lastMessage: "", messages: [], admins: [], members: [], blockedUsers: [], admissionRequests: [])
     
     var friendsToInvite: [UserModel] = []
     var showCreateNewCommunity: Bool = false
+    var isCreatingCommunity: Bool = false
     var showError: Bool = false
     var errorTitle: String = ""
     var errorMessage: String = ""
@@ -70,5 +71,22 @@ class CreateCommunityViewModel {
             errorMessage = "Hubo un error al intentar validar el nombre de la comunidad. Por favor, intenta más tarde."
             print("Error al eliminar imagen de la communidad: \(error.localizedDescription)")
         }
+    }
+    
+    func createCommunity(newCommunity: CommunityModel) async -> Bool {
+        do {
+            isCreatingCommunity = true
+            let friendsToInviteIDs: [String] = friendsToInvite.map({$0.id})
+            try await createCommunityService.createCommunity(community: newCommunity, friendToInviteIDs: friendsToInviteIDs)
+            isCreatingCommunity = false
+            return true
+        } catch {
+            errorTitle = "Error al crear la comunidad"
+            errorMessage = "Hubo un error al intentar crear la comunidad. Por favor, intenta más tarde."
+            showError = true
+            isCreatingCommunity = false
+        }
+        
+        return false
     }
 }

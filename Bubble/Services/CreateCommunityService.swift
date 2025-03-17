@@ -15,6 +15,8 @@ enum CreateCommunityError: Error {
     case uploadImageError
     case communityCheckingNameError
     case deleteImageFromStorageError
+    case createCommunityError
+    case invitationError
 }
 
 @MainActor
@@ -77,7 +79,6 @@ final class CreateCommunityService {
         }
     }
     
-    
     func removeImageFromFirebaseStorage(imageURL: String) async throws {
         guard let url = URL(string: imageURL) else {
             print("Error: Could not convert string to URL")
@@ -89,6 +90,51 @@ final class CreateCommunityService {
             try await storageRef.delete()
         } catch {
             throw CreateCommunityError.deleteImageFromStorageError
+        }
+    }
+    
+    func createCommunity(community: CommunityModel, friendToInviteIDs: [String] ) async throws {
+        do {
+            var newCommunity = community
+            newCommunity.ownerUID = uid
+            try await database.collection("communities").document(community.id).setData(newCommunity.dictionary)
+            for friendToInviteID in friendToInviteIDs {
+                try await self.sendCommunityInvitationTo(friendID: friendToInviteID)
+            }
+        } catch {
+            throw CreateCommunityError.createCommunityError
+        }
+    }
+    
+    private func getChatIDInCommonWithUserBy(id: String) async throws -> String {
+        do {
+            let ref = try await database.collection("chats").getDocuments()
+            let chats = try ref.documents.map { try $0.data(as: ChatModel.self) }
+            let chatInCommon = chats.filter { $0.participants.contains(id) }
+            
+            return chatInCommon.first!.id
+        } catch {
+            throw error
+        }
+    }
+    
+    private func sendCommunityInvitationTo(friendID: String) async throws {
+        do {
+            let chatID = try await self.getChatIDInCommonWithUserBy(id: friendID)
+            
+            let message = MessageModel(senderUserID: uid, content: "", timestamp: .init(), type: MessageType.communityInvitation)
+            try await database.collection("chats").document(chatID).collection("messages").addDocument(data: message.dictionary)
+            
+            // Actualizando información del chat
+            let updateChatInfo: [String: Any] = [
+                "lastMessageTimestamp": message.timestamp,
+                "lastMessageSenderUserID": uid,
+                "lastMessage": message.content,
+                "lastMessageType": message.type.rawValue
+            ]
+            try await database.collection("chats").document(chatID).updateData(updateChatInfo)
+        } catch {
+            throw CreateCommunityError.invitationError
         }
     }
 }

@@ -75,4 +75,5 @@ enum MessageType: String, Codable {
     case acceptedFriendRequest
     case image
     case video
+    case communityInvitation
 }

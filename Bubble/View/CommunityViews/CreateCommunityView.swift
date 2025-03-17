@@ -18,6 +18,8 @@ struct CreateCommunityView: View {
     @State private var showCheckingNameLoading: Bool = false
     @State private var showCheckMark: Bool = false
     @State private var isCommunityNameNotAvailable: Bool = false
+    @State private var wasCommunityCreatedSuccessfully: Bool = false
+    @State private var showCreateCommunityFeedback: Bool = false
     
     @Environment(\.dismiss) private var dismiss
     
@@ -98,17 +100,38 @@ struct CreateCommunityView: View {
                 
                 if showFinishButton {
                     ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            
-                        } label: {
-                            Text("Crear")
+                        if createCommunityViewModel.isCreatingCommunity {
+                            ZStack {
+                                ProgressView()
+                                    .opacity(!showCreateCommunityFeedback ? 1 : 0)
+                                
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(Color.green)
+                                    .scaleEffect(showCreateCommunityFeedback ? 1 : 0)
+                            }
+                        } else {
+                            Button {
+                                Task {
+                                    createCommunityViewModel.community.name = communityName
+                                    wasCommunityCreatedSuccessfully = await createCommunityViewModel.createCommunity(newCommunity: createCommunityViewModel.community)
+                                    
+                                    withAnimation(.bouncy(duration: 0.3).delay(0.2)) {
+                                        showCreateCommunityFeedback = wasCommunityCreatedSuccessfully
+                                    }
+                                    
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                        dismiss()
+                                    }
+                                }
+                            } label: {
+                                Text("Crear")
+                            }
                         }
                     }
                 }
             }
             .task {
                 createCommunityViewModel.friendsToInvite = await createCommunityViewModel.fetchFriends()
-                print(createCommunityViewModel.friendsToInvite)
             }
         }
     }
