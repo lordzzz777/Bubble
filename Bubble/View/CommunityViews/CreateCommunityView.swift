@@ -16,6 +16,7 @@ struct CreateCommunityView: View {
     @State private var communityName: String = ""
     @State private var showFinishButton: Bool = false
     @State private var showCheckingNameLoading: Bool = false
+    @State private var showCheckMark: Bool = false
     @State private var isCommunityNameNotAvailable: Bool = false
     
     @Environment(\.dismiss) private var dismiss
@@ -40,10 +41,14 @@ struct CreateCommunityView: View {
                                     isCommunityNameNotAvailable = await createCommunityViewModel.checkIfCommunityNameExists(communityName: communityName)
                                     showCheckingNameLoading = false
                                     
-                                    if isCommunityNameNotAvailable && !communityName.isEmpty {
-                                        showFinishButton = true
-                                    } else {
-                                        showFinishButton = false
+                                    withAnimation(.bouncy(duration: 0.3)) {
+                                        if !isCommunityNameNotAvailable && !communityName.isEmpty {
+                                            showFinishButton = true
+                                            showCheckMark = true
+                                        } else {
+                                            showFinishButton = false
+                                            showCheckMark = false
+                                        }
                                     }
                                 }
                             }
@@ -51,6 +56,11 @@ struct CreateCommunityView: View {
                         if showCheckingNameLoading {
                             ProgressView()
                         }
+                        
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(Color.green)
+                            .scaleEffect(showCheckMark ? 1 : 0)
+                            
                     }
                     .frame(maxWidth: .infinity)
                 } header: {
