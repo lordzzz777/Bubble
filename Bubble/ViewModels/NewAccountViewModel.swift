@@ -12,6 +12,7 @@ import FirebaseAuth
 @Observable @MainActor
 class NewAccountViewModel {
     private let firestoreService: FirestoreService
+    private let publicChatService: PublicChatService = PublicChatService()
     
     var uid: String? {
         return Auth.auth().currentUser?.uid
@@ -48,7 +49,7 @@ class NewAccountViewModel {
             var newUser = user
             newUser.id = uid
             try await firestoreService.createUser(user: newUser)
-            try await firestoreService.addUserToPublicChat(userID: uid)
+            try await publicChatService.addUserToPublicChat(userID: uid)
         } catch {
             errorTitle = "Error al crear usuario"
             errorDescription = "Hubo un error al crear el usuario. Inténtelo más tarde."
