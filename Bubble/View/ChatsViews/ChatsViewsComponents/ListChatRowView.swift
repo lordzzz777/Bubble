@@ -7,14 +7,18 @@
 
 import SwiftUI
 import FirebaseCore
+import FirebaseAuth
 
 struct ListChatRowView: View {
     
     let chat: ChatModel
     @State private var chatsViewModel = ChatsViewModel()
     @State private var addNewFriendViewModel = AddNewFriendViewModel()
+    
+    private let uid = Auth.auth().currentUser?.uid ?? ""
+    
     var body: some View {
-        NavigationStack {
+        VStack {
             if let user = chatsViewModel.user {
                 NavigationLink(destination: {
                     if user.isDeleted {
@@ -90,6 +94,21 @@ struct ListChatRowView: View {
                                 case .video:
                                     Text("Te ha enviado un video")
                                         .font(.footnote)
+                                case .communityInvitation:
+                                    HStack(spacing: 0) {
+                                        if chatsViewModel.checkIfMessageWasSentByCurrentUser(senderUserID: chat.lastMessageSenderUserID) {
+                                            HStack(alignment: .top, spacing: 0) {
+                                                Text("Tú: ")
+                                                    .foregroundStyle(.secondary)
+                                                
+                                                Text("invitaste a una comunidad")
+                                            }
+                                            .font(.footnote)
+                                        } else {
+                                            Text("Te ha invitado a participar de una comunidad")
+                                                .font(.footnote)
+                                        }
+                                    }
                                 }
                             }
                         }

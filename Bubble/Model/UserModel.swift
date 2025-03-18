@@ -8,7 +8,7 @@
 import Foundation
 import FirebaseCore
 
-struct UserModel: Codable {
+struct UserModel: Codable, Identifiable {
     var id: String
     var nickname: String
     var imgUrl: String

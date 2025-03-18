@@ -38,8 +38,6 @@ class PrivateChatService {
                 return
             }
             
-            print("documents: \(documents)")
-            
             let messages = try! documents.map { try $0.data(as: MessageModel.self) }
             
             print("messages in service: \(messages)")
