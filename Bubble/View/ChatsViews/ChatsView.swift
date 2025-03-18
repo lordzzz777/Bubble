@@ -14,6 +14,7 @@ struct ChatsView: View {
     
     @State private var chatsViewModel = ChatsViewModel()
     @State private var trashUserDefault = LoginViewModel()
+    @State private var createCommunityViewModel = CreateCommunityViewModel()
     @State private var isMessageDestructive = false
     
     // Esta es la variable que almacenará el valor seleccionado del Picker
@@ -22,7 +23,7 @@ struct ChatsView: View {
     var body: some View {
         NavigationStack {
             // Usamos un Picker con un estilo segmentado
-            VStack{
+            VStack {
                 Picker("Visibilidad", selection: $chatsViewModel.selectedVisibility) {
                     ForEach(chatsViewModel.visibilityOptions, id: \.self) { option in
                         Text(option)
@@ -41,11 +42,9 @@ struct ChatsView: View {
                         .font(.system(size: 100))
                     
                     Spacer()
-                    
-                }else{
+                } else {
                     Text(trashUserDefault.errorMessage)
                     if chatsViewModel.selectedVisibility == "privado" {
-                        
                         List {
                             ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
                                 ListChatRowView(chat: chat)
@@ -58,8 +57,8 @@ struct ChatsView: View {
                                     }
                             }
                         }
-                        
-                    }else{
+                        .listStyle(PlainListStyle())
+                    } else {
                         PublicChatView()
                     }
                 }
@@ -69,7 +68,6 @@ struct ChatsView: View {
                     Text(option).searchCompletion(option)
                 }
             }
-            
             .navigationTitle("Chats")
             .task {
                 await chatsViewModel.fetchChats()
@@ -101,7 +99,7 @@ struct ChatsView: View {
                         }
                         
                         Button("Crear comunidad", systemImage: "person.2.badge.plus.fill") {
-                            
+                            createCommunityViewModel.showCreateNewCommunity.toggle()
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -110,6 +108,13 @@ struct ChatsView: View {
             }
             .fullScreenCover(isPresented: $chatsViewModel.showAddFriendView) {
                 AddNewFriendView()
+            }
+            .sheet(isPresented: $createCommunityViewModel.showCreateNewCommunity, onDismiss: {
+                Task {
+                    await createCommunityViewModel.removeImageFromFirebaseStorage(imageURL: createCommunityViewModel.community.imgUrl)
+                }
+            }) {
+                CreateCommunityView(createCommunityViewModel: createCommunityViewModel)
             }
         }
     }
