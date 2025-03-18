@@ -49,8 +49,6 @@ struct ChatsView: View {
                                 }
                         }
                         .listStyle(PlainListStyle())
-                    } else {
-                        PublicChatView()
                     }
                 }
             }
