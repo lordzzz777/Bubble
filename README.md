@@ -97,8 +97,21 @@ Este proyecto está licenciado bajo la [MIT License](LICENSE).
     - Refactorizar alerts de la vista de chats y su respectivo viewmodel,
     - Actualización Readme
 
-- **Quinto sprint, estatus: En Proceso ... :**
+- **Quinto sprint, estatus: finalizado :**
     - Solucionar bug aceptar solicitudes de amistad
     - Edición de perfil
     - Funcionalidad para enviar y recibir mensajes en la vista de un chat
     - Actualización Readme
+
+- **Sexto sprint, estatus: finalizado :**
+    - Eliminación de Cuenta en "Bubble"
+    - Agregar menu con opciones a la vista de Chat
+    - Vista chats: Cambiar Entre Chats Privados y Público
+    - Errores en la vista de chat privado
+    - Agregar funcionalidad de mostrar hora en cada mensaje y el chat
+
+- **Septimo sprint, estatus: En Proceso ... :**
+    - Solucionar bug que no agrega el ID del amigo agregado al arreglo en firebase firestore
+    - Mejoras en la visualización de mensajes
+    - Refactorización general de Proyecto
+    - solucionar el desborde del botón de cerrar sesión en los iPhone pequeños
