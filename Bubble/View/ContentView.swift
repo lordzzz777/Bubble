@@ -20,6 +20,11 @@ struct ContentView: View {
                     Label("Chats", systemImage: "message.fill")
                 })
             
+            PublicChatView()
+                .tabItem({
+                    Label("Chat Café", systemImage: "cup.and.saucer.fill")
+                })
+            
             Text("Pantalla 2")
                 .tabItem({
                     Label("Comunidades", systemImage: "person.3.sequence.fill")

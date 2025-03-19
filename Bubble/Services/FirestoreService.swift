@@ -38,7 +38,7 @@ actor FirestoreService {
     /// - Throws: Lanza un error `FirestoreError.newAccountError` en caso de fallo en la escritura de datos.
     func createUser(user: UserModel) async throws {
         guard let uid = Auth.auth().currentUser?.uid else {
-            print("❌ Error: No hay usuario autenticado.")
+            print("Error: No hay usuario autenticado.")
             return
         }
         
@@ -46,7 +46,7 @@ actor FirestoreService {
             let document = try await database.collection("users").document(uid).getDocument()
             
             if let data = document.data(), let isDeleted = data["isDeleted"] as? Bool, isDeleted {
-                // 🔄 Reactivar usuario si estaba eliminado
+                // Reactivar usuario si estaba eliminado
                 try await database.collection("users").document(uid).updateData([
                     "isDeleted": false,
                     "nickname": user.nickname,
@@ -54,7 +54,7 @@ actor FirestoreService {
                     "lastConnectionTimeStamp": Timestamp(),
                     "isOnline": true,
                 ])
-                print("✅ Cuenta reactivada para UID: \(uid)")
+                print("Cuenta reactivada para UID: \(uid)")
             } else {
                 if try await checkIfUserExistsByID(userID: uid) {
                     try await database.collection("users").document(uid).updateData(["nickname": user.nickname])
@@ -65,11 +65,11 @@ actor FirestoreService {
                 }
             }
             
-            // 🔹 Agregar usuario al chat público asegurando que se cree si no existe
-            try await addUserToPublicChat(userID: uid)
+//            // Agregar usuario al chat público asegurando que se cree si no existe
+//            try await addUserToPublicChat(userID: uid)
             
         } catch {
-            print("❌ Error al crear usuario: \(error.localizedDescription)")
+            print("Error al crear usuario: \(error.localizedDescription)")
             throw FirestoreError.newAccountError
         }
     }
@@ -241,45 +241,6 @@ actor FirestoreService {
             print("Nickname actualizado correctamente a \(newNickname)")
         }catch{
             throw FirestoreError.checkNicknameError
-        }
-    }
-   
-    /// Agrega un usuario al chat público "global_chat". Si el chat no existe, lo crea.
-    ///
-    /// - Parameter userID: El identificador del usuario que se agregará al chat.
-    /// - Throws: Lanza un error si la operación en Firestore falla.
-    func addUserToPublicChat(userID: String) async throws {
-        let chatRef = database.collection("public_chats").document("global_chat")
-        
-        do {
-            let chatDoc = try await chatRef.getDocument()
-            
-            if chatDoc.exists {
-                // 🔹 Si el chat ya existe, obtenemos los participantes
-                var participants = chatDoc["participants"] as? [String] ?? []
-                
-                if !participants.contains(userID) {
-                    // 🔹 Agregar usuario si no está en la lista
-                    participants.append(userID)
-                    try await chatRef.updateData(["participants": participants])
-                    print("✅ Usuario \(userID) agregado al chat público.")
-                } else {
-                    print("⚠️ Usuario \(userID) ya está en el chat público.")
-                }
-            } else {
-                // 🔹 Si el chat público NO EXISTE, lo creamos y agregamos al usuario
-                let publicChatData: [String: Any] = [
-                    "id": "global_chat",
-                    "participants": [userID],
-                    "lastMessage": "Bienvenidos al chat público!",
-                    "lastMessageTimestamp": Timestamp()
-                ]
-                try await chatRef.setData(publicChatData)
-                print("✅ Chat público creado y usuario \(userID) agregado.")
-            }
-        } catch {
-            print("❌ Error al agregar usuario al chat público: \(error.localizedDescription)")
-            throw FirestoreError.newAccountError
         }
     }
 

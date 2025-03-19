@@ -60,7 +60,7 @@ struct UserProfileView: View {
                         Task {
                             await userProfileView.updateNicname(newNickname: newNickname)
                             isEditingNickname = false
-                            await userProfileView.showTemporaryAlert(title: "Nickname", message: "✅ Se ha actualizado con éxito")
+                            await userProfileView.showTemporaryAlert(title: "Nickname", message: "Se ha actualizado con éxito")
                         }
                     }.disabled(nickNameNotExists ?  false : true)
                         .buttonStyle(.borderedProminent)

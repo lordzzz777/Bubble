@@ -22,44 +22,33 @@ struct ChatsView: View {
     
     var body: some View {
         NavigationStack {
+            
             // Usamos un Picker con un estilo segmentado
-            VStack {
-                Picker("Visibilidad", selection: $chatsViewModel.selectedVisibility) {
-                    ForEach(chatsViewModel.visibilityOptions, id: \.self) { option in
-                        Text(option)
-                            .tag(option) // Asegúrate de usar .tag para asociar cada Text con su valor
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
+            VStack{
                 
                 if $chatsViewModel.chats.isEmpty && chatsViewModel.selectedVisibility == "privado" {
-                    Text("No tienes chats aún")
-                        .font(.largeTitle.bold())
-                        .padding(.bottom, 20)
                     
                     Image(systemName: "bubble.left.and.exclamationmark.bubble.right")
                         .font(.system(size: 100))
                     
-                    Spacer()
-                } else {
-                    Text(trashUserDefault.errorMessage)
-                    if chatsViewModel.selectedVisibility == "privado" {
-                        List {
-                            ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
-                                ListChatRowView(chat: chat)
-                                    .swipeActions {
-                                        Button("Borrar", systemImage: "trash.fill") {
-                                            chatIdSelected = chat.id
-                                            isMessageDestructive = true
-                                        }
-                                        .tint(.red)
+                    Text("No tienes chats aún")
+                        .font(.largeTitle.bold())
+                        .padding(.bottom, 20)
+                    
+                }else{
+                    
+                    List {
+                        ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
+                            ListChatRowView(chat: chat)
+                                .swipeActions {
+                                    Button("Borrar", systemImage: "trash.fill") {
+                                        chatIdSelected = chat.id
+                                        isMessageDestructive = true
                                     }
-                            }
+                                    .tint(.red)
+                                }
                         }
                         .listStyle(PlainListStyle())
-                    } else {
-                        PublicChatView()
                     }
                 }
             }

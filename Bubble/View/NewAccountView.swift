@@ -66,7 +66,7 @@ struct NewAccountView: View {
             }
             .navigationTitle("Nueva cuenta")
             .toolbar {
-                //Habilita el botón solo si el nickname no está vacío y si el nickname no existe en la base de datos
+                // Habilita el botón solo si el nickname no está vacío y si el nickname no existe en la base de datos
                 if !nickname.isEmpty && nickNameNotExists {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
@@ -82,7 +82,7 @@ struct NewAccountView: View {
                                         isDeleted: false)
                                 )
                                 
-                                // 🔹 Una vez registrado el nickname, cambiar el estado a `.hasNickname`
+                                // Una vez registrado el nickname, cambiar el estado a `.hasNickname`
                                 loginFlowState = .loggedIn
                             }
                         } label: {
