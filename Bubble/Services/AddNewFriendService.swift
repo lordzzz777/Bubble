@@ -88,7 +88,7 @@ actor AddNewFriendService {
         }
     }
     
-    /// ✅ Actualiza el array de chats en el documento del usuario
+    /// Actualiza el array de chats en el documento del usuario
     private func updateUserChats(userID: String, chatID: String) async throws {
         let userRef = database.collection("users").document(userID)
         

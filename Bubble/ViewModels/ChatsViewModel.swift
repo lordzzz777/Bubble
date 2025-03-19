@@ -65,50 +65,6 @@ class ChatsViewModel: AddNewFriendViewModel {
         }
     }
     
-    /// Obtiene los mensajes del chat público en tiempo real.
-    ///
-    /// - Nota: Usa `Task` para manejar el flujo asíncrono y cancelar la tarea si es necesario.
-    func fetchPublicChatMessages() {
-        publicChatTask?.cancel()
-        publicChatTask = Task { [weak self] in
-            guard let self = self else { return }
-            do {
-                for try await messages in await chatsService.fetchPublicChatMessages() {
-                    guard !Task.isCancelled else { return }
-                    await MainActor.run {
-                        self.messages = messages
-                    }
-                }
-            } catch {
-                print("Error al obtener mensajes del chat público: \(error.localizedDescription)")
-            }
-        }
-    }
-    
-    /// Envía un mensaje al chat público.
-    ///
-    /// - Parameter text: El contenido del mensaje que se enviará.
-    func sendPublicMessage(_ text: String) async {
-        // Verifica si hay un usuario autenticado antes de enviar el mensaje.
-        guard let userID = Auth.auth().currentUser?.uid else {
-            print("Error: No hay usuario autenticado.")
-            return
-        }
-        // Crea un nuevo mensaje con un ID único y los datos del usuario.
-        let message = MessageModel(id: UUID().uuidString,
-                                   senderUserID: userID,
-                                   content: text, timestamp: Timestamp(),
-                                   type: .text)
-        
-        do {
-            // Intenta enviar el mensaje al servicio de chats públicos.
-            try await chatsService.sendPublicMessage(message)
-        } catch {
-            // Manejo de errores si el envío del mensaje falla.
-            print("Error al enviar mensaje público: \(error.localizedDescription)")
-        }
-    }
-    
     /// Obtiene la lista de chats en los que el usuario participa y los almacena en la variable `chats`.
     /// Esta función escucha cambios en tiempo real.
     /// - Note: Cancela cualquier tarea en ejecución antes de iniciar una nueva.

@@ -50,7 +50,7 @@ struct SettingView: View {
                 Button("Cerra sesión", action: {
                     isShowAlertWarning = true
                 }).tint(.red)
-                    .padding(.horizontal, 113)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
             .navigationTitle("Configuración")
             
