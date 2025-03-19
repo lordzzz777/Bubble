@@ -112,4 +112,22 @@ class PublicChatViewModel {
         
         textFieldHeight.wrappedValue = min(40 + (numLines * lineHeight), maxHeight)
     }
+    
+    /// Devuelve la imagen de avatar del usuario
+    @ViewBuilder
+    func profileImage(_ user: UserModel?) -> some View {
+        if let imageURL = user?.imgUrl, let url = URL(string: imageURL) {
+            AsyncImage(url: url) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                ProgressView()
+            }
+        } else {
+            Image(systemName: "person.circle.fill")
+                .resizable()
+                .scaledToFit()
+                .foregroundColor(.gray)
+        }
+    }
+    
 }

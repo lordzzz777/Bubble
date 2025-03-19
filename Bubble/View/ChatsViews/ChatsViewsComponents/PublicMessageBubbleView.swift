@@ -10,6 +10,7 @@ import FirebaseCore
 import FirebaseAuth
 
 struct PublicMessageBubbleView: View {
+    @State private var publicChatViewModel =  PublicChatViewModel()
     var message: MessageModel
     var user: UserModel?
     var userColor: Color
@@ -21,7 +22,7 @@ struct PublicMessageBubbleView: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
             if !isCurrentUser {
-                profileImage()
+                publicChatViewModel.profileImage(user)
                     .frame(width: 40, height: 40)
                     .clipShape(Circle())
                     .offset(x: 5, y: 0)
@@ -38,7 +39,7 @@ struct PublicMessageBubbleView: View {
                         .padding(.horizontal, 10)
                     HStack {
                         Spacer()
-                        Text(formatTimestamp(message.timestamp))
+                        Text(publicChatViewModel.formatTimestamp(message.timestamp))
                             .font(.caption2)
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 10)
@@ -75,7 +76,7 @@ struct PublicMessageBubbleView: View {
             .frame(maxWidth: 260, alignment: isCurrentUser ? .trailing : .leading)
             
             if isCurrentUser {
-                profileImage()
+                publicChatViewModel.profileImage(user)
                     .frame(width: 40, height: 40)
                     .clipShape(Circle())
                     .offset(x: -15, y: 0)
@@ -83,29 +84,6 @@ struct PublicMessageBubbleView: View {
         }
 
         
-    }
-    
-    @ViewBuilder
-    private func profileImage() -> some View {
-        if let imageURL = user?.imgUrl, let url = URL(string: imageURL) {
-            AsyncImage(url: url) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                ProgressView()
-            }
-        } else {
-            Image(systemName: "person.circle.fill")
-                .resizable()
-                .scaledToFit()
-                .foregroundColor(.gray)
-        }
-    }
-    
-    private func formatTimestamp(_ timestamp: Timestamp) -> String {
-        let date = timestamp.dateValue()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
     }
 }
 
