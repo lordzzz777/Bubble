@@ -73,7 +73,7 @@ Este proyecto está licenciado bajo la [MIT License](LICENSE).
 
 ---
 
-## Próximos Pasos
+## Historial de procesos:
 
 - **Primer sprint, estatus: finalizado:**
     - Crear login o registro,
