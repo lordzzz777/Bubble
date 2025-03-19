@@ -110,8 +110,13 @@ Este proyecto está licenciado bajo la [MIT License](LICENSE).
     - Errores en la vista de chat privado
     - Agregar funcionalidad de mostrar hora en cada mensaje y el chat
 
-- **Septimo sprint, estatus: En Proceso ... :**
+- **Septimo sprint, estatus: finalizado :**
     - Solucionar bug que no agrega el ID del amigo agregado al arreglo en firebase firestore
     - Mejoras en la visualización de mensajes
-    - Refactorización general de Proyecto
     - solucionar el desborde del botón de cerrar sesión en los iPhone pequeños
+      
+- **Octavo sprint, estatus: En Proceso ... :**
+    - Refactorización general de Proyecto
+    - modificar de funciónalidad de agregar amigos
+    - CRUD de mensjes dentro chats Cafe
+    - Funcionalidad de actualizar estado conectado/desconectado
