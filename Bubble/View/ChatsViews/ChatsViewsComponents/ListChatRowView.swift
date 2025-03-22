@@ -12,7 +12,7 @@ import FirebaseAuth
 struct ListChatRowView: View {
     
     let chat: ChatModel
-    @State private var chatsViewModel = ChatsViewModel()
+    @State private var chatsViewModel = PrivateChatViewModel()
     @State private var addNewFriendViewModel = AddNewFriendViewModel()
     
     private let uid = Auth.auth().currentUser?.uid ?? ""

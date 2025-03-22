@@ -12,7 +12,7 @@ import FirebaseAuth
 
 struct ChatsView: View {
     
-    @State private var chatsViewModel = ChatsViewModel()
+    @State private var chatsViewModel = PrivateChatViewModel()
     @State private var trashUserDefault = LoginViewModel()
     @State private var createCommunityViewModel = CreateCommunityViewModel()
     @State private var isMessageDestructive = false
@@ -26,7 +26,7 @@ struct ChatsView: View {
             // Usamos un Picker con un estilo segmentado
             VStack{
                 
-                if $chatsViewModel.chats.isEmpty && chatsViewModel.selectedVisibility == "privado" {
+                if $chatsViewModel.chats.isEmpty {
                     
                     Image(systemName: "bubble.left.and.exclamationmark.bubble.right")
                         .font(.system(size: 100))
@@ -53,9 +53,9 @@ struct ChatsView: View {
                 }
             }
             .searchable(text: $chatsViewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
-                ForEach(chatsViewModel.visibilityOptions, id: \.self) { option in
-                    Text(option).searchCompletion(option)
-                }
+//                ForEach(chatsViewModel.visibilityOptions, id: \.self) { option in
+//                    Text(option).searchCompletion(option)
+//                }
             }
             .navigationTitle("Chats")
             .task {
@@ -63,8 +63,8 @@ struct ChatsView: View {
             }
             
             // Alerta de Error
-            .alert(isPresented: $chatsViewModel.isfetchChatsError) {
-                Alert(title: Text(chatsViewModel.errorTitle), message: Text(chatsViewModel.errorDescription), dismissButton: .default(Text("OK"))
+            .alert(isPresented: $chatsViewModel.showError) {
+                Alert(title: Text(chatsViewModel.errorTitle), message: Text(chatsViewModel.errorMessage), dismissButton: .default(Text("OK"))
                 )
             }
             

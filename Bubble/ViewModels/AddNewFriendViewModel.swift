@@ -12,11 +12,12 @@ import Foundation
 class AddNewFriendViewModel {
     private let addNewFriendService: AddNewFriendService = AddNewFriendService()
     
-    var friendNickname: String = ""
     var matchedUsers: [UserModel] = []
-    var chats: [ChatModel] = []
+  
     var showError: Bool = false
     var isSuccess = false
+    
+    var friendNickname: String = ""
     var successMessage: String = ""
     var errorTitle: String = ""
     var errorDescription: String = ""

@@ -14,7 +14,7 @@ struct SettingView: View {
     
     var general: [SettingModel]{
         return[
-            .init(titleSetting: "Cuenta", selectedView: AnyView(UserProfileView())),
+        .init(titleSetting: "Cuenta", selectedView: AnyView(UserProfileView())),
         .init(titleSetting: "Privacidad", selectedView: AnyView(Text("Mi privacidad"))),
         .init(titleSetting: "Chats", selectedView: AnyView(Text("Mis chats"))),
         .init(titleSetting: "Favoritos", selectedView: AnyView(Text("Mis favoritos")))

@@ -29,7 +29,8 @@ struct UserProfileView: View {
     var body: some View {
         NavigationStack{
             VStack(spacing: 20) {
-                profileImage() // Llamada funcion del PhotosPicker
+               // Llamada funcion del PhotosPicker
+                userProfileView.profileImage($selectedItem, $selectedImage)
                 
                 /// Muestra el textFild en caso que el usuario quisiera editar trar pulsar el botón de Editar
                 /// situado en la barra de navegación
@@ -126,64 +127,6 @@ struct UserProfileView: View {
                 }
         }
     }
-    
-    // Funcion que activa el PhotosPicker y actualiza las imagen de perfil
-    @ViewBuilder
-    private func profileImage() -> some View {
-        VStack {
-            if let selectedImage = selectedImage {
-                PhotosPicker(selection: $selectedItem, photoLibrary: .shared()) {
-                    selectedImage
-                        .resizable()
-                        .scaledToFill()
-                        .clipShape(Circle())
-                        .frame(width: 170, height: 170)
-                }
-                
-            } else {
-                if let imageURL = userProfileView.user?.imgUrl, let url = URL(string: imageURL){
-                    PhotosPicker(selection: $selectedItem, label: {
-                        AsyncImage(url: url){ images in
-                            switch images {
-                            case .empty:
-                                ProgressView()
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 170, height: 170)
-                                    .clipShape(Circle())
-                            case .failure(_):
-                                Image(systemName: "person.circle.fill")
-                                    .font(.system(size: 170))
-                            @unknown default:
-                                EmptyView()
-                            }
-                        }
-                    })
-                    
-                }else{
-                    EmptyView()
-                }
-            }
-            
-        }
-        .onChange(of: selectedItem) { _, newItem in
-            // Cargar la imagen seleccionada en firestore
-            Task {
-                if let data = try? await newItem?.loadTransferable(type: Data.self),
-                   let uiImage = UIImage(data: data) {
-                    selectedImage = Image(uiImage: uiImage)
-                    await userProfileView.saveImage(image: uiImage)
-                    await userProfileView.showTemporaryAlert(title: "👤 Foto de perfil", message: "✅ Se ha cambiado con éxito")
-                    if userProfileView.showImageUploadError {
-                        selectedImage = nil
-                    }
-                }
-            }
-        }
-    }
-    
 }
 
 #Preview {
