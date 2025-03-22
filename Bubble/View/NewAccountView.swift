@@ -24,8 +24,8 @@ struct NewAccountView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 40) {
-                SelectAvatarView()
-                
+              // SelectAvatarView()
+                newAccountViewModel.selectAvatarView($selectedItem, $selectedImage)
                 VStack(alignment: .leading, spacing: 2) {
                     ZStack(alignment: .trailing) {
                         TextField("Nickname", text: $nickname)
@@ -97,44 +97,44 @@ struct NewAccountView: View {
         }
     }
     
-    //MARK: - Seleccionar avatar
-    @ViewBuilder
-    func SelectAvatarView() -> some View {
-        VStack {
-            if let selectedImage = selectedImage {
-                PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
-                    selectedImage
-                        .resizable()
-                        .scaledToFill()
-                        .clipShape(Circle())
-                        .frame(width: 170, height: 170)
-                }
-            } else {
-                // PhotosPicker nativo de SwiftUI
-                PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
-                    Image(systemName: "person.crop.circle.fill.badge.plus")
-                        .resizable()
-                        .scaledToFit()
-                        .foregroundStyle(.black)
-                        .frame(width: 180, height: 180)
-                }
-            }
-        }
-        .onChange(of: selectedItem) { _, newItem in
-            // Cargar la imagen seleccionada en firestore
-            Task {
-                if let data = try? await newItem?.loadTransferable(type: Data.self),
-                   let uiImage = UIImage(data: data) {
-                    selectedImage = Image(uiImage: uiImage)
-                    await newAccountViewModel.saveImage(image: uiImage)
-                    
-                    if newAccountViewModel.showImageUploadError {
-                        selectedImage = nil
-                    }
-                }
-            }
-        }
-    }
+//    //MARK: - Seleccionar avatar
+//    @ViewBuilder
+//    func SelectAvatarView() -> some View {
+//        VStack {
+//            if let selectedImage = selectedImage {
+//                PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
+//                    selectedImage
+//                        .resizable()
+//                        .scaledToFill()
+//                        .clipShape(Circle())
+//                        .frame(width: 170, height: 170)
+//                }
+//            } else {
+//                // PhotosPicker nativo de SwiftUI
+//                PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
+//                    Image(systemName: "person.crop.circle.fill.badge.plus")
+//                        .resizable()
+//                        .scaledToFit()
+//                        .foregroundStyle(.black)
+//                        .frame(width: 180, height: 180)
+//                }
+//            }
+//        }
+//        .onChange(of: selectedItem) { _, newItem in
+//            // Cargar la imagen seleccionada en firestore
+//            Task {
+//                if let data = try? await newItem?.loadTransferable(type: Data.self),
+//                   let uiImage = UIImage(data: data) {
+//                    selectedImage = Image(uiImage: uiImage)
+//                    await newAccountViewModel.saveImage(image: uiImage)
+//                    
+//                    if newAccountViewModel.showImageUploadError {
+//                        selectedImage = nil
+//                    }
+//                }
+//            }
+//        }
+//    }
 }
 
 #Preview {

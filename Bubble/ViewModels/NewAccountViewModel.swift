@@ -6,8 +6,10 @@
 //
 
 import Foundation
-import SwiftUI
 import FirebaseAuth
+import PhotosUI
+import SwiftUI
+
 
 @Observable @MainActor
 class NewAccountViewModel {
@@ -151,4 +153,105 @@ class NewAccountViewModel {
             print("Error al eliminar la cuenta: \(error)")
         }
     }
+    
+    /// Función que devuelve una vista SwiftUI para mostrar y actualizar una imagen de perfil.
+    ///
+    /// Usa un `Binding` a un `PhotosPickerItem` (para manejar la selección de imagen)
+    /// y un Binding a una Image (para mostrar la imagen seleccionada)
+    @ViewBuilder
+    func profileImage(_ selectedItem:Binding<PhotosPickerItem?>,_ selectedImage: Binding<Image?>) -> some View {
+        VStack{
+            if let selectedImage = selectedImage.wrappedValue{
+                PhotosPicker(selection: selectedItem, photoLibrary: .shared()){
+                    selectedImage
+                        .resizable()
+                        .scaledToFill()
+                        .clipShape(Circle())
+                        .frame(width: 170, height: 170)
+                }
+            }else{
+                if let imegeURL = user?.imgUrl, let url = URL(string: imegeURL){
+                    PhotosPicker(selection: selectedItem, label: {
+                        AsyncImage(url: url){ image in
+                            switch image {
+                            case .empty:
+                                ProgressView()
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 170, height: 170)
+                                    .clipShape(Circle())
+                            case .failure(let error):
+                                Image(systemName: "person.circle.fill")
+                                    .font(.system(size: 170))
+                            @unknown default:
+                                EmptyView()
+                            }
+                        }
+                    })
+                }else{
+                    EmptyView()
+                }
+            }
+        }
+        .onChange(of: selectedItem.wrappedValue){ _, newItem in
+            Task{ [weak self] in
+                guard let self = self else {return}
+                if let data = try? await newItem?.loadTransferable(type: Data.self),
+                   let uiImage = UIImage(data: data) {
+                    selectedImage.wrappedValue = Image(uiImage: uiImage)
+                    await self.saveImage(image: uiImage)
+                    await self.showTemporaryAlert(title: "👤 Foto de perfil", message: "✅ Se ha cambiado con éxito")
+                    
+                    if self.showImageUploadError {
+                        selectedImage.wrappedValue = nil
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Vista reutilizable que muestra un botón de selección de imagen (avatar) usando `PhotosPicker`.
+    ///
+    /// Usa `@ViewBuilder` para permitir condicionales dentro del `body`.
+    @ViewBuilder
+    func selectAvatarView(_ selectedItem:Binding<PhotosPickerItem?>,_ selectedImage: Binding<Image?>) -> some View{
+        VStack{
+            if let selectedImage = selectedImage.wrappedValue{
+                PhotosPicker(selection: selectedItem,matching: .images, photoLibrary: .shared()){
+                    selectedImage
+                        .resizable()
+                        .scaledToFill()
+                        .clipShape(Circle())
+                        .frame(width: 170, height: 170)
+                }
+            }else{
+                PhotosPicker(selection: selectedItem, matching: .images, photoLibrary: .shared()){
+                    Image(systemName: "person.crop.circle.fill.badge.plus")
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundStyle(.black)
+                        .frame(width: 180, height: 180)
+                }
+            }
+        }
+        .onChange(of: selectedItem.wrappedValue) { _, newItem in
+            
+            Task{ [weak self] in
+                guard let self = self else {return}
+                
+                if let data = try? await newItem?.loadTransferable(type: Data.self), let uiImage = UIImage(data: data){
+                    selectedImage.wrappedValue = Image(uiImage: uiImage)
+                    await self.saveImage(image: uiImage)
+                    
+                    if self.showImageUploadError{
+                        selectedImage.wrappedValue = nil
+                    }
+                }
+            }
+        }
+        
+    }
+    
 }
