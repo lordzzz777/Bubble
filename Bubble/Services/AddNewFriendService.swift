@@ -102,6 +102,9 @@ actor AddNewFriendService {
         }
     }
     
+    /// Método asincrónico que acepta una solicitud de amistad.
+    /// Requiere el `ID` del chat donde se hizo la solicitud y el `UID` del usuario que la envió.
+    /// Lanza errores si algo falla.
     func acceptFriendRequest(chatID: String, senderUID: String) async throws {
         let chatRef = database.collection("chats").document(chatID)
         

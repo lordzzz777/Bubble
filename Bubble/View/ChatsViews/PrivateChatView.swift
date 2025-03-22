@@ -9,7 +9,7 @@ import SwiftUI
 
 struct PrivateChatView: View {
 
-    @Environment(ChatsViewModel.self) private var chatsViewModel
+    @Environment(PrivateChatViewModel.self) private var chatsViewModel
     @State private var privateChatViewModel = PrivateChatViewModel()
     @State private var messageText: String = ""
     
