@@ -23,6 +23,7 @@ actor PrivateChatService {
     private let uid = Auth.auth().currentUser?.uid ?? ""
     private var listenerRegistration: ListenerRegistration?
     
+    
     /// Obtiene los chats en tiempo real en los que el usuario participa.
     /// - Returns: Un `AsyncThrowingStream` que emite un array de `ChatModel` y maneja errores.
     func getChats() -> AsyncThrowingStream<[ChatModel], Error>  {
