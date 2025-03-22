@@ -182,7 +182,7 @@ class NewAccountViewModel {
                                     .scaledToFill()
                                     .frame(width: 170, height: 170)
                                     .clipShape(Circle())
-                            case .failure(let error):
+                            case .failure:
                                 Image(systemName: "person.circle.fill")
                                     .font(.system(size: 170))
                             @unknown default:
