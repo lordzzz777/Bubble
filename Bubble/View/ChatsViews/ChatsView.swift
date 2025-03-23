@@ -14,8 +14,10 @@ struct ChatsView: View {
     
     @State private var chatsViewModel = ChatsViewModel()
     @State private var trashUserDefault = LoginViewModel()
+    @State private var userViewModel = UserViewModel()
     @State private var createCommunityViewModel = CreateCommunityViewModel()
     @State private var isMessageDestructive = false
+    @State private var isStatus = false
     
     // Esta es la variable que almacenará el valor seleccionado del Picker
     @State private var chatIdSelected: String = ""
@@ -40,6 +42,11 @@ struct ChatsView: View {
                     List {
                         ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
                             ListChatRowView(chat: chat)
+                                .contextMenu{
+                                    Button("Desconectar"){
+                                        isStatus.toggle()
+                                    }
+                                }
                                 .swipeActions {
                                     Button("Borrar", systemImage: "trash.fill") {
                                         chatIdSelected = chat.id

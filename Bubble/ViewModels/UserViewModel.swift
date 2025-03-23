@@ -35,11 +35,12 @@ class UserViewModel {
     func updateUserStatus(online: Bool) async {
         do{
            try await firestoreService.updateUserStatus(isOnline: online)
+            print("Estado actualizado a \(online ? "🟢 Conectado" : "⚪️ Desconectado")")
         }catch{
             print("No se pudo actualizar el estado: \(error)")
         }
     }
-    
+        
     func storeLastSeen() async {
         do {
             try await firestoreService.storeLastSeen()
