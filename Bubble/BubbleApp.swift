@@ -12,6 +12,7 @@ import GoogleSignIn
 
 @main
 struct BubbleApp: App {
+    @State private var userViewModel = UserViewModel()
     
     @AppStorage("LoginFlowState") private var loginFlowState = UserLoginState.loggedOut
     
@@ -31,9 +32,17 @@ struct BubbleApp: App {
             switch loginFlowState {
             case .loggedOut:
                 WelcomeView()
+                    .onAppear{
+                        userViewModel.startMonitoringUserStatus()
+                    }
                     .onOpenURL { url in
                         if GIDSignIn.sharedInstance.hasPreviousSignIn() {
                             GIDSignIn.sharedInstance.handle(url)
+                        }
+                        
+                        Task{
+                            await userViewModel.updateUserStatus(online: false)
+                            await userViewModel.storeLastSeen()
                         }
                     }
                     .id(loginFlowState.rawValue)
