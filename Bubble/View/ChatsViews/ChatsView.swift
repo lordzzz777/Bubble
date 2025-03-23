@@ -17,13 +17,15 @@ struct ChatsView: View {
     @State private var userViewModel = UserViewModel()
     @State private var createCommunityViewModel = CreateCommunityViewModel()
     @State private var isMessageDestructive = false
-    @State private var isStatus = false
+    @State private var isShowingToggle = false
     
     // Esta es la variable que almacenará el valor seleccionado del Picker
     @State private var chatIdSelected: String = ""
     
     var body: some View {
         NavigationStack {
+            
+            
             
             // Usamos un Picker con un estilo segmentado
             VStack{
@@ -38,15 +40,10 @@ struct ChatsView: View {
                         .padding(.bottom, 20)
                     
                 }else{
-                    
+
                     List {
                         ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
                             ListChatRowView(chat: chat)
-                                .contextMenu{
-                                    Button("Desconectar"){
-                                        isStatus.toggle()
-                                    }
-                                }
                                 .swipeActions {
                                     Button("Borrar", systemImage: "trash.fill") {
                                         chatIdSelected = chat.id
@@ -56,7 +53,33 @@ struct ChatsView: View {
                                 }
                         }
                         .listStyle(PlainListStyle())
-                    }
+                        
+                    }.overlay(content: {
+                        if isShowingToggle{
+                            VStack(alignment: .leading, spacing: 8) {
+                                if let user = userViewModel.user {
+                                    Toggle(isOn: Binding<Bool>(
+                                        get: { user.isOnline },
+                                        set: { newValue in
+                                            Task {
+                                                await userViewModel.updateUserStatus(online: newValue)
+                                                await userViewModel.loadUser()
+                                            }
+                                        }
+                                    )) {
+                                        Text("Estado:  \(user.isOnline ? "🟢 Conectado" : "⚪️ Desconectado")")
+                                    }
+                                    .toggleStyle(SwitchToggleStyle(tint: .green))
+                                    .padding(.horizontal)
+                                }
+                                
+                            }
+                            .padding()
+                            .background(RoundedRectangle(cornerRadius: 15).fill(Color(.systemBackground)))
+                            .padding(.horizontal)
+                            .offset(y: 250)
+                        }
+                    })
                 }
             }
             .searchable(text: $chatsViewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
@@ -66,9 +89,13 @@ struct ChatsView: View {
             }
             .navigationTitle("Chats")
             .task {
+                await userViewModel.loadUser()
                 await chatsViewModel.fetchChats()
             }
-            
+            .onChange(of: userViewModel.user?.isOnline) { _, _ in
+                Task { await userViewModel.loadUser() }
+            }
+
             // Alerta de Error
             .alert(isPresented: $chatsViewModel.isfetchChatsError) {
                 Alert(title: Text(chatsViewModel.errorTitle), message: Text(chatsViewModel.errorDescription), dismissButton: .default(Text("OK"))
@@ -97,6 +124,13 @@ struct ChatsView: View {
                         Button("Crear comunidad", systemImage: "person.2.badge.plus.fill") {
                             createCommunityViewModel.showCreateNewCommunity.toggle()
                         }
+                        
+                        Button("Status de conexion", systemImage: isShowingToggle ? "eye" : "eye.slash") {
+                            withAnimation(.easeInOut){
+                                isShowingToggle.toggle()
+                            }
+                        }
+                        
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }

@@ -14,6 +14,7 @@ class UserViewModel {
     private let networkMonitor = NetworkMonitor()
     private var cancellabeTask: Task<Void,Never>?
     
+    var user: UserModel?
     var isConnected: Bool = false
     
     func startMonitoringUserStatus() {
@@ -35,6 +36,7 @@ class UserViewModel {
     func updateUserStatus(online: Bool) async {
         do{
            try await firestoreService.updateUserStatus(isOnline: online)
+            user?.isOnline = online
             print("Estado actualizado a \(online ? "🟢 Conectado" : "⚪️ Desconectado")")
         }catch{
             print("No se pudo actualizar el estado: \(error)")
@@ -49,4 +51,11 @@ class UserViewModel {
         }
     }
     
+    func loadUser() async {
+        do {
+            self.user = try await firestoreService.getUserData()
+        } catch {
+            print("Error cargando usuario")
+        }
+    }
 }
