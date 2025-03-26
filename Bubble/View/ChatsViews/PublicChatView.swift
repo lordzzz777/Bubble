@@ -10,6 +10,8 @@ import FirebaseFirestore
 import FirebaseAuth
 
 struct PublicChatView: View {
+    @FocusState private var isTextFieldFocused: Bool
+    
     @State private var publicChatViewModel = PublicChatViewModel()
     @State private var messageText: String = ""
     @State private var textFieldHeight: CGFloat = 40
@@ -54,13 +56,11 @@ struct PublicChatView: View {
                     TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
                         Task{
                             await handleSendOrEdit()
-//                            await publicChatViewModel.sendPublicMessage(messageText)
-//                            messageText = ""
-//                            textFieldHeight = 40
                         }
                     })
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .frame(minHeight: textFieldHeight)
+                        
                         .onChange(of: textFieldHeight) {_,_ in
                             publicChatViewModel.updateHeight(messageText: messageText, textFieldHeight: $textFieldHeight)
                         }
@@ -72,22 +72,14 @@ struct PublicChatView: View {
                         Image(systemName: isEditing ? "pencil.circle.fill" : "paperplane.fill")
                             .foregroundColor(.blue)
                     }
-//                    Button(action: {
-//                        if !messageText.isEmpty {
-//                            Task {
-//                                await publicChatViewModel.sendPublicMessage(messageText)
-//                                messageText = ""
-//                                textFieldHeight = 40
-//                            }
-//                        }
-//                    }) {
-//                        Image(systemName: "paperplane.fill")
-//                            .foregroundColor(.blue)
-//                    }
                 }
                 .padding()
+                .focused($isTextFieldFocused)
             }
-            .navigationTitle("Chat Café ☕️")
+            .onTapGesture {
+                isTextFieldFocused = false
+            }
+            .navigationTitle("Chat Publico")
             .navigationBarTitleDisplayMode(.large)
             .onAppear {
                 publicChatViewModel.fetchPublicChatMessages()
