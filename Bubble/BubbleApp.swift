@@ -35,6 +35,7 @@ struct BubbleApp: App {
                         if GIDSignIn.sharedInstance.hasPreviousSignIn() {
                             GIDSignIn.sharedInstance.handle(url)
                         }
+
                     }
                     .id(loginFlowState.rawValue)
                 
@@ -43,8 +44,8 @@ struct BubbleApp: App {
                 
             case .loggedIn:
                 ContentView()
-                
-            }        }
+            }
+        }
     }
     
     /// Desactiva logs de `gRPC` en Firebase
