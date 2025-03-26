@@ -163,17 +163,27 @@ class PublicChatViewModel {
         }
     }
     
-    func handleSendOrEdit(text messageText: inout String, MessageID editingMessageID: inout String?, Height textFieldHeight: inout CGFloat,isEditing: inout Bool) async {
-        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {return}
-        if let messageID = editingMessageID {
-            await editMessage(messageID: messageID, newContent: messageText)
-            isEditing = false
-            editingMessageID = nil
-        }else {
-            await sendPublicMessage(messageText)
+    /// Maneja el envío o la edición de un mensaje desde la vista, centralizando toda la lógica en el ViewModel.
+    ///
+    /// - Parameters:
+    ///   - messageText: Texto del mensaje (enlace a la propiedad `@State` de la vista).
+    ///   - editingMessageID: Identificador del mensaje que se está editando, si existe.
+    ///   - textFieldHeight: Altura del campo de texto, ajustable dinámicamente.
+    ///   - isEditing: Indicador de si el usuario está editando un mensaje existente.
+    func handleSendOrEdit(messageText: Binding<String>, editingMessageID: Binding<String?>, textFieldHeight: Binding<CGFloat>, isEditing: Binding<Bool>) async {
+        let trimmedText = messageText.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else { return }
+        
+        if let messageID = editingMessageID.wrappedValue {
+            await editMessage(messageID: messageID, newContent: trimmedText)
+            isEditing.wrappedValue = false
+            editingMessageID.wrappedValue = nil
+        } else {
+            await sendPublicMessage(trimmedText)
         }
-        messageText = ""
-        textFieldHeight = 40
+        
+        messageText.wrappedValue = ""
+        textFieldHeight.wrappedValue = 40
     }
     
 }
