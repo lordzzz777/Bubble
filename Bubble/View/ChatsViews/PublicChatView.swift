@@ -55,6 +55,7 @@ struct PublicChatView: View {
                 HStack {
                     TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
                         Task{
+//                            await publicChatViewModel.handleSendOrEdit(text: &messageText, MessageID: &editingMessageID, Height: &textFieldHeight, isEditing: &isEditing)
                             await handleSendOrEdit()
                         }
                     })
@@ -66,6 +67,7 @@ struct PublicChatView: View {
                         }
                     Button(action: {
                         Task {
+//                            await publicChatViewModel.handleSendOrEdit(text: &messageText, MessageID: &editingMessageID, Height: &textFieldHeight, isEditing: &isEditing)
                             await handleSendOrEdit()
                         }
                     }) {

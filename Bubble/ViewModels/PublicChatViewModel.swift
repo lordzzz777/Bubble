@@ -163,4 +163,17 @@ class PublicChatViewModel {
         }
     }
     
+    func handleSendOrEdit(text messageText: inout String, MessageID editingMessageID: inout String?, Height textFieldHeight: inout CGFloat,isEditing: inout Bool) async {
+        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {return}
+        if let messageID = editingMessageID {
+            await editMessage(messageID: messageID, newContent: messageText)
+            isEditing = false
+            editingMessageID = nil
+        }else {
+            await sendPublicMessage(messageText)
+        }
+        messageText = ""
+        textFieldHeight = 40
+    }
+    
 }
