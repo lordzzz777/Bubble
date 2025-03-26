@@ -11,6 +11,11 @@ import FirebaseAuth
 
 struct PublicMessageBubbleView: View {
     @State private var publicChatViewModel =  PublicChatViewModel()
+    
+    @Binding var messageText: String
+    @Binding var isEditing: Bool
+    @Binding var editingMessageID: String?
+    
     var message: MessageModel
     var user: UserModel?
     var userColor: Color
@@ -58,8 +63,32 @@ struct PublicMessageBubbleView: View {
                             ))
                        
                 )
-                .foregroundColor(.white)
+                .foregroundStyle(.primary)
+                .contextMenu {
+                    if isCurrentUser {
+                        Button(action: {
+                            withAnimation(.spring(duration: .zero)){
+                                messageText = message.content
+                                editingMessageID = message.id
+                                isEditing = true
+                            }
 
+                        } , label: {
+                            Text("Editar")
+                            Image(systemName: "pencil")
+                        })
+                        
+                        Button(role: .destructive, action: {
+                            Task{
+                                await publicChatViewModel.permanentlyDeleteMessage(messageID: message.id)
+                            }
+                        } , label: {
+                            Text("Eliminar")
+                            Image(systemName: "trash")
+                        })
+                    }
+                }
+                
                 if isCurrentUser{
                     TriangleRight().fill(userColor.opacity(0.4))
                         .frame(width: 10, height: 10)
@@ -89,6 +118,9 @@ struct PublicMessageBubbleView: View {
 
 #Preview {
     PublicMessageBubbleView(
+        messageText: .constant("Hola"),
+        isEditing: .constant(false),
+        editingMessageID: .constant(nil),
         message: MessageModel(id: "1", senderUserID: "user123", content: "Hola, este es un mensaje público", timestamp: Timestamp(), type: .text),
         user: UserModel(id: "user123", nickname: "Juan Pérez", imgUrl: "", lastConnectionTimeStamp: Timestamp(), isOnline: true, chats: [], friends: [], isDeleted: false),
         userColor: .blue
