@@ -55,7 +55,13 @@ struct PublicChatView: View {
                 HStack {
                     TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
                         Task{
-                            await handleSendOrEdit()
+                      await publicChatViewModel.handleSendOrEdit(
+                            messageText: $messageText,
+                            editingMessageID: $editingMessageID,
+                            textFieldHeight: $textFieldHeight,
+                            isEditing: $isEditing
+                            )
+                         
                         }
                     })
                         .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -66,7 +72,12 @@ struct PublicChatView: View {
                         }
                     Button(action: {
                         Task {
-                            await handleSendOrEdit()
+                          await publicChatViewModel.handleSendOrEdit(
+                                messageText: $messageText,
+                                editingMessageID: $editingMessageID,
+                                textFieldHeight: $textFieldHeight,
+                                isEditing: $isEditing
+                            )
                         }
                     }) {
                         Image(systemName: isEditing ? "pencil.circle.fill" : "paperplane.fill")
@@ -88,19 +99,6 @@ struct PublicChatView: View {
                 }
             }
         }
-    }
-    
-    private func handleSendOrEdit() async {
-        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        if let messageID = editingMessageID {
-            await publicChatViewModel.editMessage(messageID: messageID, newContent: messageText)
-            isEditing = false
-            editingMessageID = nil
-        } else {
-            await publicChatViewModel.sendPublicMessage(messageText)
-        }
-        messageText = ""
-        textFieldHeight = 40
     }
 }
 
