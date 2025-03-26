@@ -25,7 +25,7 @@ struct ContentView: View {
             
             PublicChatView()
                 .tabItem({
-                    Label("Chat Café", systemImage: "cup.and.saucer.fill")
+                    Label("Publico", systemImage: "cup.and.saucer.fill")
                 })
             
             Text("Pantalla 2")

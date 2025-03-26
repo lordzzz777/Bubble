@@ -10,9 +10,13 @@ import FirebaseFirestore
 import FirebaseAuth
 
 struct PublicChatView: View {
+    @FocusState private var isTextFieldFocused: Bool
+    
     @State private var publicChatViewModel = PublicChatViewModel()
     @State private var messageText: String = ""
     @State private var textFieldHeight: CGFloat = 40
+    @State private var isEditing: Bool = false
+    @State private var editingMessageID: String? = nil
     
     var body: some View {
         NavigationStack{
@@ -23,6 +27,9 @@ struct PublicChatView: View {
                             ForEach(publicChatViewModel.messages, id: \.id) { message in
                                 if let user = publicChatViewModel.visibleUsers.first(where: { $0.id == message.senderUserID }) {
                                     PublicMessageBubbleView(
+                                        messageText: $messageText,
+                                        isEditing: $isEditing,
+                                        editingMessageID: $editingMessageID,
                                         message: message,
                                         user: user,
                                         userColor: publicChatViewModel.getColorForUser(userID: message.senderUserID)
@@ -46,35 +53,44 @@ struct PublicChatView: View {
                 Spacer()
                 
                 HStack {
-                    TextField("Escribe tu mensaje...", text: $messageText, onCommit: {
+                    TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
                         Task{
-                            await publicChatViewModel.sendPublicMessage(messageText)
-                            messageText = ""
-                            textFieldHeight = 40
+                      await publicChatViewModel.handleSendOrEdit(
+                            messageText: $messageText,
+                            editingMessageID: $editingMessageID,
+                            textFieldHeight: $textFieldHeight,
+                            isEditing: $isEditing
+                            )
+                         
                         }
                     })
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .frame(minHeight: textFieldHeight)
+                        
                         .onChange(of: textFieldHeight) {_,_ in
                             publicChatViewModel.updateHeight(messageText: messageText, textFieldHeight: $textFieldHeight)
                         }
-                    
                     Button(action: {
-                        if !messageText.isEmpty {
-                            Task {
-                                await publicChatViewModel.sendPublicMessage(messageText)
-                                messageText = ""
-                                textFieldHeight = 40
-                            }
+                        Task {
+                          await publicChatViewModel.handleSendOrEdit(
+                                messageText: $messageText,
+                                editingMessageID: $editingMessageID,
+                                textFieldHeight: $textFieldHeight,
+                                isEditing: $isEditing
+                            )
                         }
                     }) {
-                        Image(systemName: "paperplane.fill")
+                        Image(systemName: isEditing ? "pencil.circle.fill" : "paperplane.fill")
                             .foregroundColor(.blue)
                     }
                 }
                 .padding()
+                .focused($isTextFieldFocused)
             }
-            .navigationTitle("Chat Café ☕️")
+            .onTapGesture {
+                isTextFieldFocused = false
+            }
+            .navigationTitle("Chat Publico")
             .navigationBarTitleDisplayMode(.large)
             .onAppear {
                 publicChatViewModel.fetchPublicChatMessages()

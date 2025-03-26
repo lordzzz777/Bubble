@@ -32,18 +32,68 @@ actor PublicChatService {
                         return
                     }
                     
-                    let messages = documents.compactMap { try? $0.data(as: MessageModel.self) }
+                    let messages = documents.compactMap { doc -> MessageModel? in
+                        var message = try? doc.data(as: MessageModel.self)
+                        message?.id = doc.documentID // 🔥 clave: sobrescribe el id con el documentID real
+                        return message
+                    }
+                    
                     continuation.yield(with: .success(messages))
                 }
         }
     }
+
     
     /// Envía un mensaje al chat público en Firestore.
     ///
     /// - Parameter message: El mensaje `MessageModel` que se enviará.
     /// - Throws: Lanza un error si la operación en Firestore falla.
     func sendPublicMessage(_ message: MessageModel) async throws {
-        try await chatsRef.collection("messages").addDocument(data: message.dictionary)
+        //try await chatsRef.collection("messages").addDocument(data: message.dictionary)
+        try await chatsRef.collection("messages").document(message.id).setData(message.dictionary)
+    }
+    
+    /// Actualiza el contenido de un mensaje específico por ID.
+    func editMessage(messageID: String, newContent: String) async throws {
+//        let messageRef = chatsRef.collection("messages").document(messageID)
+//        
+//        do{
+//            try await messageRef.updateData(["content": newContent])
+//        }catch{
+//           print("Mensaje del server -> Error, el mensaje no se ha actualizado")
+//            throw error
+//        }
+        
+        
+        let messageRef = chatsRef.collection("messages").document(messageID)
+        print("🛠 Editando mensaje con ID: \(messageID)")
+        try await messageRef.updateData(["content": newContent])
+    }
+    
+    /// Marca un mensaje como eliminado, sin borrarlo físicamente.
+    func deleteMessage(messageID: String) async throws {
+        let messageRef = chatsRef.collection("messages").document(messageID)
+        
+        do{
+            try await messageRef.updateData(["content": "Mensaje eliminado"])
+        }catch{
+            print("Mensaje del server -> Error, el mensaje no se ha actualizado")
+            throw error
+        }
+        
+    }
+    
+    /// Elimina físicamente un mensaje de Firestore.
+    func permanentlyDeleteMessage(messageID: String) async throws {
+        let messgeRef = chatsRef.collection("messages").document(messageID)
+        
+        do{
+            try await messgeRef.delete()
+            print("Mensaje eliminado con exito")
+        }catch{
+            print("Mensaje del server -> Error al eliminar el mensaje")
+            throw error
+        }
     }
     
     /// Agrega un usuario al chat público "global_chat". Si el chat no existe, lo crea.

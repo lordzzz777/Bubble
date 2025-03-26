@@ -62,6 +62,39 @@ class PublicChatViewModel {
         }
     }
     
+    /// Edita un mensaje en Firestore.
+    func editMessage(messageID: String, newContent: String) async {
+        do{
+            try await publicChatService.editMessage(messageID: messageID, newContent: newContent)
+        }catch{
+            errorTitle = "Error al eliminar"
+            errorMessage = "No se pudo marcar como eliminado."
+            showError = true
+        }
+    }
+    
+    /// Marca un mensaje como eliminado (edita el contenido).
+    func deleteMessage(messageID: String) async{
+        do{
+            try await publicChatService.deleteMessage(messageID: messageID)
+        }catch{
+            errorTitle = "Error al eliminar"
+            errorMessage = "No se pudo marcar como eliminado."
+            showError = true
+        }
+    }
+    
+    /// Elimina permanentemente un mensaje de Firestore.
+    func permanentlyDeleteMessage(messageID: String) async {
+        do{
+            try await publicChatService.permanentlyDeleteMessage(messageID: messageID)
+        }catch{
+            errorTitle = "Error al eliminar"
+            errorMessage = "No se pudo eliminar el mensaje."
+            showError = true
+        }
+    }
+    
     /// Obtiene todos los usuarios visibles en Firestore.
     func fetchVisibleUsers() async {
         do{
@@ -128,6 +161,29 @@ class PublicChatViewModel {
                 .scaledToFit()
                 .foregroundColor(.gray)
         }
+    }
+    
+    /// Maneja el envío o la edición de un mensaje desde la vista, centralizando toda la lógica en el ViewModel.
+    ///
+    /// - Parameters:
+    ///   - messageText: Texto del mensaje (enlace a la propiedad `@State` de la vista).
+    ///   - editingMessageID: Identificador del mensaje que se está editando, si existe.
+    ///   - textFieldHeight: Altura del campo de texto, ajustable dinámicamente.
+    ///   - isEditing: Indicador de si el usuario está editando un mensaje existente.
+    func handleSendOrEdit(messageText: Binding<String>, editingMessageID: Binding<String?>, textFieldHeight: Binding<CGFloat>, isEditing: Binding<Bool>) async {
+        let trimmedText = messageText.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else { return }
+        
+        if let messageID = editingMessageID.wrappedValue {
+            await editMessage(messageID: messageID, newContent: trimmedText)
+            isEditing.wrappedValue = false
+            editingMessageID.wrappedValue = nil
+        } else {
+            await sendPublicMessage(trimmedText)
+        }
+        
+        messageText.wrappedValue = ""
+        textFieldHeight.wrappedValue = 40
     }
     
 }
