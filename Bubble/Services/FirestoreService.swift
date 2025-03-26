@@ -258,6 +258,22 @@ actor FirestoreService {
             throw error
         }
     }
+    
+    func updateUserStatus(isOnline: Bool) async throws {
+        guard let uid = Auth.auth().currentUser?.uid else {return}
+        
+        try await database.collection("users").document(uid).updateData([
+            "isOnline": isOnline
+        ])
+    }
+    
+    func storeLastSeen() async throws {
+        guard let uid = Auth.auth().currentUser?.uid else {return}
+        
+        try await database.collection("users").document(uid).updateData([
+            "lastConnectionTimeStamp": Timestamp()
+        ])
+    }
 }
 
 

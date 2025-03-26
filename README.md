@@ -70,6 +70,7 @@ Este proyecto está licenciado bajo la [MIT License](LICENSE).
 <img width="156" alt="Captura de pantalla 2025-03-05 a las 3 14 51" src="https://github.com/user-attachments/assets/2f0cea5e-36d1-4928-a35e-5bd31c70316a" />
 <img width="154" alt="Captura de pantalla 2025-03-05 a las 3 21 22" src="https://github.com/user-attachments/assets/4b393b6d-021e-4479-9ae3-8fe519674d3f" />
 <img width="154" alt="Captura de pantalla 2025-03-05 a las 3 31 16" src="https://github.com/user-attachments/assets/6a24d0c6-8971-45ca-a03b-a82062f382d3" />
+<img width="145" alt="Captura de pantalla 2025-03-24 a las 12 59 04" src="https://github.com/user-attachments/assets/e85d6473-ff82-4832-bb00-e33581c2ff3d" />
 
 ---
 
