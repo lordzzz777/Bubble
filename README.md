@@ -61,63 +61,69 @@ Este proyecto está licenciado bajo la [MIT License](LICENSE).
 
 ---
 
-## Capturas de Pantalla
-
-<img width="150"  alt="login" src="https://github.com/user-attachments/assets/039ec655-a08c-49b9-bd82-44dc5cb38870" />
-<img width="150"  alt="Registrar usuario" src="https://github.com/user-attachments/assets/67a63285-05ce-4904-8e87-60fa455284a8" />
-<img width="150"  alt="ChatsView" src="https://github.com/user-attachments/assets/239da25f-7cf1-4c8a-9a92-cc9e36a7cd3a" />
-<img width="150" alt="listachat" src="https://github.com/user-attachments/assets/54b10476-ff57-4996-b418-029e3fa23730" />
-<img width="156" alt="Captura de pantalla 2025-03-05 a las 3 14 51" src="https://github.com/user-attachments/assets/2f0cea5e-36d1-4928-a35e-5bd31c70316a" />
-<img width="154" alt="Captura de pantalla 2025-03-05 a las 3 21 22" src="https://github.com/user-attachments/assets/4b393b6d-021e-4479-9ae3-8fe519674d3f" />
-<img width="154" alt="Captura de pantalla 2025-03-05 a las 3 31 16" src="https://github.com/user-attachments/assets/6a24d0c6-8971-45ca-a03b-a82062f382d3" />
-<img width="145" alt="Captura de pantalla 2025-03-24 a las 12 59 04" src="https://github.com/user-attachments/assets/e85d6473-ff82-4832-bb00-e33581c2ff3d" />
-
----
-
 ## Historial de procesos:
 
 - **Primer sprint, estatus: finalizado:**
     - Crear login o registro,
     - Crear nueva cuenta
-      
+    - ## Capturas de Pantalla
+      <img width="90"  alt="login" src="https://github.com/user-attachments/assets/039ec655-a08c-49b9-bd82-44dc5cb38870" />
+      <img width="90"  alt="Registrar usuario" src="https://github.com/user-attachments/assets/67a63285-05ce-4904-8e87-60fa455284a8" />
+---     
 - **Segundo sprint, estatus: finalizado:**
     - Vista chats: Vistas de Listado de Chats,
     - Vista chats: Eliminar chats con swipe hacia la izquierda,
     - Vista de chats: Mostrar detalles en tarjetas de chat (Chat Card Details)
-  
+    - ## Capturas de Pantalla
+      <img width="90"  alt="ChatsView" src="https://github.com/user-attachments/assets/239da25f-7cf1-4c8a-9a92-cc9e36a7cd3a" />
+      <img width="90" alt="listachat" src="https://github.com/user-attachments/assets/54b10476-ff57-4996-b418-029e3fa23730" />
+---  
 - **Tercero sprint, estatus: finalizado:**
     - Flujo de navegación según estado de registro,
     - Solucionar typo del botón de Google,
     - Eliminar chats con swipe hacia la izquierda,
     - Solicitudes de amistad, Flujo de navegación según estado de registro
-      
+---      
 - **Cuarto sprint, estatus: finalizado :**
     - Solucionar bug que te lleva a la pantalla de crear nueva cuenta con una cuenta ya creada,
     - Solucionar bug que crashea la app al recibir una solicitud de amistad,
     - Refactorizar alerts de la vista de chats y su respectivo viewmodel,
     - Refactorizar alerts de la vista de chats y su respectivo viewmodel,
     - Actualización Readme
-
+---
 - **Quinto sprint, estatus: finalizado :**
     - Solucionar bug aceptar solicitudes de amistad
     - Edición de perfil
     - Funcionalidad para enviar y recibir mensajes en la vista de un chat
     - Actualización Readme
-
+    - ## Capturas de Pantalla
+      <img width="96" alt="Captura de pantalla 2025-03-05 a las 3 14 51" src="https://github.com/user-attachments/assets/2f0cea5e-36d1-4928-a35e-5bd31c70316a" />
+      <img width="94" alt="Captura de pantalla 2025-03-05 a las 3 21 22" src="https://github.com/user-attachments/assets/4b393b6d-021e-4479-9ae3-8fe519674d3f" />
+      <img width="94" alt="Captura de pantalla 2025-03-05 a las 3 31 16" src="https://github.com/user-attachments/assets/6a24d0c6-8971-45ca-a03b-a82062f382d3" />
+---
 - **Sexto sprint, estatus: finalizado :**
     - Eliminación de Cuenta en "Bubble"
     - Agregar menu con opciones a la vista de Chat
     - Vista chats: Cambiar Entre Chats Privados y Público
     - Errores en la vista de chat privado
     - Agregar funcionalidad de mostrar hora en cada mensaje y el chat
-
+    - ## Capturas de Pantalla
+      <img width="85" alt="Captura de pantalla 2025-03-24 a las 12 59 04" src="https://github.com/user-attachments/assets/e85d6473-ff82-4832-bb00-e33581c2ff3d" />
+---
 - **Septimo sprint, estatus: finalizado :**
     - Solucionar bug que no agrega el ID del amigo agregado al arreglo en firebase firestore
     - Mejoras en la visualización de mensajes
     - solucionar el desborde del botón de cerrar sesión en los iPhone pequeños
-      
-- **Octavo sprint, estatus: En Proceso ... :**
+---     
+- **Octavo sprint, estatus: finalizado :**
     - Refactorización general de Proyecto
     - modificar de funciónalidad de agregar amigos
-    - CRUD de mensjes dentro chats Cafe
+    - CRUD de mensjes dentro chats publico
     - Funcionalidad de actualizar estado conectado/desconectado
+---
+- **Noveno sprint, estatus: En Proceso ... :**
+    - Responder a un usuario dentro del chat Publico
+    - Implementar funcionalidad para indicar mensajes no leídos
+    - CRUD de mensjes dentro chats Privados
+
+---
