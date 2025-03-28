@@ -19,38 +19,73 @@ class PublicChatViewModel {
     var userColors: [String: Color] = [:]
     var errorTitle: String = ""
     var errorMessage: String = ""
+    var replyNotificationsCount: Int = 0
     var showError: Bool = false
-
+    var isPublicChatVisible: Bool = false
+    
     /// Obtiene los mensajes del chat público en tiempo real.
     func fetchPublicChatMessages() {
-        Task{
-            do{
-                for try await messages in await publicChatService.fetchPublicChatMessages(){
+        Task {
+            do {
+                for try await messages in await publicChatService.fetchPublicChatMessages() {
                     self.messages = messages
+                    
+                    guard let currentUserID = Auth.auth().currentUser?.uid,
+                          let currentUser = visibleUsers.first(where: { $0.id == currentUserID }) else { return }
+                    
+                    let lastSeenID = UserDefaults.standard.string(forKey: "lastSeenReplyID")
+                    
+                    // Filtrar respuestas que no son del propio usuario
+                    let repliesToMe = messages.filter {
+                        $0.replyingToNickname == currentUser.nickname &&
+                        $0.senderUserID != currentUserID
+                    }
+                    
+                    // Comparar con el último mensaje visto
+                    if let lastSeenID = lastSeenID,
+                       let index = repliesToMe.lastIndex(where: { $0.id == lastSeenID }) {
+                        let newReplies = repliesToMe.suffix(from: repliesToMe.index(after: index))
+                        self.replyNotificationsCount = isPublicChatVisible ? 0 : newReplies.count
+                    } else {
+                        self.replyNotificationsCount = isPublicChatVisible ? 0 : repliesToMe.count
+                    }
                 }
-            }catch{
+            } catch {
                 self.errorTitle = "Mensajes no encontrados"
                 self.errorMessage = "Error al obtener mensajes del chat público."
                 self.showError = true
             }
         }
     }
-    
+
     /// Envía un mensaje al chat público.
     /// - Parameter text: Contenido del mensaje a enviar.
-    func sendPublicMessage(_ text: String) async {
+    func sendPublicMessage(_ text: String, replyingTo messageID: String?) async {
         guard let userID = Auth.auth().currentUser?.uid else {
             errorTitle = "Error: sin usuarios"
             errorMessage = "No hay usuario autenticado."
             showError = true
             return
         }
+        var replyingToText: String? = nil
+        var replyingToNickname: String? = nil
+        
+        // Buscar texto y nickname del mensaje al que se responde
+        if let replyID = messageID,
+           let repliedMessage = messages.first(where: { $0.id == replyID }),
+           let repliedUser = visibleUsers.first(where: { $0.id == repliedMessage.senderUserID }) {
+            replyingToText = repliedMessage.content
+            replyingToNickname = repliedUser.nickname
+        }
         
         let message = MessageModel(id: UUID().uuidString,
                                    senderUserID: userID,
                                    content: text,
                                    timestamp: Timestamp(),
-                                   type: .text)
+                                   type: .text,
+                                   replyToMessageID: messageID,
+                                   replyingToText: replyingToText,
+                                   replyingToNickname: replyingToNickname)
         
         do{
             try await publicChatService.sendPublicMessage(message)
@@ -164,13 +199,13 @@ class PublicChatViewModel {
     }
     
     /// Maneja el envío o la edición de un mensaje desde la vista, centralizando toda la lógica en el ViewModel.
-    ///
-    /// - Parameters:
-    ///   - messageText: Texto del mensaje (enlace a la propiedad `@State` de la vista).
-    ///   - editingMessageID: Identificador del mensaje que se está editando, si existe.
-    ///   - textFieldHeight: Altura del campo de texto, ajustable dinámicamente.
-    ///   - isEditing: Indicador de si el usuario está editando un mensaje existente.
-    func handleSendOrEdit(messageText: Binding<String>, editingMessageID: Binding<String?>, textFieldHeight: Binding<CGFloat>, isEditing: Binding<Bool>) async {
+    func handleSendOrEdit(
+        messageText: Binding<String>,
+        editingMessageID: Binding<String?>,
+        textFieldHeight: Binding<CGFloat>,
+        isEditing: Binding<Bool>,
+        replyingToMessageID: Binding<String?>
+    ) async {
         let trimmedText = messageText.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
         
@@ -179,11 +214,64 @@ class PublicChatViewModel {
             isEditing.wrappedValue = false
             editingMessageID.wrappedValue = nil
         } else {
-            await sendPublicMessage(trimmedText)
+            await sendPublicMessage(trimmedText, replyingTo: replyingToMessageID.wrappedValue)
+            replyingToMessageID.wrappedValue = nil // Limpiar después de enviar
         }
-        
+
+        if isPublicChatVisible,
+           let currentUserID = Auth.auth().currentUser?.uid,
+           let currentUser = visibleUsers.first(where: { $0.id == currentUserID }),
+           let lastReply = messages.filter({ $0.replyingToNickname == currentUser.nickname }).last {
+            
+            UserDefaults.standard.set(lastReply.id, forKey: "lastSeenReplyID")
+        }
+
         messageText.wrappedValue = ""
         textFieldHeight.wrappedValue = 40
+    }
+    
+    /// Restablece (pone en cero) las notificaciones de respuestas dirigidas al usuario actual,
+    /// y guarda el último mensaje que le respondió en UserDefaults para referencia futura.
+    ///
+    /// Esta función se llama cuando el usuario entra al chat público, indicando que ya vio las respuestas.
+    func resetReplyNotificationsIfNeeded() async {
+        if let currentUserID = Auth.auth().currentUser?.uid,
+           let currentUser = visibleUsers.first(where: { $0.id == currentUserID }) {
+            
+            if let lastReply = messages
+                .filter({ $0.replyingToNickname == currentUser.nickname && $0.senderUserID != currentUserID })
+                .last {
+                UserDefaults.standard.set(lastReply.id, forKey: "lastSeenReplyID")
+            }
+            
+            replyNotificationsCount = 0
+        }
+    }
+
+    /// Carga desde UserDefaults el ID del último mensaje que fue una respuesta dirigida al usuario
+    /// y que el usuario ya ha visto previamente.
+    ///
+    /// - Returns: Un `String` opcional que representa el ID del último mensaje respondido visto,
+    /// o `nil` si no se ha guardado ninguno.
+    func loadLastSeenReplyID() -> String? {
+        return UserDefaults.standard.string(forKey: "lastSeenReplyID")
+    }
+    
+    /// Elimina permanentemente los mensajes que fueron marcados como "Mensaje eliminado"
+    /// y que son más antiguos que el tiempo especificado.
+    ///
+    /// - Parameter seconds: Tiempo en segundos que define qué tan viejo debe ser un mensaje eliminado
+    /// para ser eliminado de Firestore. Por defecto: 1 hora (3600 segundos).
+    func cleanUpDeletedMessages(olderThan seconds: TimeInterval = 3600) async {
+        let cutoffDate = Date().addingTimeInterval(-seconds)
+        
+        let deletedMessages = messages.filter {
+            $0.content == "Mensaje eliminado" && $0.timestamp.dateValue() < cutoffDate
+        }
+        
+        for message in deletedMessages {
+            await permanentlyDeleteMessage(messageID: message.id)
+        }
     }
     
 }
