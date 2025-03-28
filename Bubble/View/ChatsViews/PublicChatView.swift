@@ -11,8 +11,8 @@ import FirebaseAuth
 
 struct PublicChatView: View {
     @FocusState private var isTextFieldFocused: Bool
-    
-    @State private var publicChatViewModel = PublicChatViewModel()
+    @Environment(PublicChatViewModel.self) var publicChatViewModel
+   
     @State private var replyingToMessageID: String? = nil
     @State private var replyingToNickname: String? = nil
     @State private var messageText: String = ""
@@ -26,20 +26,27 @@ struct PublicChatView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack {
-                            ForEach(publicChatViewModel.messages, id: \.id) { message in
-                                if let user = publicChatViewModel.visibleUsers.first(where: { $0.id == message.senderUserID }) {
-                                    PublicMessageBubbleView(
-                                        messageText: $messageText,
-                                        isEditing: $isEditing,
-                                        editingMessageID: $editingMessageID,
-                                        replyingToMessageID: $replyingToMessageID,
-                                        replyingToNickname: $replyingToNickname,
-                                        message: message,
-                                        user: user,
-                                        userColor: publicChatViewModel.getColorForUser(userID: message.senderUserID)
-                                    )
-                                    .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
-                                    .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
+                            LazyVStack {
+                                ForEach(publicChatViewModel.messages.indices, id: \.self) { index in
+                                    let message = publicChatViewModel.messages[index]
+                                    let nextMessage = index + 1 < publicChatViewModel.messages.count ? publicChatViewModel.messages[index + 1] : nil
+                                    let showAvatarAndName = nextMessage?.senderUserID != message.senderUserID
+                                    
+                                    if let user = publicChatViewModel.visibleUsers.first(where: { $0.id == message.senderUserID }) {
+                                        PublicMessageBubbleView(
+                                            messageText: $messageText,
+                                            isEditing: $isEditing,
+                                            editingMessageID: $editingMessageID,
+                                            replyingToMessageID: $replyingToMessageID,
+                                            replyingToNickname: $replyingToNickname,
+                                            message: message,
+                                            user: user,
+                                            userColor: publicChatViewModel.getColorForUser(userID: message.senderUserID),
+                                            showAvatarAndName: showAvatarAndName
+                                        )
+                                        .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
+                                        .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
+                                    }
                                 }
                             }
                         }
@@ -116,10 +123,23 @@ struct PublicChatView: View {
             .navigationTitle("Chat Publico")
             .navigationBarTitleDisplayMode(.large)
             .onAppear {
-                publicChatViewModel.fetchPublicChatMessages()
+                publicChatViewModel.isPublicChatVisible = true
                 Task {
                     await publicChatViewModel.fetchVisibleUsers()
+                    await publicChatViewModel.resetReplyNotificationsIfNeeded()
+                    publicChatViewModel.fetchPublicChatMessages()
+                    await publicChatViewModel.cleanUpDeletedMessages(olderThan: 300)
+                    
+                    ///limpieza automática cada minuto
+                    while publicChatViewModel.isPublicChatVisible {
+                        await publicChatViewModel.cleanUpDeletedMessages(olderThan: 300)
+                        try? await Task.sleep(nanoseconds: 60 * 1_000_000_000)
+                    }
                 }
+            }
+
+            .onDisappear {
+                publicChatViewModel.isPublicChatVisible = false
             }
         }
     }
