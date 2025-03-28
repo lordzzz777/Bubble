@@ -15,6 +15,8 @@ struct PublicMessageBubbleView: View {
     @Binding var messageText: String
     @Binding var isEditing: Bool
     @Binding var editingMessageID: String?
+    @Binding var replyingToMessageID: String?
+    @Binding var replyingToNickname: String?
     
     var message: MessageModel
     var user: UserModel?
@@ -49,6 +51,38 @@ struct PublicMessageBubbleView: View {
                             .font(.footnote.bold())
                             .foregroundColor(.primary)
                             .padding(.horizontal, 10)
+                        Rectangle().fill(.black.opacity(0.60))
+                            .frame(width: 250, height: 1, alignment: .center)
+                        
+                        //AÑADIDO: Caja de referencia si es respuesta
+                        if let replyText = message.replyingToText, let replyNickname = message.replyingToNickname {
+                            HStack{
+                                Rectangle().fill(.orange)
+                                    .frame(width: 3, height: 60)
+                                    
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("\(replyNickname)")
+                                        .font(.caption.bold())
+                                    Rectangle().fill(.black.opacity(0.60))
+                                        .frame(width: 250, height: 1, alignment: .center)
+                                        .padding(.vertical, 10)
+                                    
+                                    Text("\(replyText)")
+                                        .font(.caption2)
+                                        .lineLimit(2)
+                                    
+                                }
+
+                                
+                            }                       .padding(4)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(.white.opacity(0.35))
+                                        .stroke(Color.black.opacity(0.5), lineWidth: 1)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        
                         
                         Text(message.content)
                             .padding(.horizontal, 10)
@@ -71,7 +105,7 @@ struct PublicMessageBubbleView: View {
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ))
-                            
+                                
                         )
                         .foregroundStyle(.primary)
                         .contextMenu {
@@ -97,6 +131,12 @@ struct PublicMessageBubbleView: View {
                                     Text("Eliminar")
                                     Image(systemName: "trash")
                                 })
+                            }else{
+                            
+                                Button("Responder") {
+                                    replyingToMessageID = message.id
+                                    replyingToNickname = user?.nickname
+                                }
                             }
                         }
                     
@@ -112,8 +152,7 @@ struct PublicMessageBubbleView: View {
                             .offset(x: 10, y: -30)
                     }
                     
-                } .shadow(radius: 3)
-                    .frame(maxWidth: 260, alignment: isCurrentUser ? .trailing : .leading)
+                }.frame(maxWidth: 260, alignment: isCurrentUser ? .trailing : .leading)
                 
                 if isCurrentUser {
                     publicChatViewModel.profileImage(user)
@@ -127,13 +166,13 @@ struct PublicMessageBubbleView: View {
     }
 }
 
-#Preview {
-    PublicMessageBubbleView(
-        messageText: .constant("Hola"),
-        isEditing: .constant(false),
-        editingMessageID: .constant(nil),
-        message: MessageModel(id: "1", senderUserID: "user123", content: "Hola, este es un mensaje público", timestamp: Timestamp(), type: .text),
-        user: UserModel(id: "user123", nickname: "Juan Pérez", imgUrl: "", lastConnectionTimeStamp: Timestamp(), isOnline: true, chats: [], friends: [], isDeleted: false),
-        userColor: .blue
-    )
-}
+//#Preview {
+//    PublicMessageBubbleView(
+//        messageText: .constant("Hola"),
+//        isEditing: .constant(false),
+//        editingMessageID: .constant(nil),
+//        message: MessageModel(id: "1", senderUserID: "user123", content: "Hola, este es un mensaje público", timestamp: Timestamp(), type: .text),
+//        user: UserModel(id: "user123", nickname: "Juan Pérez", imgUrl: "", lastConnectionTimeStamp: Timestamp(), isOnline: true, chats: [], friends: [], isDeleted: false),
+//        userColor: .blue
+//    )
+//}

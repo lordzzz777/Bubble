@@ -20,7 +20,7 @@ class PublicChatViewModel {
     var errorTitle: String = ""
     var errorMessage: String = ""
     var showError: Bool = false
-
+    
     /// Obtiene los mensajes del chat público en tiempo real.
     func fetchPublicChatMessages() {
         Task{
@@ -38,19 +38,32 @@ class PublicChatViewModel {
     
     /// Envía un mensaje al chat público.
     /// - Parameter text: Contenido del mensaje a enviar.
-    func sendPublicMessage(_ text: String) async {
+    func sendPublicMessage(_ text: String, replyingTo messageID: String?) async {
         guard let userID = Auth.auth().currentUser?.uid else {
             errorTitle = "Error: sin usuarios"
             errorMessage = "No hay usuario autenticado."
             showError = true
             return
         }
+        var replyingToText: String? = nil
+        var replyingToNickname: String? = nil
+        
+        // Buscar texto y nickname del mensaje al que se responde
+        if let replyID = messageID,
+           let repliedMessage = messages.first(where: { $0.id == replyID }),
+           let repliedUser = visibleUsers.first(where: { $0.id == repliedMessage.senderUserID }) {
+            replyingToText = repliedMessage.content
+            replyingToNickname = repliedUser.nickname
+        }
         
         let message = MessageModel(id: UUID().uuidString,
                                    senderUserID: userID,
                                    content: text,
                                    timestamp: Timestamp(),
-                                   type: .text)
+                                   type: .text,
+                                   replyToMessageID: messageID,
+                                   replyingToText: replyingToText,
+                                   replyingToNickname: replyingToNickname)
         
         do{
             try await publicChatService.sendPublicMessage(message)
@@ -170,7 +183,14 @@ class PublicChatViewModel {
     ///   - editingMessageID: Identificador del mensaje que se está editando, si existe.
     ///   - textFieldHeight: Altura del campo de texto, ajustable dinámicamente.
     ///   - isEditing: Indicador de si el usuario está editando un mensaje existente.
-    func handleSendOrEdit(messageText: Binding<String>, editingMessageID: Binding<String?>, textFieldHeight: Binding<CGFloat>, isEditing: Binding<Bool>) async {
+    ///   - replyingToMessageID: Identificador del mensaje al que se está respondiendo, si aplica.
+    func handleSendOrEdit(
+        messageText: Binding<String>,
+        editingMessageID: Binding<String?>,
+        textFieldHeight: Binding<CGFloat>,
+        isEditing: Binding<Bool>,
+        replyingToMessageID: Binding<String?>
+    ) async {
         let trimmedText = messageText.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
         
@@ -179,11 +199,13 @@ class PublicChatViewModel {
             isEditing.wrappedValue = false
             editingMessageID.wrappedValue = nil
         } else {
-            await sendPublicMessage(trimmedText)
+            await sendPublicMessage(trimmedText, replyingTo: replyingToMessageID.wrappedValue)
+            replyingToMessageID.wrappedValue = nil // Limpiar después de enviar
         }
         
         messageText.wrappedValue = ""
         textFieldHeight.wrappedValue = 40
     }
+    
     
 }

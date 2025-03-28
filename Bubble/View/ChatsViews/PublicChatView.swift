@@ -13,6 +13,8 @@ struct PublicChatView: View {
     @FocusState private var isTextFieldFocused: Bool
     
     @State private var publicChatViewModel = PublicChatViewModel()
+    @State private var replyingToMessageID: String? = nil
+    @State private var replyingToNickname: String? = nil
     @State private var messageText: String = ""
     @State private var textFieldHeight: CGFloat = 40
     @State private var isEditing: Bool = false
@@ -30,6 +32,8 @@ struct PublicChatView: View {
                                         messageText: $messageText,
                                         isEditing: $isEditing,
                                         editingMessageID: $editingMessageID,
+                                        replyingToMessageID: $replyingToMessageID,
+                                        replyingToNickname: $replyingToNickname,
                                         message: message,
                                         user: user,
                                         userColor: publicChatViewModel.getColorForUser(userID: message.senderUserID)
@@ -52,6 +56,23 @@ struct PublicChatView: View {
                 
                 Spacer()
                 
+                if let nickname = replyingToNickname {
+                    HStack {
+                        Text("Respondiendo a \(nickname)")
+                            .font(.footnote)
+                            .foregroundStyle(.blue)
+                        Spacer()
+                        Button(action: {
+                            replyingToMessageID = nil
+                            replyingToNickname = nil
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                
                 HStack {
                     TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
                         Task{
@@ -59,7 +80,8 @@ struct PublicChatView: View {
                             messageText: $messageText,
                             editingMessageID: $editingMessageID,
                             textFieldHeight: $textFieldHeight,
-                            isEditing: $isEditing
+                            isEditing: $isEditing,
+                            replyingToMessageID: $replyingToMessageID
                             )
                          
                         }
@@ -76,7 +98,8 @@ struct PublicChatView: View {
                                 messageText: $messageText,
                                 editingMessageID: $editingMessageID,
                                 textFieldHeight: $textFieldHeight,
-                                isEditing: $isEditing
+                                isEditing: $isEditing,
+                                replyingToMessageID: $replyingToMessageID
                             )
                         }
                     }) {
