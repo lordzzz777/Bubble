@@ -50,35 +50,21 @@ struct PublicChatModel: Codable, Identifiable {
 }
 
 /// Modelo que representa un mensaje dentro de un chat.
-struct MessageModel: Identifiable, Codable, Hashable {
+struct MessageModel: Codable, Hashable {
     var id: String = ""
     var senderUserID: String
     var content: String
     var timestamp: Timestamp
     var type: MessageType
     
-    var replyToMessageID: String?
-    var replyingToText: String?
-    var replyingToNickname: String?
-    
     var dictionary: [String: Any] {
-        var dict: [String: Any] = [
+        return [
             "id": id,
             "senderUserID": senderUserID,
             "content": content,
             "timestamp": timestamp,
             "type": type.rawValue
         ]
-        if let replyingToMessageID = replyToMessageID {
-            dict["replyingToMessageID"] = replyingToMessageID
-        }
-        if let replyingToText = replyingToText {
-            dict["replyingToText"] = replyingToText
-        }
-        if let replyingToNickname = replyingToNickname {
-            dict["replyingToNickname"] = replyingToNickname
-        }
-        return dict
     }
 }
 
