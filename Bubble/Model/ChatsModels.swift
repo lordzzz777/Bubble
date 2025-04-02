@@ -61,6 +61,8 @@ struct MessageModel: Identifiable, Codable, Hashable {
     var replyingToText: String?
     var replyingToNickname: String?
     
+    var reactions:[String: String]? = nil // UserID : Emoji
+    
     var dictionary: [String: Any] {
         var dict: [String: Any] = [
             "id": id,
@@ -78,6 +80,7 @@ struct MessageModel: Identifiable, Codable, Hashable {
         if let replyingToNickname = replyingToNickname {
             dict["replyingToNickname"] = replyingToNickname
         }
+        
         return dict
     }
 }

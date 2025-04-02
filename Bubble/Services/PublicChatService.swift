@@ -33,16 +33,26 @@ actor PublicChatService {
                     }
                     
                     let messages = documents.compactMap { doc -> MessageModel? in
-                        var message = try? doc.data(as: MessageModel.self)
-                        message?.id = doc.documentID // 🔥 clave: sobrescribe el id con el documentID real
-                        return message
+                        do {
+                            var message = try doc.data(as: MessageModel.self)
+                            message.id = doc.documentID
+                            
+                            // Asegura que las reacciones están presentes
+                            if let reactions = doc.data()["reactions"] as? [String: String] {
+                                message.reactions = reactions
+                            }
+                            
+                            return message
+                        } catch {
+                            print("Error al parsear mensaje:", error)
+                            return nil
+                        }
                     }
                     
                     continuation.yield(with: .success(messages))
                 }
         }
     }
-
     
     /// Envía un mensaje al chat público en Firestore.
     ///
@@ -55,18 +65,8 @@ actor PublicChatService {
     
     /// Actualiza el contenido de un mensaje específico por ID.
     func editMessage(messageID: String, newContent: String) async throws {
-//        let messageRef = chatsRef.collection("messages").document(messageID)
-//        
-//        do{
-//            try await messageRef.updateData(["content": newContent])
-//        }catch{
-//           print("Mensaje del server -> Error, el mensaje no se ha actualizado")
-//            throw error
-//        }
-        
-        
         let messageRef = chatsRef.collection("messages").document(messageID)
-        print("🛠 Editando mensaje con ID: \(messageID)")
+        print("Editando mensaje con ID: \(messageID)")
         try await messageRef.updateData(["content": newContent])
     }
     
@@ -137,5 +137,24 @@ actor PublicChatService {
         }catch{
             throw error
         }
+    }
+    
+    /// Agrega metodo para actualizar la reacción
+    func reactToMessage(messageID: String, emoji: String, userID: String) async throws {
+        let messageRef = chatsRef.collection("messages").document(messageID)
+        //try await messageRef.updateData(["reactions.\(userID)": emoji])
+        do {
+            try await messageRef.updateData(["reactions.\(userID)": emoji])
+        } catch {
+            print("Error Server: no se guardó la reacción")
+            throw error
+        }
+    }
+
+    
+    /// Elimina la reaccion del mensaje
+    func removeReaction(fromMessageID messageID: String, userID: String) async throws {
+        let messageRef = chatsRef.collection("messages").document(messageID)
+        try await messageRef.updateData(["reactions.\(userID)": FieldValue.delete()])
     }
 }
