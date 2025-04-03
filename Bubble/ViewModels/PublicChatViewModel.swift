@@ -57,7 +57,7 @@ class PublicChatViewModel {
             }
         }
     }
-
+    
     /// Envía un mensaje al chat público.
     /// - Parameter text: Contenido del mensaje a enviar.
     func sendPublicMessage(_ text: String, replyingTo messageID: String?) async {
@@ -85,7 +85,7 @@ class PublicChatViewModel {
                                    type: .text,
                                    replyToMessageID: messageID,
                                    replyingToText: replyingToText,
-                                   replyingToNickname: replyingToNickname)
+                                   replyingToNickname: replyingToNickname )
         
         do{
             try await publicChatService.sendPublicMessage(message)
@@ -217,7 +217,7 @@ class PublicChatViewModel {
             await sendPublicMessage(trimmedText, replyingTo: replyingToMessageID.wrappedValue)
             replyingToMessageID.wrappedValue = nil // Limpiar después de enviar
         }
-
+        
         if isPublicChatVisible,
            let currentUserID = Auth.auth().currentUser?.uid,
            let currentUser = visibleUsers.first(where: { $0.id == currentUserID }),
@@ -225,7 +225,7 @@ class PublicChatViewModel {
             
             UserDefaults.standard.set(lastReply.id, forKey: "lastSeenReplyID")
         }
-
+        
         messageText.wrappedValue = ""
         textFieldHeight.wrappedValue = 40
     }
@@ -247,7 +247,7 @@ class PublicChatViewModel {
             replyNotificationsCount = 0
         }
     }
-
+    
     /// Carga desde UserDefaults el ID del último mensaje que fue una respuesta dirigida al usuario
     /// y que el usuario ya ha visto previamente.
     ///
@@ -274,4 +274,55 @@ class PublicChatViewModel {
         }
     }
     
+    /// Agrega una reacción (emoji) a un mensaje en el chat público.
+    ///
+    /// - Parameters:
+    ///   - messageID: El ID del mensaje al que se quiere reaccionar.
+    ///   - emoji: El emoji que se va a agregar como reacción.
+    ///   - userID: El ID del usuario que reacciona (aunque no se usa porque se obtiene desde Firebase).
+    func addReacToMessage(messageID: String, emoji: String, userID: String) async {
+        guard let userID = Auth.auth().currentUser?.uid else {return}
+        
+        do{
+            try await publicChatService.reactToMessage(messageID: messageID, emoji: emoji, userID: userID)
+            
+        }catch{
+            errorTitle = "Error al reaccionar"
+            errorMessage = "No se pudo enviar la reacción."
+            showError = true
+        }
+    }
+    
+    /// Elimina la reacción de un mensaje para el usuario actual.
+    ///
+    /// - Parameter messageID: El ID del mensaje del cual se quiere quitar la reacción.
+    func reacToMessageRemove(from messageID: String) async {
+        guard let userID = Auth.auth().currentUser?.uid else {return}
+        
+        do{
+            try await publicChatService.removeReaction(fromMessageID: messageID, userID: userID)
+        }catch{
+            errorTitle = "Error"
+            errorMessage = "No se pudo eliminar la reacción."
+            showError = true
+        }
+    }
+    
+    /// Copia un texto al portapapeles y muestra un toast por 2 segundos.
+    ///
+    /// - Parameters:
+    ///   - text: El texto que se va a copiar al portapapeles.
+    ///   - showCopiedToast: Binding a una variable `@State` en la vista que controla la visibilidad del toast.
+    func copyToClopboard(_ text: String,_ showCopiedToast: Binding<Bool>) async {
+        
+        UIPasteboard.general.string = text
+        showCopiedToast.wrappedValue = true
+        
+        do{
+            try await Task.sleep(nanoseconds: 2_000_000_000)
+            showCopiedToast.wrappedValue = false
+        }catch{
+            print("Error en la espera del toast")
+        }
+    }
 }
