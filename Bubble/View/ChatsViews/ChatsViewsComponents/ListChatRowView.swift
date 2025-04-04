@@ -8,6 +8,7 @@
 import SwiftUI
 import FirebaseCore
 import FirebaseAuth
+import Kingfisher
 
 struct ListChatRowView: View {
     
@@ -44,14 +45,14 @@ struct ListChatRowView: View {
                                     Image(systemName: "person.crop.circle.fill")
                                         .font(.system(size: 45))
                                 }else{
-                                    AsyncImage(url: URL(string: user.imgUrl)) { image in
-                                        image.resizable()
-                                            .scaledToFill()
-                                    } placeholder: {
-                                        ProgressView()
-                                    }
-                                    .clipShape(Circle())
-                                    .frame(width: 45, height: 45)
+                                    KFImage(URL(string: user.imgUrl))
+                                        .placeholder{
+                                            ProgressView()
+                                        }
+                                        .resizable()
+                                        .scaledToFill()
+                                        .clipShape(Circle())
+                                        .frame(width: 45, height: 45)
                                 }
                                 
                                 Circle()
@@ -131,7 +132,6 @@ struct ListChatRowView: View {
                             .multilineTextAlignment(.trailing)
                     }
                 })
-                // .disabled(user.isDeleted) // Deshabilita el chat si el usuario está eliminado
             } else {
                 ProgressView()
             }

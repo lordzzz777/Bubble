@@ -21,10 +21,6 @@ struct MessageBubbleView: View {
             
             HStack {
                 VStack(alignment: .leading) {
-//                    HStack{
-//                        profileImage().padding(6)
-//                        Text(user?.nickname ?? "").bold()
-//                    }.padding(.vertical, 5)
                     Text(message.content)
                     
                 }
@@ -46,34 +42,6 @@ struct MessageBubbleView: View {
         .frame(maxWidth: .infinity, alignment: privateChatViewModel.checkIfMessageWasSentByCurrentUser(message) ? .trailing : .leading)
         .task {
             await userProfileView.loadUserData()
-        }
-    }
-    
-    @ViewBuilder
-    private func profileImage() -> some View {
-        VStack {
-            if let imageURL = user?.imgUrl, let url = URL(string: imageURL){
-                AsyncImage(url: url){ images in
-                    switch images {
-                    case .empty:
-                        ProgressView()
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 35, height: 35)
-                            .clipShape(Circle())
-                    case .failure(_):
-                        Image(systemName: "person.circle.fill")
-                            .font(.system(size: 35))
-                    @unknown default:
-                        EmptyView()
-                    }
-                }
-                
-            }else{
-                EmptyView()
-            }
         }
     }
 }

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseCore
+import Kingfisher
 
 struct MatchedFriendRowView: View {
     
@@ -18,14 +19,15 @@ struct MatchedFriendRowView: View {
             VStack {
                 // Si la url no está vacía se muestra la imagen del usuario. Sino, se muestra una imagen por defecto
                 if !user.imgUrl.isEmpty {
-                    AsyncImage(url: URL(string: user.imgUrl)) { image in
-                        image.resizable()
-                            .scaledToFill()
-                    } placeholder: {
-                        ProgressView()
-                    }
-                    .clipShape(Circle())
-                    .frame(width: 60, height: 60)
+                        KFImage(URL(string: user.imgUrl))
+                        .placeholder{
+                            ProgressView()
+                        }
+                        .resizable()
+                        .scaledToFill()
+                        .clipShape(Circle())
+                        .frame(width: 60, height: 60)
+                    
                 } else {
                     Image(systemName: "person.crop.circle.fill")
                         .font(.system(size: 60))

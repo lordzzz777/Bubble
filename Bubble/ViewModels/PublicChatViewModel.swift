@@ -9,6 +9,7 @@ import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 import SwiftUI
+import Kingfisher
 
 @Observable @MainActor
 class PublicChatViewModel {
@@ -185,11 +186,8 @@ class PublicChatViewModel {
     @ViewBuilder
     func profileImage(_ user: UserModel?) -> some View {
         if let imageURL = user?.imgUrl, let url = URL(string: imageURL) {
-            AsyncImage(url: url) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                ProgressView()
-            }
+            KFImage(url).resizable().scaledToFill()
+                .progressViewStyle(.automatic)
         } else {
             Image(systemName: "person.circle.fill")
                 .resizable()
