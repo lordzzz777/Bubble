@@ -172,23 +172,6 @@ class NewAccountViewModel {
             }else{
                 if let imegeURL = user?.imgUrl, let url =  URL(string: imegeURL){
                     PhotosPicker(selection: selectedItem, label: {
-//                        AsyncImage(url: url){ image in
-//                            switch image {
-//                            case .empty:
-//                                ProgressView()
-//                            case .success(let image):
-//                                image
-//                                    .resizable()
-//                                    .scaledToFill()
-//                                    .frame(width: 170, height: 170)
-//                                    .clipShape(Circle())
-//                            case .failure:
-//                                Image(systemName: "person.circle.fill")
-//                                    .font(.system(size: 170))
-//                            @unknown default:
-//                                EmptyView()
-//                            }
-//                        }
                         ComponetImageKFImage(url: url)
                     })
                 }else{
