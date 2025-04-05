@@ -253,14 +253,3 @@ struct PublicMessageBubbleView: View {
         }
     }
 }
-
-//#Preview {
-//    PublicMessageBubbleView(
-//        messageText: .constant("Hola"),
-//        isEditing: .constant(false),
-//        editingMessageID: .constant(nil),
-//        message: MessageModel(id: "1", senderUserID: "user123", content: "Hola, este es un mensaje público", timestamp: Timestamp(), type: .text),
-//        user: UserModel(id: "user123", nickname: "Juan Pérez", imgUrl: "", lastConnectionTimeStamp: Timestamp(), isOnline: true, chats: [], friends: [], isDeleted: false),
-//        userColor: .blue
-//    )
-//}
