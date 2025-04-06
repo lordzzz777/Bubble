@@ -44,14 +44,29 @@ class MatchedFriendViewModel {
     }
     
     @MainActor
-    func checkFriendRequestStatus(friendUID: String) async {
+    func checkIfFriendRequestPending(friendUID: String) async {
         do {
             let isPending = try await addNewFriendService.checkFriendIfFriendRequestPending(friendUID: friendUID)
-            print("Estado de la solicitud de amistad: \(isPending)")
-            friendRequestStatus = isPending ? .pending : .none
+            if isPending {
+                friendRequestStatus = .pending
+            }
         } catch {
             errorTitle = "Error al verificar el estado de la solicitud de amistad"
             errorDescription = "Ha ocurrido un error al intentar verificar el estado de la solicitud de amistad. Por favor, intente más tarde."
+            showError = true
+        }
+    }
+    
+    @MainActor
+    func checkIfFriend(friendUID: String) async {
+        do {
+            let isFriend = try await addNewFriendService.checkIfFriend(friendUID: friendUID)
+            if isFriend {
+                friendRequestStatus = .accepted
+            }
+        } catch {
+            errorTitle = "Error al verificar si son amigos"
+            errorDescription = "Ha ocurrido un error al intentar verificar si son amigos. Por favor, intente más tarde."
             showError = true
         }
     }

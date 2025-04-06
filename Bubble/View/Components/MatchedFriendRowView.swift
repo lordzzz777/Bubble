@@ -42,11 +42,31 @@ struct MatchedFriendRowView: View {
             
             switch matchedFriendViewModel.friendRequestStatus {
                 case .pending:
-                    Text("Solicitud enviada")
-                        .foregroundStyle(.secondary)
+                    Button {
+                        //
+                    } label: {
+                        Text("Cancelar")
+                    }
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 50)
+                            .fill(Color.secondary)
+                    )
                 case .accepted:
-                    Text("Amigo")
-                        .foregroundStyle(.secondary)
+                    Button {
+                        //
+                    } label: {
+                        Text("Eliminar")
+                    }
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 50)
+                            .fill(Color.red)
+                    )
                 case .none:
                     Button {
                         Task {
@@ -68,7 +88,8 @@ struct MatchedFriendRowView: View {
         .onAppear {
             Task {
                 loading = true
-                await matchedFriendViewModel.checkFriendRequestStatus(friendUID: user.id)
+                await matchedFriendViewModel.checkIfFriendRequestPending(friendUID: user.id)
+                await matchedFriendViewModel.checkIfFriend(friendUID: user.id)
                 loading = false
             }
         }

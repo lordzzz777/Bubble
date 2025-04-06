@@ -91,14 +91,26 @@ actor AddNewFriendService {
                 .whereField("lastMessageType", isEqualTo: MessageType.friendRequest.rawValue).getDocuments()
             let chatsData = try documents.documents.map { try $0.data(as: ChatModel.self) }.compactMap { $0 }
             
-            print("Chats encontrados: \(chatsData)")
-            
             // Si el array de chats no está vacío y si el amigo no está en la lista de amigos del usuario actual, entonces hay una solicitud pendiente
             return !chatsData.isEmpty && !userData.friends.contains(uid)
         } catch {
             throw error
         }
     }
+    
+    /// Verifica por el UID si el usuario ya se encuentra dentro de la lista de amigos del usuario actual
+    /// - Parameter friendUID: UID del amigo a verificar
+    /// - Returns: Boolean que indica si el amigo es parte de la lista de amigos
+    func checkIfFriend(friendUID: String) async throws -> Bool {
+        do {
+            let userInfo = try await getCurrentUserInfo()
+            return userInfo.friends.contains(friendUID)
+        } catch {
+            throw error
+        }
+    }
+            
+            
     
     /// Obtiene la información del usuario actual desde Firestore
     /// - Returns: El modelo del usuario actual (UserModel)
