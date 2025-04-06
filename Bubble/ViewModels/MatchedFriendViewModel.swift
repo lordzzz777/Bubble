@@ -55,6 +55,19 @@ class MatchedFriendViewModel {
         }
     }
     
+    func deleteFriend(friendUID: String) async {
+        do {
+            try await addNewFriendService.deleteFriend(friendUID: friendUID)
+            withAnimation(.bouncy(duration: 0.3)) {
+                friendRequestStatus = .none
+            }
+        } catch {
+            errorTitle = "Error al eliminar amigo"
+            errorDescription = "Ha ocurrido un error al intentar eliminar al amigo. Por favor, intente más tarde."
+            showError = true
+        }
+    }
+    
     func checkIfFriendRequestPending(friendUID: String) async {
         do {
             let isPending = try await addNewFriendService.checkFriendIfFriendRequestPending(friendUID: friendUID)

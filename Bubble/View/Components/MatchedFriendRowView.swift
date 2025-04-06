@@ -68,7 +68,11 @@ struct MatchedFriendRowView: View {
                         ProgressView()
                     } else {
                         Button {
-                            //
+                            Task {
+                                isSendingRequest = true
+                                await matchedFriendViewModel.deleteFriend(friendUID: user.id)
+                                isSendingRequest = false
+                            }
                         } label: {
                             Text("Eliminar")
                         }

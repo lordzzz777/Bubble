@@ -90,6 +90,25 @@ actor AddNewFriendService {
         }
     }
     
+    
+    func deleteFriend(friendUID: String) async throws {
+        do {
+            let document = try await database.collection("users").document(uid).getDocument()
+            guard let userData = try? document.data(as: UserModel.self) else {
+                fatalError("No se pudo obtener el usuario")
+            }
+            
+            var friends = userData.friends
+            if let index = friends.firstIndex(of: friendUID) {
+                friends.remove(at: index)
+            }
+            
+            try await database.collection("users").document(uid).updateData(["friends": friends])
+        } catch {
+            throw error
+        }
+    }
+    
     /// Checkea si el amigo tiene una solicitud de amistad pendiente enviada por nosotros.
     /// - Parameter friendUID: UID del amigo al que se desea enviar la solicitud
     /// - Returns: Boolean que indica si hay una solicitud pendiente
