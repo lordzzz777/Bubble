@@ -73,6 +73,33 @@ actor AddNewFriendService {
         }
     }
     
+    /// Checkea si el amigo tiene una solicitud de amistad pendiente enviada por nosotros.
+    /// - Parameter friendUID: UID del amigo al que se desea enviar la solicitud
+    /// - Returns: Boolean que indica si hay una solicitud pendiente
+    func checkFriendIfFriendRequestPending(friendUID: String) async throws -> Bool {
+        do {
+            // Obtenemos la información del amigo al que queremos enviar la solicitud
+            let document = try await database.collection("users").document(friendUID).getDocument()
+            guard let userData = try? document.data(as: UserModel.self) else {
+                fatalError("No se pudo obtener el usuario")
+            }
+            
+            //Obtenemos los chats privados donde el amigo es participante, el último mensaje fue enviado por el usuario actual y el tipo de mensaje es "friendRequest"
+            let documents = try await database.collection("chats")
+                .whereField("participants", arrayContains: friendUID)
+                .whereField("lastMessageSenderUserID", isEqualTo: uid)
+                .whereField("lastMessageType", isEqualTo: MessageType.friendRequest.rawValue).getDocuments()
+            let chatsData = try documents.documents.map { try $0.data(as: ChatModel.self) }.compactMap { $0 }
+            
+            print("Chats encontrados: \(chatsData)")
+            
+            // Si el array de chats no está vacío y si el amigo no está en la lista de amigos del usuario actual, entonces hay una solicitud pendiente
+            return !chatsData.isEmpty && !userData.friends.contains(uid)
+        } catch {
+            throw error
+        }
+    }
+    
     /// Obtiene la información del usuario actual desde Firestore
     /// - Returns: El modelo del usuario actual (UserModel)
     private func getCurrentUserInfo() async throws -> UserModel {

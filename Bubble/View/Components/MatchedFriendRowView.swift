@@ -11,7 +11,9 @@ import Kingfisher
 
 struct MatchedFriendRowView: View {
     
-    @State private var addNewFriendViewModel: AddNewFriendViewModel = .init()
+    @State private var matchedFriendViewModel: MatchedFriendViewModel = .init()
+    @State private var loading: Bool = false
+    
     var user: UserModel
     
     var body: some View {
@@ -38,13 +40,36 @@ struct MatchedFriendRowView: View {
             
             Spacer()
             
-            Button {
-                Task {
-                    await addNewFriendViewModel.sendFriendRequest(friendUID: user.id)
-                }
-            } label: {
-                Text("Agregar amigo")
-                    .padding()
+            switch matchedFriendViewModel.friendRequestStatus {
+                case .pending:
+                    Text("Solicitud enviada")
+                        .foregroundStyle(.secondary)
+                case .accepted:
+                    Text("Amigo")
+                        .foregroundStyle(.secondary)
+                case .none:
+                    Button {
+                        Task {
+                            await matchedFriendViewModel.sendFriendRequest(friendUID: user.id)
+                        }
+                    } label: {
+                        Text("Agregar amigo")
+                    }
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 50)
+                            .fill(Color.accentColor)
+                    )
+            }
+        }
+        .redacted(reason: loading ? .placeholder : [])
+        .onAppear {
+            Task {
+                loading = true
+                await matchedFriendViewModel.checkFriendRequestStatus(friendUID: user.id)
+                loading = false
             }
         }
     }

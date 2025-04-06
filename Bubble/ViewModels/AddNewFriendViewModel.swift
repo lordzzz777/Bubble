@@ -35,20 +35,6 @@ class AddNewFriendViewModel {
         }
     }
 
-    /// Envía una solicitud de amistad al usuario con el UID especificado
-    /// - Parameter friendUID: UID del amigo al que se desea enviar la solicitud
-    func sendFriendRequest(friendUID: String) async {
-        Task {
-            do {
-                try await addNewFriendService.sendFriendRequest(friendUID: friendUID)
-            } catch {
-                errorTitle = "Error al enviar solicitud de amistad"
-                errorDescription = "Ha ocurrido un error al intentar enviar una solicitud de amistad. Por favor, intente más tarde."
-                showError = true
-            }
-        }
-    }
-
     /// Función para aceptar solicitud de amistad
     func acceptFriendRequest(chatID: String, senderUID: String) async{
         do{
