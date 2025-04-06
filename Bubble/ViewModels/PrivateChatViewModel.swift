@@ -18,7 +18,7 @@ class PrivateChatViewModel {
     var user: UserModel?
     var chats: [ChatModel] = []
     var messages: [MessageModel] = []
-    
+    var areUserFriends: Bool = false
     var showError: Bool = false
     var showAddFriendView: Bool = false
     
@@ -45,24 +45,32 @@ class PrivateChatViewModel {
         return groups.sorted { $0.key < $1.key }
     }
     
+    func checkIfUserIsFriend() async  {
+        do {
+            areUserFriends = try await privateChatService.checkIfFriend(friendID: user?.id ?? "")
+        } catch {
+            errorTitle = "Error"
+            errorMessage = "Ocurrió un error al verificar si el usuario es amigo."
+            showError = true
+        }
+    }
+    
     /// Obtiene los mensajes de un chat privado y los ordena por timestamp.
     ///
     /// - Parameter chatID: El identificador del chat del cual se desean obtener los mensajes.
-    func fetchMessages(chatID: String) {
-        Task {
-            do {
-                for try await newMessages in await privateChatService.fetchMessagesFromChat(chatID: chatID) {
-                    messages = newMessages.sorted(by: { $0.timestamp.seconds < $1.timestamp.seconds })
-                    if let last = messages.last {
-                        lastMessage = last
-                    }
+    func fetchMessages(chatID: String) async {
+        do {
+            for try await newMessages in await privateChatService.fetchMessagesFromChat(chatID: chatID) {
+                messages = newMessages.sorted(by: { $0.timestamp.seconds < $1.timestamp.seconds })
+                if let last = messages.last {
+                    lastMessage = last
                 }
-            } catch {
-                errorTitle = "Error al obtener mensajes"
-                errorMessage = "Hubo un error al intentar obtener los mensajes. Por favor, inténtalo más tarde."
-                print(error.localizedDescription)
-                showError = true
             }
+        } catch {
+            errorTitle = "Error al obtener mensajes"
+            errorMessage = "Hubo un error al intentar obtener los mensajes. Por favor, inténtalo más tarde."
+            print(error.localizedDescription)
+            showError = true
         }
     }
 

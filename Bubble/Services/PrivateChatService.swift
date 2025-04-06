@@ -71,6 +71,18 @@ actor PrivateChatService {
         listenerRegistration = nil
     }
     
+    func checkIfFriend(friendID: String) async throws -> Bool {
+        do {
+            let document = try await database.collection("users").document(uid).getDocument()
+            guard let userData = try? document.data(as: UserModel.self) else {
+                fatalError("No se pudo obtener el usuario")
+            }
+            return userData.friends.contains(friendID)
+        } catch {
+            throw error
+        }
+    }
+    
     /// Obtiene un usuario en tiempo real desde Firestore y devuelve un flujo asíncrono de actualizaciones.
     /// - Parameter id: El ID del usuario que se desea obtener.
     /// - Returns: Un `AsyncThrowingStream` que emite `UserModel?` y maneja errores.

@@ -66,6 +66,13 @@ struct PrivateChatView: View {
                                     }
                                 }
                             }
+                            
+                            if !privateChatViewModel.areUserFriends {
+                                Text("Tú y \(user.nickname) no son amigos")
+                                    .foregroundStyle(.red)
+                                    .italic()
+                                    .padding(.bottom, 20)
+                            }
                         }
                         .onChange(of: privateChatViewModel.lastMessage) { _, lastMessage in
                             withAnimation {
@@ -75,37 +82,39 @@ struct PrivateChatView: View {
                     }
                 }
                 
-                ZStack(alignment: .bottomTrailing) {
-                    TextField("Escribe tu mensaje", text: $messageText)
-                        .padding(.trailing, 20)
-                        .onSubmit {
-                            Task {
-                                if !messageText.isEmpty {
-                                    await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageText)
-                                    messageText = ""
+                if privateChatViewModel.areUserFriends {
+                    ZStack(alignment: .bottomTrailing) {
+                        TextField("Escribe tu mensaje", text: $messageText)
+                            .padding(.trailing, 20)
+                            .onSubmit {
+                                Task {
+                                    if !messageText.isEmpty {
+                                        await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageText)
+                                        messageText = ""
+                                    }
                                 }
                             }
-                        }
-                    
-                    if !messageText.isEmpty {
-                        Button {
-                            messageText = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.gray)
+                        
+                        if !messageText.isEmpty {
+                            Button {
+                                messageText = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.gray)
+                            }
                         }
                     }
+                    .padding(8)
+                    .clipShape(
+                        RoundedRectangle(cornerRadius: 8)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(.gray, lineWidth: 0.3)
+                    )
+                    .padding(.bottom, 8)
+                    .padding(.horizontal, 4)
                 }
-                .padding(8)
-                .clipShape(
-                    RoundedRectangle(cornerRadius: 8)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(.gray, lineWidth: 0.3)
-                )
-                .padding(.bottom, 8)
-                .padding(.horizontal, 4)
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -121,7 +130,8 @@ struct PrivateChatView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(false)
             .task {
-                privateChatViewModel.fetchMessages(chatID: chat.id)
+                await privateChatViewModel.fetchMessages(chatID: chat.id)
+                await privateChatViewModel.checkIfUserIsFriend()
                 print("messages: \(privateChatViewModel.messages)")
                 if privateChatViewModel.showError {
                     print(privateChatViewModel.errorMessage)
