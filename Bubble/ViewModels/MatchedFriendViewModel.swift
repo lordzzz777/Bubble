@@ -14,7 +14,7 @@ enum FriendRequestStatus {
     case accepted
 }
 
-@Observable
+@Observable @MainActor
 class MatchedFriendViewModel {
     private var addNewFriendService: AddNewFriendService = AddNewFriendService()
     var friendRequestStatus: FriendRequestStatus = .none
@@ -26,7 +26,6 @@ class MatchedFriendViewModel {
     
     /// Envía una solicitud de amistad al usuario con el UID especificado
     /// - Parameter friendUID: UID del amigo al que se desea enviar la solicitud
-    @MainActor
     func sendFriendRequest(friendUID: String) async {
         Task {
             do {
@@ -43,7 +42,19 @@ class MatchedFriendViewModel {
         }
     }
     
-    @MainActor
+    func cancelFriendRequest(friendUID: String) async {
+        do {
+            try await addNewFriendService.cancelFriendRequest(friendUID: friendUID)
+            withAnimation(.bouncy(duration: 0.3)) {
+                friendRequestStatus = .none
+            }
+        } catch {
+            errorTitle = "Error al cancelar solicitud de amistad"
+            errorDescription = "Ha ocurrido un error al intentar cancelar la solicitud de amistad. Por favor, intente más tarde."
+            showError = true
+        }
+    }
+    
     func checkIfFriendRequestPending(friendUID: String) async {
         do {
             let isPending = try await addNewFriendService.checkFriendIfFriendRequestPending(friendUID: friendUID)
@@ -57,7 +68,6 @@ class MatchedFriendViewModel {
         }
     }
     
-    @MainActor
     func checkIfFriend(friendUID: String) async {
         do {
             let isFriend = try await addNewFriendService.checkIfFriend(friendUID: friendUID)

@@ -13,6 +13,7 @@ struct MatchedFriendRowView: View {
     
     @State private var matchedFriendViewModel: MatchedFriendViewModel = .init()
     @State private var loading: Bool = false
+    @State private var isSendingRequest: Bool = false
     
     var user: UserModel
     
@@ -42,56 +43,72 @@ struct MatchedFriendRowView: View {
             
             switch matchedFriendViewModel.friendRequestStatus {
                 case .pending:
-                    Button {
-                        //
-                    } label: {
-                        Text("Cancelar")
-                    }
-                    .foregroundStyle(Color.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 50)
-                            .fill(Color.secondary)
-                    )
-                case .accepted:
-                    Button {
-                        //
-                    } label: {
-                        Text("Eliminar")
-                    }
-                    .foregroundStyle(Color.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 50)
-                            .fill(Color.red)
-                    )
-                case .none:
-                    Button {
-                        Task {
-                            await matchedFriendViewModel.sendFriendRequest(friendUID: user.id)
+                    if isSendingRequest {
+                        ProgressView()
+                    } else {
+                        Button {
+                            Task {
+                                isSendingRequest = true
+                                await matchedFriendViewModel.cancelFriendRequest(friendUID: user.id)
+                                isSendingRequest = false
+                            }
+                        } label: {
+                            Text("Cancelar")
                         }
-                    } label: {
-                        Text("Agregar amigo")
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 50)
+                                .fill(Color.secondary)
+                        )
                     }
-                    .foregroundStyle(Color.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 50)
-                            .fill(Color.accentColor)
-                    )
+                case .accepted:
+                    if isSendingRequest {
+                        ProgressView()
+                    } else {
+                        Button {
+                            //
+                        } label: {
+                            Text("Eliminar")
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 50)
+                                .fill(Color.red)
+                        )
+                    }
+                case .none:
+                    if isSendingRequest {
+                        ProgressView()
+                    } else {
+                        Button {
+                            Task {
+                                isSendingRequest = true
+                                await matchedFriendViewModel.sendFriendRequest(friendUID: user.id)
+                                isSendingRequest = false
+                            }
+                        } label: {
+                            Text("Agregar amigo")
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 50)
+                                .fill(Color.accentColor)
+                        )
+                    }
             }
         }
         .redacted(reason: loading ? .placeholder : [])
-        .onAppear {
-            Task {
-                loading = true
-                await matchedFriendViewModel.checkIfFriendRequestPending(friendUID: user.id)
-                await matchedFriendViewModel.checkIfFriend(friendUID: user.id)
-                loading = false
-            }
+        .task {
+            loading = true
+            await matchedFriendViewModel.checkIfFriendRequestPending(friendUID: user.id)
+            await matchedFriendViewModel.checkIfFriend(friendUID: user.id)
+            loading = false
         }
     }
 }

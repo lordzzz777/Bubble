@@ -240,14 +240,12 @@ class PrivateChatViewModel {
                     for try await user in await privateChatService.getUser(by: chat.lastMessageSenderUserID) {
                         guard !Task.isCancelled else { return }
                         self.user = user
-                        print("friend user: \(String(describing: user?.nickname))")
                     }
                 } else {
                     let friendUID = getFriendID(chat.participants)
                     for try await user in await privateChatService.getUser(by: friendUID) {
                         guard !Task.isCancelled else { return }
                         self.user = user
-                        print("friend user: \(String(describing: user?.nickname))")
                     }
                 }
             } catch {
