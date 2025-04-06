@@ -18,9 +18,10 @@ class PrivateChatViewModel {
     var user: UserModel?
     var chats: [ChatModel] = []
     var messages: [MessageModel] = []
-    var areUserFriends: Bool = false
     var showError: Bool = false
     var showAddFriendView: Bool = false
+    
+    var friendStatus: FriendRequestStatus = .none
     
     var searchQuery = "" // Variables para la búsqueda
     var errorTitle: String = ""
@@ -45,9 +46,13 @@ class PrivateChatViewModel {
         return groups.sorted { $0.key < $1.key }
     }
     
-    func checkIfUserIsFriend() async  {
+    func checkIfUserIsFriend(userID: String) async  {
         do {
-            areUserFriends = try await privateChatService.checkIfFriend(friendID: user?.id ?? "")
+            let areUserFriends = try await privateChatService.checkIfFriend(friendID: userID)
+            print("areUserFriends: \(areUserFriends)")
+            if areUserFriends {
+                friendStatus = .accepted
+            }
         } catch {
             errorTitle = "Error"
             errorMessage = "Ocurrió un error al verificar si el usuario es amigo."

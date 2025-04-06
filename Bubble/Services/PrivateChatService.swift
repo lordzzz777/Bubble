@@ -77,6 +77,7 @@ actor PrivateChatService {
             guard let userData = try? document.data(as: UserModel.self) else {
                 fatalError("No se pudo obtener el usuario")
             }
+            print("Are users friends \(userData.friends.contains(friendID))")
             return userData.friends.contains(friendID)
         } catch {
             throw error

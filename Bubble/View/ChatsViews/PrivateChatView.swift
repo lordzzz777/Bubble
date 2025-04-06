@@ -12,6 +12,7 @@ struct PrivateChatView: View {
     @Environment(PrivateChatViewModel.self) private var chatsViewModel
     @State private var privateChatViewModel = PrivateChatViewModel()
     @State private var messageText: String = ""
+    @State private var checkingFriendStatus: Bool = false
     
     var user: UserModel
     var chat: ChatModel
@@ -67,11 +68,12 @@ struct PrivateChatView: View {
                                 }
                             }
                             
-                            if !privateChatViewModel.areUserFriends {
+                            if privateChatViewModel.friendStatus == .none {
                                 Text("Tú y \(user.nickname) no son amigos")
                                     .foregroundStyle(.red)
                                     .italic()
                                     .padding(.bottom, 20)
+                                    .opacity(checkingFriendStatus ? 0 : 1)
                             }
                         }
                         .onChange(of: privateChatViewModel.lastMessage) { _, lastMessage in
@@ -82,7 +84,7 @@ struct PrivateChatView: View {
                     }
                 }
                 
-                if privateChatViewModel.areUserFriends {
+                if privateChatViewModel.friendStatus == .accepted {
                     ZStack(alignment: .bottomTrailing) {
                         TextField("Escribe tu mensaje", text: $messageText)
                             .padding(.trailing, 20)
@@ -129,10 +131,15 @@ struct PrivateChatView: View {
             .navigationTitle(user.nickname)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(false)
+            .onAppear {
+                Task {
+                    checkingFriendStatus = true
+                    await privateChatViewModel.checkIfUserIsFriend(userID: user.id)
+                    checkingFriendStatus = false
+                }
+            }
             .task {
                 await privateChatViewModel.fetchMessages(chatID: chat.id)
-                await privateChatViewModel.checkIfUserIsFriend()
-                print("messages: \(privateChatViewModel.messages)")
                 if privateChatViewModel.showError {
                     print(privateChatViewModel.errorMessage)
                 }
