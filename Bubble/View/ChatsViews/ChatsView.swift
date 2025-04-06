@@ -133,7 +133,7 @@ struct ChatsView: View {
                     }
                 }
             }
-            .fullScreenCover(isPresented: $chatsViewModel.showAddFriendView) {
+            .sheet(isPresented: $chatsViewModel.showAddFriendView) {
                 AddNewFriendView()
             }
             .sheet(isPresented: $createCommunityViewModel.showCreateNewCommunity, onDismiss: {

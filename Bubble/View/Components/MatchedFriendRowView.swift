@@ -11,7 +11,10 @@ import Kingfisher
 
 struct MatchedFriendRowView: View {
     
-    @State private var addNewFriendViewModel: AddNewFriendViewModel = .init()
+    @State private var matchedFriendViewModel: MatchedFriendViewModel = .init()
+    @State private var loading: Bool = false
+    @State private var isSendingRequest: Bool = false
+    
     var user: UserModel
     
     var body: some View {
@@ -38,14 +41,78 @@ struct MatchedFriendRowView: View {
             
             Spacer()
             
-            Button {
-                Task {
-                    await addNewFriendViewModel.sendFriendRequest(friendUID: user.id)
-                }
-            } label: {
-                Text("Agregar amigo")
-                    .padding()
+            switch matchedFriendViewModel.friendRequestStatus {
+                case .pending:
+                    if isSendingRequest {
+                        ProgressView()
+                    } else {
+                        Button {
+                            Task {
+                                isSendingRequest = true
+                                await matchedFriendViewModel.cancelFriendRequest(friendUID: user.id)
+                                isSendingRequest = false
+                            }
+                        } label: {
+                            Text("Cancelar")
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 50)
+                                .fill(Color.secondary)
+                        )
+                    }
+                case .accepted:
+                    if isSendingRequest {
+                        ProgressView()
+                    } else {
+                        Button {
+                            Task {
+                                isSendingRequest = true
+                                await matchedFriendViewModel.deleteFriend(friendUID: user.id)
+                                isSendingRequest = false
+                            }
+                        } label: {
+                            Text("Eliminar")
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 50)
+                                .fill(Color.red)
+                        )
+                    }
+                case .none:
+                    if isSendingRequest {
+                        ProgressView()
+                    } else {
+                        Button {
+                            Task {
+                                isSendingRequest = true
+                                await matchedFriendViewModel.sendFriendRequest(friendUID: user.id)
+                                isSendingRequest = false
+                            }
+                        } label: {
+                            Text("Agregar amigo")
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 50)
+                                .fill(Color.accentColor)
+                        )
+                    }
             }
+        }
+        .redacted(reason: loading ? .placeholder : [])
+        .task {
+            loading = true
+            await matchedFriendViewModel.checkIfFriendRequestPending(friendUID: user.id)
+            await matchedFriendViewModel.checkIfFriend(friendUID: user.id)
+            loading = false
         }
     }
 }
