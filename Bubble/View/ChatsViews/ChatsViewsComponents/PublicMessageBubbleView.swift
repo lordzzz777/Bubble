@@ -8,6 +8,7 @@
 import SwiftUI
 import FirebaseCore
 import FirebaseAuth
+import Kingfisher
 
 struct PublicMessageBubbleView: View {
     @State private var publicChatViewModel =  PublicChatViewModel()
@@ -120,9 +121,21 @@ struct PublicMessageBubbleView: View {
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
-                        
-                        Text(message.content)
-                            .padding(.horizontal, 10)
+                        if message.type == .image {
+                            if let url = URL(string: message.content){
+                                KFImage(url)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .cornerRadius(12)
+                                    .frame(maxWidth: 220, maxHeight: 220)
+                                    .onTapGesture {
+                                        // Aquí podrías abrir una vista de imagen completa
+                                    }
+                            }
+                        }else{
+                            Text(message.content)
+                                .padding(.horizontal, 10)
+                        }
                         if let reactions = message.reactions, !reactions.isEmpty{
                             HStack(spacing: 2){
                                 ForEach(Array(Set(reactions.values)), id:\.self){ emoji in

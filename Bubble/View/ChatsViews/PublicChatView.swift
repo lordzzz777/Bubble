@@ -8,10 +8,14 @@
 import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
+import PhotosUI
 
 struct PublicChatView: View {
     @FocusState private var isTextFieldFocused: Bool
     @Environment(PublicChatViewModel.self) var publicChatViewModel
+    
+    @State private var chatMediaViewModel = ChatMediaViewModel()
+    @State private var selectedImageItem: PhotosPickerItem?
    
     @State private var replyingToMessageID: String? = nil
     @State private var replyingToNickname: String? = nil
@@ -80,7 +84,13 @@ struct PublicChatView: View {
                     .padding(.horizontal)
                 }
                 
-                HStack {
+                HStack(spacing: 8) {
+                    PhotosPicker(selection: $selectedImageItem, matching: .images, photoLibrary: .shared()){
+                        Image(systemName: "photo.on.rectangle")
+                            .font(.system(size: 22))
+                            .foregroundColor(.blue)
+                    }
+                    
                     TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
                         Task{
                       await publicChatViewModel.handleSendOrEdit(
@@ -137,7 +147,12 @@ struct PublicChatView: View {
                     }
                 }
             }
-
+            .onChange(of: selectedImageItem){ oldValue, newValue in
+                Task{
+                    await chatMediaViewModel.sendImageFromPicker(newValue)
+                    selectedImageItem = nil
+                }
+            }
             .onDisappear {
                 publicChatViewModel.isPublicChatVisible = false
             }
