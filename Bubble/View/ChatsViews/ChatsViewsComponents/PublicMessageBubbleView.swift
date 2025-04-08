@@ -26,6 +26,9 @@ struct PublicMessageBubbleView: View {
     var userColor: Color
     var showAvatarAndName: Bool
     
+    var onImageTap: ((URL) -> Void)? = nil
+
+    
     var isCurrentUser: Bool {
         message.senderUserID == Auth.auth().currentUser?.uid
     }
@@ -130,6 +133,7 @@ struct PublicMessageBubbleView: View {
                                     .frame(maxWidth: 220, maxHeight: 220)
                                     .onTapGesture {
                                         // Aquí podrías abrir una vista de imagen completa
+                                        onImageTap?(url)
                                     }
                             }
                         }else{
