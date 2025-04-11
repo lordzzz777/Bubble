@@ -14,9 +14,11 @@ import Kingfisher
 struct PublicChatView: View {
     @FocusState private var isTextFieldFocused: Bool
     @Environment(PublicChatViewModel.self) var publicChatViewModel
+
     
     @State private var chatMediaViewModel = ChatMediaViewModel()
     @State private var selectedImageItem: PhotosPickerItem?
+
    
     @State private var replyingToMessageID: String? = nil
     @State private var replyingToNickname: String? = nil
@@ -59,6 +61,7 @@ struct PublicChatView: View {
                                                     showImageOverlay = true
                                                 }
                                             }
+
                                         )
                                         .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
                                         .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
@@ -96,6 +99,7 @@ struct PublicChatView: View {
                     .padding(.horizontal)
                 }
                 
+
                 HStack(spacing: 8) {
                     PhotosPicker(selection: $selectedImageItem, matching: .images, photoLibrary: .shared()){
                         Image(systemName: "photo.on.rectangle")
@@ -103,6 +107,7 @@ struct PublicChatView: View {
                             .foregroundColor(.blue)
                     }
                     
+
                     TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
                         Task{
                       await publicChatViewModel.handleSendOrEdit(
@@ -157,6 +162,7 @@ struct PublicChatView: View {
                         await publicChatViewModel.cleanUpDeletedMessages(olderThan: 300)
                         try? await Task.sleep(nanoseconds: 60 * 1_000_000_000)
                     }
+
                 }
             }
             .onChange(of: selectedImageItem){ oldValue, newValue in
@@ -193,7 +199,12 @@ struct PublicChatView: View {
                             }
                     }
                     .transition(.scale.combined(with: .opacity))
+
                 }
+            }
+
+            .onDisappear {
+                publicChatViewModel.isPublicChatVisible = false
             }
         }
     }

@@ -25,6 +25,7 @@ struct PublicMessageBubbleView: View {
     var user: UserModel?
     var userColor: Color
     var showAvatarAndName: Bool
+
     
     var onImageTap: ((URL) -> Void)? = nil
 
@@ -85,7 +86,7 @@ struct PublicMessageBubbleView: View {
                    
 
                     VStack(alignment: .leading) {
-                        
+ 
                        
                             Text(user?.nickname ?? "Usuario desconocido")
                                 .font(.footnote.bold())
@@ -140,6 +141,7 @@ struct PublicMessageBubbleView: View {
                             Text(message.content)
                                 .padding(.horizontal, 10)
                         }
+                      
                         if let reactions = message.reactions, !reactions.isEmpty{
                             HStack(spacing: 2){
                                 ForEach(Array(Set(reactions.values)), id:\.self){ emoji in
