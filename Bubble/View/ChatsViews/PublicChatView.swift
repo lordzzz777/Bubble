@@ -8,10 +8,15 @@
 import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
+import PhotosUI
+import Kingfisher
 
 struct PublicChatView: View {
     @FocusState private var isTextFieldFocused: Bool
     @Environment(PublicChatViewModel.self) var publicChatViewModel
+    
+    @State private var chatMediaViewModel = ChatMediaViewModel()
+    @State private var selectedImageItem: PhotosPickerItem?
    
     @State private var replyingToMessageID: String? = nil
     @State private var replyingToNickname: String? = nil
@@ -19,6 +24,11 @@ struct PublicChatView: View {
     @State private var textFieldHeight: CGFloat = 40
     @State private var isEditing: Bool = false
     @State private var editingMessageID: String? = nil
+
+    // Para mostrar imagen flotante
+    @State private var selectedImageURL: URL? = nil
+    @State private var showImageOverlay = false
+
     
     var body: some View {
         NavigationStack{
@@ -42,7 +52,13 @@ struct PublicChatView: View {
                                             message: message,
                                             user: user,
                                             userColor: publicChatViewModel.getColorForUser(userID: message.senderUserID),
-                                            showAvatarAndName: showAvatarAndName
+                                            showAvatarAndName: showAvatarAndName,
+                                            onImageTap: { url in
+                                                selectedImageURL = url
+                                                withAnimation {
+                                                    showImageOverlay = true
+                                                }
+                                            }
                                         )
                                         .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
                                         .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
@@ -80,7 +96,13 @@ struct PublicChatView: View {
                     .padding(.horizontal)
                 }
                 
-                HStack {
+                HStack(spacing: 8) {
+                    PhotosPicker(selection: $selectedImageItem, matching: .images, photoLibrary: .shared()){
+                        Image(systemName: "photo.on.rectangle")
+                            .font(.system(size: 22))
+                            .foregroundColor(.blue)
+                    }
+                    
                     TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
                         Task{
                       await publicChatViewModel.handleSendOrEdit(
@@ -137,9 +159,41 @@ struct PublicChatView: View {
                     }
                 }
             }
-
+            .onChange(of: selectedImageItem){ oldValue, newValue in
+                Task{
+                    await chatMediaViewModel.sendImageFromPicker(newValue)
+                    selectedImageItem = nil
+                }
+            }
             .onDisappear {
                 publicChatViewModel.isPublicChatVisible = false
+            }
+            .overlay{
+                if showImageOverlay, let url = selectedImageURL{
+                    ZStack {
+                        Color.black.opacity(0.6)
+                            .ignoresSafeArea()
+                            .onTapGesture {
+                                withAnimation {
+                                    showImageOverlay = false
+                                }
+                            }
+                        
+                        KFImage(url)
+                            .resizable()
+                            .scaledToFit()
+                            .padding()
+                            .background(Color.white.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .shadow(radius: 10)
+                            .onTapGesture {
+                                withAnimation {
+                                    showImageOverlay = false
+                                }
+                            }
+                    }
+                    .transition(.scale.combined(with: .opacity))
+                }
             }
         }
     }
