@@ -83,9 +83,6 @@ struct ChatsView: View {
                 }
             }
             .searchable(text: $chatsViewModel.searchQuery, placement: .navigationBarDrawer(displayMode: .always)) {
-//                ForEach(chatsViewModel.visibilityOptions, id: \.self) { option in
-//                    Text(option).searchCompletion(option)
-//                }
             }
             .navigationTitle("Chats")
             .task {
@@ -136,7 +133,7 @@ struct ChatsView: View {
                     }
                 }
             }
-            .fullScreenCover(isPresented: $chatsViewModel.showAddFriendView) {
+            .sheet(isPresented: $chatsViewModel.showAddFriendView) {
                 AddNewFriendView()
             }
             .sheet(isPresented: $createCommunityViewModel.showCreateNewCommunity, onDismiss: {

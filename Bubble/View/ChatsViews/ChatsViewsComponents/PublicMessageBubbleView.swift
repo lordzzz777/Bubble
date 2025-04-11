@@ -8,6 +8,7 @@
 import SwiftUI
 import FirebaseCore
 import FirebaseAuth
+import Kingfisher
 
 struct PublicMessageBubbleView: View {
     @State private var publicChatViewModel =  PublicChatViewModel()
@@ -24,6 +25,10 @@ struct PublicMessageBubbleView: View {
     var user: UserModel?
     var userColor: Color
     var showAvatarAndName: Bool
+
+    
+    var onImageTap: ((URL) -> Void)? = nil
+
     
     var isCurrentUser: Bool {
         message.senderUserID == Auth.auth().currentUser?.uid
@@ -81,7 +86,7 @@ struct PublicMessageBubbleView: View {
                    
 
                     VStack(alignment: .leading) {
-                        
+ 
                        
                             Text(user?.nickname ?? "Usuario desconocido")
                                 .font(.footnote.bold())
@@ -120,9 +125,23 @@ struct PublicMessageBubbleView: View {
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
-                        
-                        Text(message.content)
-                            .padding(.horizontal, 10)
+                        if message.type == .image {
+                            if let url = URL(string: message.content){
+                                KFImage(url)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .cornerRadius(12)
+                                    .frame(maxWidth: 220, maxHeight: 220)
+                                    .onTapGesture {
+                                        // Aquí podrías abrir una vista de imagen completa
+                                        onImageTap?(url)
+                                    }
+                            }
+                        }else{
+                            Text(message.content)
+                                .padding(.horizontal, 10)
+                        }
+                      
                         if let reactions = message.reactions, !reactions.isEmpty{
                             HStack(spacing: 2){
                                 ForEach(Array(Set(reactions.values)), id:\.self){ emoji in
@@ -253,14 +272,3 @@ struct PublicMessageBubbleView: View {
         }
     }
 }
-
-//#Preview {
-//    PublicMessageBubbleView(
-//        messageText: .constant("Hola"),
-//        isEditing: .constant(false),
-//        editingMessageID: .constant(nil),
-//        message: MessageModel(id: "1", senderUserID: "user123", content: "Hola, este es un mensaje público", timestamp: Timestamp(), type: .text),
-//        user: UserModel(id: "user123", nickname: "Juan Pérez", imgUrl: "", lastConnectionTimeStamp: Timestamp(), isOnline: true, chats: [], friends: [], isDeleted: false),
-//        userColor: .blue
-//    )
-//}

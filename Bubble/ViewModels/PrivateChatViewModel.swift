@@ -18,9 +18,10 @@ class PrivateChatViewModel {
     var user: UserModel?
     var chats: [ChatModel] = []
     var messages: [MessageModel] = []
-    
     var showError: Bool = false
     var showAddFriendView: Bool = false
+    
+    var friendStatus: FriendRequestStatus = .none
     
     var searchQuery = "" // Variables para la búsqueda
     var errorTitle: String = ""
@@ -45,24 +46,36 @@ class PrivateChatViewModel {
         return groups.sorted { $0.key < $1.key }
     }
     
+    func checkIfUserIsFriend(userID: String) async  {
+        do {
+            let areUserFriends = try await privateChatService.checkIfFriend(friendID: userID)
+            print("areUserFriends: \(areUserFriends)")
+            if areUserFriends {
+                friendStatus = .accepted
+            }
+        } catch {
+            errorTitle = "Error"
+            errorMessage = "Ocurrió un error al verificar si el usuario es amigo."
+            showError = true
+        }
+    }
+    
     /// Obtiene los mensajes de un chat privado y los ordena por timestamp.
     ///
     /// - Parameter chatID: El identificador del chat del cual se desean obtener los mensajes.
-    func fetchMessages(chatID: String) {
-        Task {
-            do {
-                for try await newMessages in await privateChatService.fetchMessagesFromChat(chatID: chatID) {
-                    messages = newMessages.sorted(by: { $0.timestamp.seconds < $1.timestamp.seconds })
-                    if let last = messages.last {
-                        lastMessage = last
-                    }
+    func fetchMessages(chatID: String) async {
+        do {
+            for try await newMessages in await privateChatService.fetchMessagesFromChat(chatID: chatID) {
+                messages = newMessages.sorted(by: { $0.timestamp.seconds < $1.timestamp.seconds })
+                if let last = messages.last {
+                    lastMessage = last
                 }
-            } catch {
-                errorTitle = "Error al obtener mensajes"
-                errorMessage = "Hubo un error al intentar obtener los mensajes. Por favor, inténtalo más tarde."
-                print(error.localizedDescription)
-                showError = true
             }
+        } catch {
+            errorTitle = "Error al obtener mensajes"
+            errorMessage = "Hubo un error al intentar obtener los mensajes. Por favor, inténtalo más tarde."
+            print(error.localizedDescription)
+            showError = true
         }
     }
 
@@ -240,14 +253,12 @@ class PrivateChatViewModel {
                     for try await user in await privateChatService.getUser(by: chat.lastMessageSenderUserID) {
                         guard !Task.isCancelled else { return }
                         self.user = user
-                        print("friend user: \(String(describing: user?.nickname))")
                     }
                 } else {
                     let friendUID = getFriendID(chat.participants)
                     for try await user in await privateChatService.getUser(by: friendUID) {
                         guard !Task.isCancelled else { return }
                         self.user = user
-                        print("friend user: \(String(describing: user?.nickname))")
                     }
                 }
             } catch {

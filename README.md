@@ -52,6 +52,7 @@ Bubble es una aplicación moderna y minimalista desarrollada en **SwiftUI**, dis
 
 - yeikobu, [Github](https://github.com/yeikobu) y [Linkedin](https://www.linkedin.com/in/jacob-aguilar-campos/overlay/about-this-profile/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base%3Bkqfp06aKQ92Qw9GLJqDagg%3D%3D)
 - lordzzz777, [Github](https://github.com/lordzzz777) y [Linkedin](https://www.linkedin.com/in/esteban-pérez-castillejo-a79476333/?midToken=AQFoUW3wQ6lhOw&midSig=00uIzmNbyL9HE1&eid=na0p6l-m6peu2ao-y8&otpToken=MTMwMTFlZTcxNzJiYzljY2IwMmIwZmViNDExZGVmYjI4ZmM2ZDk0MDljYWM4YzZlN2JkYTAxNjc0YTVmNWNmYmY0ZGRkNmU3MThlNWNmZjk0MGZhYzhiMDI4NTRjM2RmNTUyM2YzMTdiNTc0OWRlNzhlOTgyMTIwY2QsMSwx&originalSubdomain=es)
+- ManuelCBR, [Github](https://github.com/ManuelCBR)
 
 ---
 

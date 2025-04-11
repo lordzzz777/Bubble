@@ -7,10 +7,14 @@
 
 import SwiftUI
 import FirebaseCore
+import Kingfisher
 
 struct MatchedFriendRowView: View {
     
-    @State private var addNewFriendViewModel: AddNewFriendViewModel = .init()
+    @State private var matchedFriendViewModel: MatchedFriendViewModel = .init()
+    @State private var loading: Bool = false
+    @State private var isSendingRequest: Bool = false
+    
     var user: UserModel
     
     var body: some View {
@@ -18,14 +22,15 @@ struct MatchedFriendRowView: View {
             VStack {
                 // Si la url no está vacía se muestra la imagen del usuario. Sino, se muestra una imagen por defecto
                 if !user.imgUrl.isEmpty {
-                    AsyncImage(url: URL(string: user.imgUrl)) { image in
-                        image.resizable()
-                            .scaledToFill()
-                    } placeholder: {
-                        ProgressView()
-                    }
-                    .clipShape(Circle())
-                    .frame(width: 60, height: 60)
+                        KFImage(URL(string: user.imgUrl))
+                        .placeholder{
+                            ProgressView()
+                        }
+                        .resizable()
+                        .scaledToFill()
+                        .clipShape(Circle())
+                        .frame(width: 60, height: 60)
+                    
                 } else {
                     Image(systemName: "person.crop.circle.fill")
                         .font(.system(size: 60))
@@ -36,14 +41,78 @@ struct MatchedFriendRowView: View {
             
             Spacer()
             
-            Button {
-                Task {
-                    await addNewFriendViewModel.sendFriendRequest(friendUID: user.id)
-                }
-            } label: {
-                Text("Agregar amigo")
-                    .padding()
+            switch matchedFriendViewModel.friendRequestStatus {
+                case .pending:
+                    if isSendingRequest {
+                        ProgressView()
+                    } else {
+                        Button {
+                            Task {
+                                isSendingRequest = true
+                                await matchedFriendViewModel.cancelFriendRequest(friendUID: user.id)
+                                isSendingRequest = false
+                            }
+                        } label: {
+                            Text("Cancelar")
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 50)
+                                .fill(Color.secondary)
+                        )
+                    }
+                case .accepted:
+                    if isSendingRequest {
+                        ProgressView()
+                    } else {
+                        Button {
+                            Task {
+                                isSendingRequest = true
+                                await matchedFriendViewModel.deleteFriend(friendUID: user.id)
+                                isSendingRequest = false
+                            }
+                        } label: {
+                            Text("Eliminar")
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 50)
+                                .fill(Color.red)
+                        )
+                    }
+                case .none:
+                    if isSendingRequest {
+                        ProgressView()
+                    } else {
+                        Button {
+                            Task {
+                                isSendingRequest = true
+                                await matchedFriendViewModel.sendFriendRequest(friendUID: user.id)
+                                isSendingRequest = false
+                            }
+                        } label: {
+                            Text("Agregar amigo")
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 50)
+                                .fill(Color.accentColor)
+                        )
+                    }
             }
+        }
+        .redacted(reason: loading ? .placeholder : [])
+        .task {
+            loading = true
+            await matchedFriendViewModel.checkIfFriendRequestPending(friendUID: user.id)
+            await matchedFriendViewModel.checkIfFriend(friendUID: user.id)
+            loading = false
         }
     }
 }
