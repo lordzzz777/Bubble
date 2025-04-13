@@ -71,46 +71,49 @@ struct ListChatRowView: View {
                                     .foregroundColor(.red)
                             } else {
                                 // Aquí para manejar los diferentes tipos de mensajes que pueden venir
-                                switch chat.lastMessageType {
-                                case .text:
-                                    HStack(spacing: 0) {
-                                        if chatsViewModel.checkIfMessageWasSentByCurrentUser(senderUserID: chat.lastMessageSenderUserID) {
-                                            Text("Tú: ")
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        
-                                        Text(chat.lastMessage)
-                                            .font(.footnote)
-                                    }
-                                    .font(.footnote)
-                                case .friendRequest:
-                                    Text("Quiere ser tu amigo/a")
-                                        .font(.footnote)
-                                case .acceptedFriendRequest:
-                                    Text("Tú y \(user.nickname) ahora son amigos")
-                                        .font(.footnote)
-                                case .image:
-                                    Text("Te ha enviado una imagen")
-                                        .font(.footnote)
-                                case .video:
-                                    Text("Te ha enviado un video")
-                                        .font(.footnote)
-                                case .communityInvitation:
-                                    HStack(spacing: 0) {
-                                        if chatsViewModel.checkIfMessageWasSentByCurrentUser(senderUserID: chat.lastMessageSenderUserID) {
-                                            HStack(alignment: .top, spacing: 0) {
-                                                Text("Tú: ")
-                                                    .foregroundStyle(.secondary)
-                                                
-                                                Text("invitaste a una comunidad")
-                                            }
-                                            .font(.footnote)
-                                        } else {
-                                            Text("Te ha invitado a participar de una comunidad")
-                                                .font(.footnote)
-                                        }
-                                    }
-                                }
+//                                switch chat.lastMessageType {
+//                                case .text:
+//                                    HStack(spacing: 0) {
+//                                        if chatsViewModel.checkIfMessageWasSentByCurrentUser(senderUserID: chat.lastMessageSenderUserID) {
+//                                            Text("Tú: ")
+//                                                .foregroundStyle(.secondary)
+//                                        }
+//                                        
+//                                        Text(chat.lastMessage)
+//                                            .font(.footnote)
+//                                    }
+//                                    .font(.footnote)
+//                                case .friendRequest:
+//                                    Text("Quiere ser tu amigo/a")
+//                                        .font(.footnote)
+//                                case .acceptedFriendRequest:
+//                                    Text("Tú y \(user.nickname) ahora son amigos")
+//                                        .font(.footnote)
+//                                case .image:
+//                                    Text("Te ha enviado una imagen")
+//                                        .font(.footnote)
+//                                case .video:
+//                                    Text("Te ha enviado un video")
+//                                        .font(.footnote)
+//                                case .communityInvitation:
+//                                    HStack(spacing: 0) {
+//                                        if chatsViewModel.checkIfMessageWasSentByCurrentUser(senderUserID: chat.lastMessageSenderUserID) {
+//                                            HStack(alignment: .top, spacing: 0) {
+//                                                Text("Tú: ")
+//                                                    .foregroundStyle(.secondary)
+//                                                
+//                                                Text("invitaste a una comunidad")
+//                                            }
+//                                            .font(.footnote)
+//                                        } else {
+//                                            Text("Te ha invitado a participar de una comunidad")
+//                                                .font(.footnote)
+//                                        }
+//                                    }
+//                                case .audio:
+//                                    break
+//                                    // Nota de voz ...
+//                                }
                             }
                         }
                         

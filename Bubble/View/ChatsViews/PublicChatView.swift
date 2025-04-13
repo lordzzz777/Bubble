@@ -107,42 +107,54 @@ struct PublicChatView: View {
                             .foregroundColor(.blue)
                     }
                     
-
-                    TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
-                        Task{
-                      await publicChatViewModel.handleSendOrEdit(
-                            messageText: $messageText,
-                            editingMessageID: $editingMessageID,
-                            textFieldHeight: $textFieldHeight,
-                            isEditing: $isEditing,
-                            replyingToMessageID: $replyingToMessageID
-                            )
-                         
-                        }
-                    })
+                   
+                        TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
+                            Task{
+                                await publicChatViewModel.handleSendOrEdit(
+                                    messageText: $messageText,
+                                    editingMessageID: $editingMessageID,
+                                    textFieldHeight: $textFieldHeight,
+                                    isEditing: $isEditing,
+                                    replyingToMessageID: $replyingToMessageID
+                                )
+                                
+                            }
+                        })
+                    
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .frame(minHeight: textFieldHeight)
                         
                         .onChange(of: textFieldHeight) {_,_ in
                             publicChatViewModel.updateHeight(messageText: messageText, textFieldHeight: $textFieldHeight)
                         }
-                    Button(action: {
-                        Task {
-                          await publicChatViewModel.handleSendOrEdit(
-                                messageText: $messageText,
-                                editingMessageID: $editingMessageID,
-                                textFieldHeight: $textFieldHeight,
-                                isEditing: $isEditing,
-                                replyingToMessageID: $replyingToMessageID
-                            )
-                        }
-                    }) {
-                        Image(systemName: isEditing ? "pencil.circle.fill" : "paperplane.fill")
-                            .foregroundColor(.blue)
+
+                    if !messageText.isEmpty{
+                        
+                            Button(action: {
+                                Task {
+                                    await publicChatViewModel.handleSendOrEdit(
+                                        messageText: $messageText,
+                                        editingMessageID: $editingMessageID,
+                                        textFieldHeight: $textFieldHeight,
+                                        isEditing: $isEditing,
+                                        replyingToMessageID: $replyingToMessageID
+                                    )
+                                }
+                            }) {
+                                withAnimation(.linear){
+                                    Image(systemName: isEditing ? "pencil.circle.fill" : "paperplane.fill")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        
                     }
+                        buttonTag()
+                   
                 }
                 .padding()
                 .focused($isTextFieldFocused)
+
+                    
             }
             .onTapGesture {
                 isTextFieldFocused = false
@@ -207,6 +219,34 @@ struct PublicChatView: View {
                 publicChatViewModel.isPublicChatVisible = false
             }
         }
+    }
+    
+    @ViewBuilder
+    func buttonTag() -> some View {
+        VoiceRecordingButton(
+            onStart: {
+                Task {
+                    _ = try? await chatMediaViewModel.startVoiceRecording()
+                }
+            },
+            onCancel: {
+                Task {
+                    _ = await chatMediaViewModel.deleteGrabation() // elimina el archivo
+                    // Opcional: mostrar toast "Cancelado"
+                }
+            },
+            onFinish: {
+                Task {
+                    if let url = await chatMediaViewModel.deleteGrabation() {
+                        if let remoteURL = try? await chatMediaViewModel.uploadNoteVoice(url: url) {
+                            let duration = chatMediaViewModel.audioPlayer?.duration
+                            try? await chatMediaViewModel.sendNoteVoiceConURL(remoteURL, audioDuration: duration)
+                        }
+                    }
+                }
+            }
+        )
+
     }
 }
 

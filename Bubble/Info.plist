@@ -17,5 +17,7 @@
 	<dict/>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Necesitamos guardar imágenes en tu galería</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>La app precisa permiso para usar el micro del dispositivo</string>
 </dict>
 </plist>
