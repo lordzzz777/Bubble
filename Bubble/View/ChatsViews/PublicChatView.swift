@@ -17,6 +17,8 @@ struct PublicChatView: View {
 
     
     @State private var chatMediaViewModel = ChatMediaViewModel()
+    @State private var audioViewModel = ChatAudioViewModel()
+
     @State private var selectedImageItem: PhotosPickerItem?
 
    
@@ -30,6 +32,9 @@ struct PublicChatView: View {
     // Para mostrar imagen flotante
     @State private var selectedImageURL: URL? = nil
     @State private var showImageOverlay = false
+    
+    @State private var isDraggingLeft = false
+    @State private var dragOffset: CGSize = .zero
 
     
     var body: some View {
@@ -99,7 +104,22 @@ struct PublicChatView: View {
                     .padding(.horizontal)
                 }
                 
-
+                // Justo antes del HStack de entrada (el que contiene el TextField, botones, etc.)
+                if audioViewModel.isRecording {
+                    VStack(spacing: 6) {
+                        RecordingWaveformView(barColor: .green)
+                            .frame(height: 36)
+                            .padding(.horizontal)
+                        
+                        if let startTime = audioViewModel.recordingStartTime {
+                            Text(formatDuration(from: startTime))
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.gray)
+                        }
+                    }
+                    .padding(.bottom, 4)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
                 HStack(spacing: 8) {
                     PhotosPicker(selection: $selectedImageItem, matching: .images, photoLibrary: .shared()){
                         Image(systemName: "photo.on.rectangle")
@@ -149,6 +169,8 @@ struct PublicChatView: View {
                         
                     }
                         buttonTag()
+
+
                    
                 }
                 .padding()
@@ -226,28 +248,34 @@ struct PublicChatView: View {
         VoiceRecordingButton(
             onStart: {
                 Task {
-                    _ = try? await chatMediaViewModel.startVoiceRecording()
-                }
-            },
-            onCancel: {
-                Task {
-                    _ = await chatMediaViewModel.deleteGrabation() // elimina el archivo
-                    // Opcional: mostrar toast "Cancelado"
+                    try? await audioViewModel.startRecording()
                 }
             },
             onFinish: {
                 Task {
-                    if let url = await chatMediaViewModel.deleteGrabation() {
-                        if let remoteURL = try? await chatMediaViewModel.uploadNoteVoice(url: url) {
-                            let duration = chatMediaViewModel.audioPlayer?.duration
-                            try? await chatMediaViewModel.sendNoteVoiceConURL(remoteURL, audioDuration: duration)
-                        }
+                    await audioViewModel.stopRecording()
+                    try? await audioViewModel.uploadVoiceNote()
+                    if let url = audioViewModel.uploadedAudioURL{
+                        let duration = audioViewModel.audioDuration ?? 0
+                        try? await chatMediaViewModel.sendVoiceMessage(with: url, duration: duration)
                     }
                 }
-            }
+            },
+            onCancel: {
+                audioViewModel.reset()
+            },
+
         )
 
     }
+
+    private func formatDuration(from start: Date) -> String {
+        let elapsed = Int(Date().timeIntervalSince(start))
+        let minutes = elapsed / 60
+        let seconds = elapsed % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
 }
 
 #Preview {

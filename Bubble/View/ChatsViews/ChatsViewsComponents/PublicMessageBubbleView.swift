@@ -10,8 +10,11 @@ import FirebaseCore
 import FirebaseAuth
 import Kingfisher
 
+
 struct PublicMessageBubbleView: View {
     @State private var publicChatViewModel =  PublicChatViewModel()
+    @State private var chatAudioViewModel = ChatAudioViewModel()
+    
     @State private var isEmojiPickerVisible = false
     @State private var showCopiedToast = false
     
@@ -125,22 +128,31 @@ struct PublicMessageBubbleView: View {
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
-                        if message.type == .image {
-                            if let url = URL(string: message.content){
+                        switch message.type {
+                        case .image:
+                            if let url = URL(string: message.content) {
                                 KFImage(url)
                                     .resizable()
                                     .scaledToFit()
                                     .cornerRadius(12)
                                     .frame(maxWidth: 220, maxHeight: 220)
                                     .onTapGesture {
-                                        // Aquí podrías abrir una vista de imagen completa
                                         onImageTap?(url)
                                     }
                             }
-                        }else{
+                            
+                        case .audio:
+                            AudioMessageView(
+                                audioURLString: message.content,
+                                duration: message.audioDuration ?? 0,
+                                chatAudioViewModel: chatAudioViewModel
+                            )
+                            
+                        default:
                             Text(message.content)
                                 .padding(.horizontal, 10)
                         }
+
                       
                         if let reactions = message.reactions, !reactions.isEmpty{
                             HStack(spacing: 2){

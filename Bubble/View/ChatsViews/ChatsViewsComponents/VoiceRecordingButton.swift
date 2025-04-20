@@ -8,46 +8,52 @@
 import SwiftUI
 
 struct VoiceRecordingButton: View {
+   @Environment(\.colorScheme) private var colorScheme
     var onStart: () -> Void
-    var onCancel: () -> Void
     var onFinish: () -> Void
+    var onCancel: () -> Void
     
-    @GestureState private var dragOffset: CGSize = .zero
-    @State private var isRecording = false
+    // Estado de gesto
+    @State private var isDraggingLeft = false
+    @State private var dragOffset: CGSize = .zero
+    
+    // Umbral de cancelación
+    private let cancelThreshold: CGFloat = -80
     
     var body: some View {
-        ZStack{
+        ZStack {
             Circle()
-                .fill(isRecording ? Color.red : Color.blue)
-                .frame(width: 30, height: 30)
-                .overlay(content: {
-                    Image(systemName: "mic.fill")
-                        .font(.title3)
-                        .foregroundStyle(.white)
-                })
-        }.gesture(
+                .fill(isDraggingLeft ? .red : .gray)
+                .frame( width:  30 , height: 70 )
+                .shadow(radius: 4)
+            
+            Image(systemName: "mic.fill")
+                .foregroundColor(.white)
+                .font(.system(size: 24))
+        }
+        .gesture(
             DragGesture(minimumDistance: 0)
-                .updating($dragOffset){ value, state, _ in
-                    state = value.translation
+                .onChanged { value in
+                    dragOffset = value.translation
+                    isDraggingLeft = dragOffset.width < cancelThreshold
                 }
-                .onChanged{ _ in
-                    if isRecording{
-                        onStart()
-                        isRecording = true
-                    }
-                }
-                .onEnded{ value in
-                    if value.translation.width < -50 {
+                .onEnded { _ in
+                    if isDraggingLeft {
                         onCancel()
-                    }else{
+                    } else {
                         onFinish()
                     }
-                    isRecording = false
+                    // Reset visual
+                    dragOffset = .zero
+                    isDraggingLeft = false
                 }
         )
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.2)
+                .onEnded { _ in
+                    onStart()
+                }
+        )
+        .animation(.easeInOut(duration: 0.2), value: isDraggingLeft)
     }
 }
-
-//#Preview {
-//    VoiceRecordingButton()
-//}

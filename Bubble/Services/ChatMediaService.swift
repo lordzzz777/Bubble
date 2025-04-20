@@ -148,43 +148,43 @@ actor ChatMediaService{
     }
     
     // MARK: - Subida y eliminación
-    
-    /// Sube una nota de voz a Firebase Storage y retorna la URL.
-    func uploadVoiceNote(_ fileURL: URL, path: String = UUID().uuidString) async throws -> String {
-        let audioData = try Data(contentsOf: fileURL)
-        let storageRef = Storage.storage().reference().child("voice_notes/\(path).m4a")
-        
-        return try await Task.detached(priority: .userInitiated) {
-            _ = try await storageRef.putDataAsync(audioData)
-            let url = try await storageRef.downloadURL()
-            return url.absoluteString
-        }.value
-    }
-    
-    
-    /// Elimina una nota de voz de Firebase Storage.
-    func deleteVoiceNote(from storageURL: String) async throws {
-        do{
-            let ref = Storage.storage().reference(forURL: storageURL)
-            try await ref.delete()
-        }catch{
-            print( print("Info server:  No se a eliminado"))
-            throw error
-        }
-    }
-    
-    /// Reproduce una nota de voz desde una URL remota.
-    /// Devuelve la URL local donde se guardó el archivo descargado.
-    func downloadVoiceNote(from urlString: String) async throws -> URL {
-        do{
-            let localURL = try await downloadAndStoreImageLocally(from: urlString)
-            return localURL
-        }catch{
-            print("Info server:  No se a cargado la URL del audio ")
-            throw error
-        }
-    }
-    
+//    
+//    /// Sube una nota de voz a Firebase Storage y retorna la URL.
+//    func uploadVoiceNote(_ fileURL: URL, path: String = UUID().uuidString) async throws -> String {
+//        let audioData = try Data(contentsOf: fileURL)
+//        let storageRef = Storage.storage().reference().child("voice_notes/\(path).m4a")
+//        
+//        return try await Task.detached(priority: .userInitiated) {
+//            _ = try await storageRef.putDataAsync(audioData)
+//            let url = try await storageRef.downloadURL()
+//            return url.absoluteString
+//        }.value
+//    }
+//    
+//    
+//    /// Elimina una nota de voz de Firebase Storage.
+//    func deleteVoiceNote(from storageURL: String) async throws {
+//        do{
+//            let ref = Storage.storage().reference(forURL: storageURL)
+//            try await ref.delete()
+//        }catch{
+//            print( print("Info server:  No se a eliminado"))
+//            throw error
+//        }
+//    }
+//    
+//    /// Reproduce una nota de voz desde una URL remota.
+//    /// Devuelve la URL local donde se guardó el archivo descargado.
+//    func downloadVoiceNote(from urlString: String) async throws -> URL {
+//        do{
+//            let localURL = try await downloadAndStoreImageLocally(from: urlString)
+//            return localURL
+//        }catch{
+//            print("Info server:  No se a cargado la URL del audio ")
+//            throw error
+//        }
+//    }
+//    
     
 }
 
