@@ -107,15 +107,14 @@ struct PublicChatView: View {
                 // Justo antes del HStack de entrada (el que contiene el TextField, botones, etc.)
                 if audioViewModel.isRecording {
                     VStack(spacing: 6) {
-                        RecordingWaveformView(barColor: .green)
+                        RecordingWaveformView(audioViewModel: audioViewModel)
                             .frame(height: 36)
                             .padding(.horizontal)
-                        
-                        if let startTime = audioViewModel.recordingStartTime {
-                            Text(formatDuration(from: startTime))
+
+                            Text(audioViewModel.recordingElapsedTime)
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.gray)
-                        }
+
                     }
                     .padding(.bottom, 4)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
@@ -168,10 +167,9 @@ struct PublicChatView: View {
                             }
                         
                     }
-                        buttonTag()
-
-
-                   
+                    
+                        buttonTag()// Boton de frabacion
+                 
                 }
                 .padding()
                 .focused($isTextFieldFocused)
@@ -249,6 +247,7 @@ struct PublicChatView: View {
             onStart: {
                 Task {
                     try? await audioViewModel.startRecording()
+                    await audioViewModel.startRecordingWaveformUpdates()
                 }
             },
             onFinish: {

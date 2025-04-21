@@ -47,6 +47,7 @@ actor ChatAudioService {
         ]
         
         let recorder = try AVAudioRecorder(url: fileURL, settings: settings)
+        recorder.isMeteringEnabled = true
         recorder.prepareToRecord()
         
         guard recorder.record() else {
@@ -122,4 +123,22 @@ actor ChatAudioService {
         let fileURL = cachesDir.appendingPathComponent(filename)
         return FileManager.default.fileExists(atPath: fileURL.path) ? fileURL : nil
     }
+    
+    /// Devuelve la potencia de audio actual normalizada del grabador.
+    /// Asegúrate de que `isMeteringEnabled = true` esté configurado cuando se inicia la grabación.
+//    func getAveragePower() -> CGFloat {
+//        guard let recorder = audioRecorder else { return 0 }
+//        recorder.updateMeters()
+//        let level = recorder.averagePower(forChannel: 0)
+//        let normalized = max(0.01, CGFloat((level + 60) / 60)) // Normaliza entre 0...1
+//        return normalized
+//    }
+    func getAveragePower() -> Float {
+        guard let recorder = audioRecorder else { return 0 }
+        recorder.updateMeters()
+        let power = recorder.averagePower(forChannel: 0)
+        let level = pow(10, power / 20)
+        return max(0.05, Float(level))
+    }
+
 }

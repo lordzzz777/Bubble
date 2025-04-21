@@ -26,6 +26,7 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
     var localAudioURL: URL?
     var recordingStartTime: Date?
     var waveformSamples: [CGFloat] = []
+    var liveRecordingSamples: [CGFloat] = []
     
     var errorMessage: String?
     var errorTitleMessage: String?
@@ -33,6 +34,16 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
     
     var audioDuration: Double? = nil
     var currentPlaybackTime: Double = 0
+    var recordingElapsed: TimeInterval = 0
+    
+    var recordingElapsedTime: String {
+        let total = Int(recordingElapsed)
+        let min = total / 60
+        let sec = total % 60
+        return String(format: "%d:%02d", min, sec)
+    }
+
+    
     
     // MARK: - Grabación
     
@@ -44,6 +55,7 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
             localAudioURL = url
             recordingStartTime = Date()
             isRecording = true
+            liveRecordingSamples.removeAll()
             
         } catch {
             isShowError = true
@@ -200,6 +212,7 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
         currentPlaybackTime = 0
         player = nil
         recordingStartTime = nil
+        liveRecordingSamples.removeAll()
     }
     
     // MARK: - Descarga & Reproducción
@@ -369,6 +382,47 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
             }
         }
     }
+    
+    /// Agrega una nueva muestra a la forma de onda en tiempo real.
+    /// - Parameter level: valor normalizado (0.0 a 1.0) representando la potencia del micrófono.
+    func appendLiveSample (_ value: CGFloat, maxSamples: Int = 30){
+        Task{ @MainActor in
+            if liveRecordingSamples.count >= maxSamples{
+                liveRecordingSamples.removeFirst()
+            }
+            liveRecordingSamples.append(value)
+            
+        }
+    }
+    
+    /// Inicia un bucle que actualiza la forma de onda durante la grabación en tiempo real.
+    /// Esta función consulta periódicamente el nivel de audio del micrófono desde `ChatAudioService`
+    /// y lo envía a la vista principal para mostrarlo como una animación en vivo.
+    func startRecordingWaveformUpdates() async {
+        
+        while isRecording {
+            do {
+                // Espera 200 milisegundos entre cada muestra
+                try await Task.sleep(nanoseconds: 200_000_000)
+                
+                // Obtener el nivel de audio actual desde el actor (de forma segura)
+                let level = await audioService.getAveragePower()
+                
+                // Actualizar visualmente desde el hilo principal
+                await MainActor.run {
+                    self.appendLiveSample(CGFloat(level))
+                    
+                    // Actualizar tiempo de grabación
+                    if let start = self.recordingStartTime {
+                        self.recordingElapsed = Date().timeIntervalSince(start)
+                    }
+                }
+            } catch {
+                print("Error al actualizar la onda de grabación: \(error.localizedDescription)")
+            }
+        }
+    }
+
 }
 
 
