@@ -14,23 +14,28 @@ import Kingfisher
 struct PublicChatView: View {
     @FocusState private var isTextFieldFocused: Bool
     @Environment(PublicChatViewModel.self) var publicChatViewModel
-
+    
     
     @State private var chatMediaViewModel = ChatMediaViewModel()
+    @State private var audioViewModel = ChatAudioViewModel()
+    
     @State private var selectedImageItem: PhotosPickerItem?
-
-   
+    
+    
     @State private var replyingToMessageID: String? = nil
     @State private var replyingToNickname: String? = nil
     @State private var messageText: String = ""
     @State private var textFieldHeight: CGFloat = 40
     @State private var isEditing: Bool = false
     @State private var editingMessageID: String? = nil
-
+    
     // Para mostrar imagen flotante
     @State private var selectedImageURL: URL? = nil
     @State private var showImageOverlay = false
-
+    
+    @State private var isDraggingLeft = false
+    @State private var dragOffset: CGSize = .zero
+    
     
     var body: some View {
         NavigationStack{
@@ -61,7 +66,7 @@ struct PublicChatView: View {
                                                     showImageOverlay = true
                                                 }
                                             }
-
+                                            
                                         )
                                         .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
                                         .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
@@ -99,7 +104,24 @@ struct PublicChatView: View {
                     .padding(.horizontal)
                 }
                 
-
+                // Justo antes del HStack de entrada (el que contiene el TextField, botones, etc.)
+                if audioViewModel.isRecording {
+                    VStack(spacing: 6) {
+                        
+                        // Muestra Honda de sonido al grabar
+                        RecordingWaveformView(audioViewModel: audioViewModel)
+                            .frame(height: 36)
+                            .padding(.horizontal)
+                        
+                        // Muestra el tiempo de grabacion en acción real
+                        Text(audioViewModel.recordingElapsedTime)
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.gray)
+                        
+                    }
+                    .padding(.bottom, 4)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
                 HStack(spacing: 8) {
                     PhotosPicker(selection: $selectedImageItem, matching: .images, photoLibrary: .shared()){
                         Image(systemName: "photo.on.rectangle")
@@ -107,42 +129,55 @@ struct PublicChatView: View {
                             .foregroundColor(.blue)
                     }
                     
-
+                    
                     TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
                         Task{
-                      await publicChatViewModel.handleSendOrEdit(
-                            messageText: $messageText,
-                            editingMessageID: $editingMessageID,
-                            textFieldHeight: $textFieldHeight,
-                            isEditing: $isEditing,
-                            replyingToMessageID: $replyingToMessageID
-                            )
-                         
-                        }
-                    })
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .frame(minHeight: textFieldHeight)
-                        
-                        .onChange(of: textFieldHeight) {_,_ in
-                            publicChatViewModel.updateHeight(messageText: messageText, textFieldHeight: $textFieldHeight)
-                        }
-                    Button(action: {
-                        Task {
-                          await publicChatViewModel.handleSendOrEdit(
+                            await publicChatViewModel.handleSendOrEdit(
                                 messageText: $messageText,
                                 editingMessageID: $editingMessageID,
                                 textFieldHeight: $textFieldHeight,
                                 isEditing: $isEditing,
                                 replyingToMessageID: $replyingToMessageID
                             )
+                            
                         }
-                    }) {
-                        Image(systemName: isEditing ? "pencil.circle.fill" : "paperplane.fill")
-                            .foregroundColor(.blue)
+                    })
+                    
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .frame(minHeight: textFieldHeight)
+                    
+                    .onChange(of: textFieldHeight) {_,_ in
+                        publicChatViewModel.updateHeight(messageText: messageText, textFieldHeight: $textFieldHeight)
                     }
+                    
+                    if !messageText.isEmpty{
+                        
+                        Button(action: {
+                            Task {
+                                await publicChatViewModel.handleSendOrEdit(
+                                    messageText: $messageText,
+                                    editingMessageID: $editingMessageID,
+                                    textFieldHeight: $textFieldHeight,
+                                    isEditing: $isEditing,
+                                    replyingToMessageID: $replyingToMessageID
+                                )
+                            }
+                        }) {
+                            withAnimation(.linear){
+                                Image(systemName: isEditing ? "pencil.circle.fill" : "paperplane.fill")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        
+                    }
+                    
+                    buttonTag()// Boton de grabación
+                    
                 }
                 .padding()
                 .focused($isTextFieldFocused)
+                
+                
             }
             .onTapGesture {
                 isTextFieldFocused = false
@@ -162,7 +197,7 @@ struct PublicChatView: View {
                         await publicChatViewModel.cleanUpDeletedMessages(olderThan: 300)
                         try? await Task.sleep(nanoseconds: 60 * 1_000_000_000)
                     }
-
+                    
                 }
             }
             .onChange(of: selectedImageItem){ oldValue, newValue in
@@ -199,14 +234,41 @@ struct PublicChatView: View {
                             }
                     }
                     .transition(.scale.combined(with: .opacity))
-
+                    
                 }
             }
-
+            
             .onDisappear {
                 publicChatViewModel.isPublicChatVisible = false
             }
         }
+    }
+    
+    @ViewBuilder
+    func buttonTag() -> some View {
+        VoiceRecordingButton(
+            onStart: {
+                Task {
+                    try? await audioViewModel.startRecording()
+                    await audioViewModel.startRecordingWaveformUpdates()
+                }
+            },
+            onFinish: {
+                Task {
+                    await audioViewModel.stopRecording()
+                    try? await audioViewModel.uploadVoiceNote()
+                    if let url = audioViewModel.uploadedAudioURL{
+                        let duration = audioViewModel.audioDuration ?? 0
+                        try? await chatMediaViewModel.sendVoiceMessage(with: url, duration: duration)
+                    }
+                }
+            },
+            onCancel: {
+                audioViewModel.reset()
+            },
+            
+        )
+        
     }
 }
 
