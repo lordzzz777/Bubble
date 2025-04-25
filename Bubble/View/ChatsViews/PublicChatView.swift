@@ -18,9 +18,10 @@ struct PublicChatView: View {
     
     @State private var chatMediaViewModel = ChatMediaViewModel()
     @State private var audioViewModel = ChatAudioViewModel()
+    @State private var chatFileViewModel = ChatFileViewModel()
     
     @State private var selectedImageItem: PhotosPickerItem?
-    
+    @State private var isShowingPhotosPicker = false
     
     @State private var replyingToMessageID: String? = nil
     @State private var replyingToNickname: String? = nil
@@ -28,6 +29,8 @@ struct PublicChatView: View {
     @State private var textFieldHeight: CGFloat = 40
     @State private var isEditing: Bool = false
     @State private var editingMessageID: String? = nil
+    @State private var isShowingFileImporter = false
+    @State private var selectedFileURL: URL? = nil
     
     // Para mostrar imagen flotante
     @State private var selectedImageURL: URL? = nil
@@ -123,12 +126,46 @@ struct PublicChatView: View {
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
                 HStack(spacing: 8) {
-                    PhotosPicker(selection: $selectedImageItem, matching: .images, photoLibrary: .shared()){
-                        Image(systemName: "photo.on.rectangle")
-                            .font(.system(size: 22))
-                            .foregroundColor(.blue)
-                    }
+                    Menu(content: {
+                        
+                        Button { // Agregar archivos
+                            isShowingFileImporter = true
+                        } label: {
+                            Text("Agrgar archivos").bold()
+                            Image(systemName: "doc")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.primary)
+                        }
+                        
+                        Button { // Agregar archivos
+                            isShowingPhotosPicker  = true
+                        } label: {
+                            Text("Carrete de fotos").bold()
+                            Image(systemName: "photo.on.rectangle")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.primary)
+                        }
+                        
+                        Button { // Agregar archivos
+                            // ...
+                        } label: {
+                            Text("Cámara de fotos").bold()
+                            Image(systemName: "camera")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.primary)
+                        }
+                        
+                    }, label: {
+                        Image(systemName: "paperclip").font(.system(size: 22).bold())
+                            .foregroundStyle(.primary)
+                    })
                     
+                    // Agregar imagen de carrete
+                    .photosPicker(
+                        isPresented: $isShowingPhotosPicker,
+                        selection: $selectedImageItem,
+                        matching: .images
+                    )
                     
                     TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
                         Task{
@@ -164,8 +201,8 @@ struct PublicChatView: View {
                             }
                         }) {
                             withAnimation(.linear){
-                                Image(systemName: isEditing ? "pencil.circle.fill" : "paperplane.fill")
-                                    .foregroundColor(.blue)
+                                Image(systemName: isEditing ?  "paperplane.fill" : "arrow.up.circle.fill")
+                                    .font(.system(size: 22).bold())
                             }
                         }
                         
@@ -237,6 +274,27 @@ struct PublicChatView: View {
                     
                 }
             }
+            
+            .fileImporter(
+                isPresented: $isShowingFileImporter,
+                allowedContentTypes: [.item],
+                allowsMultipleSelection: false
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    if let selectedURL = urls.first {
+                        selectedFileURL = selectedURL
+                        Task {
+                            try? await chatFileViewModel.validateFileSize(selectedURL)
+                            await chatFileViewModel.sendFileMessage(selectedURL, replyingTo: replyingToMessageID)
+                            replyingToMessageID = nil
+                        }
+                    }
+                case .failure(let error):
+                    print("Error al seleccionar archivo: \(error.localizedDescription)")
+                }
+            }
+
             
             .onDisappear {
                 publicChatViewModel.isPublicChatVisible = false
