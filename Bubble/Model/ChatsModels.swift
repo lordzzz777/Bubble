@@ -95,4 +95,5 @@ enum MessageType: String, Codable {
     case video
     case communityInvitation
     case audio
+    case file
 }

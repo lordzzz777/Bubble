@@ -18,6 +18,7 @@ enum UserLoginState: Int {
 
 
 actor GoogleService {
+    
     var showError = false
     var errorMessage: String = ""
     var navigateHome = false
