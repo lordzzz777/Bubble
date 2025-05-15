@@ -11,6 +11,7 @@ import FirebaseStorage
 
 /// Servicio exclusivo para gestionar grabación, almacenamiento, descarga y reproducción de notas de voz.
 actor ChatAudioService {
+    
     private var audioRecorder: AVAudioRecorder?
     
     // MARK: - Grabación
