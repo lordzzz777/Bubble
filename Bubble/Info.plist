@@ -15,7 +15,5 @@
 	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict/>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Necesitamos guardar imágenes en tu galería</string>
 </dict>
 </plist>

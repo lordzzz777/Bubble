@@ -10,10 +10,19 @@ import FirebaseCore
 import FirebaseAuth
 import Kingfisher
 
+
 struct PublicMessageBubbleView: View {
     @State private var publicChatViewModel =  PublicChatViewModel()
+    @State private var chatAudioViewModel = ChatAudioViewModel()
+    @State private var chatFileViewModel = ChatFileViewModel()
+    
     @State private var isEmojiPickerVisible = false
     @State private var showCopiedToast = false
+    @State private var isDownloading = false
+    @State private var previewedFileURL: URL? = nil
+    @State private var isPreviewPresented = false
+    @State private var unsupportedExtension: String? = nil
+    
     
     @Binding var messageText: String
     @Binding var isEditing: Bool
@@ -25,10 +34,10 @@ struct PublicMessageBubbleView: View {
     var user: UserModel?
     var userColor: Color
     var showAvatarAndName: Bool
-
+    
     
     var onImageTap: ((URL) -> Void)? = nil
-
+    
     
     var isCurrentUser: Bool {
         message.senderUserID == Auth.auth().currentUser?.uid
@@ -82,21 +91,16 @@ struct PublicMessageBubbleView: View {
                 }
                 
                 VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: showAvatarAndName ? 30 : -10) {
-                    
-                   
-
                     VStack(alignment: .leading) {
- 
-                       
-                            Text(user?.nickname ?? "Usuario desconocido")
-                                .font(.footnote.bold())
-                                .foregroundColor(.primary)
-                                .padding(.horizontal, 10)
-                            
-                            Rectangle()
-                                .fill(.black.opacity(0.60))
-                                .frame(width: 250, height: 1, alignment: .center)
-                       
+                        Text(user?.nickname ?? "Usuario desconocido")
+                            .font(.footnote.bold())
+                            .foregroundColor(.primary)
+                            .padding(.horizontal, 10)
+                        
+                        Rectangle()
+                            .fill(.black.opacity(0.60))
+                            .frame(width: 250, height: 1, alignment: .center)
+                        
                         
                         // Caja de referencia si es respuesta
                         if let replyText = message.replyingToText, let replyNickname = message.replyingToNickname {
@@ -125,23 +129,67 @@ struct PublicMessageBubbleView: View {
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
-                        if message.type == .image {
-                            if let url = URL(string: message.content){
+                        switch message.type {
+                        case .image:
+                            if let url = URL(string: message.content) {
                                 KFImage(url)
                                     .resizable()
                                     .scaledToFit()
                                     .cornerRadius(12)
                                     .frame(maxWidth: 220, maxHeight: 220)
                                     .onTapGesture {
-                                        // Aquí podrías abrir una vista de imagen completa
                                         onImageTap?(url)
                                     }
                             }
-                        }else{
+                            
+                        case .audio:
+                            AudioMessageView(
+                                audioURLString: message.content,
+                                duration: message.audioDuration ?? 0,
+                                chatAudioViewModel: chatAudioViewModel
+                            )
+                            
+                        case .file:
+                            HStack(spacing: 10){
+                                //  FileThumbnailView(fileURL: URL(string: message.content) ?? URL(fileURLWithPath: "/dev/null"))
+                                SmartFileThumbnailView(fileURL: URL(string: message.content) ?? URL(fileURLWithPath: "/dev/null"))
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(URL(string: message.content)?.lastPathComponent ?? "Archivo")
+                                        .font(.caption)
+                                        .lineLimit(1)
+                                    
+                                    Button {
+                                        Task {
+                                            isDownloading = true
+                                            try await chatFileViewModel.previewsFile(message.content, isPreviewPresented: $isPreviewPresented, previewedFileURL: $previewedFileURL, unsupportedExtension: $unsupportedExtension)
+                                            isDownloading = false
+                                        }
+                                    } label: {
+                                        if isDownloading {
+                                            ProgressView()
+                                        } else {
+                                            Label("Abrir archivo", systemImage: "doc.text.viewfinder")
+                                                .font(.subheadline)
+                                                .foregroundStyle(.primary)
+                                                .bold()
+                                        }
+                                    }
+                                    
+                                    .sheet(isPresented: $isPreviewPresented) {
+                                        if let url = previewedFileURL {
+                                            QuickLookPreview(url: url)
+                                        } else {
+                                            ProgressView("Cargando...")
+                                        }
+                                    }
+                                }
+                            }
+                            
+                        default:
                             Text(message.content)
                                 .padding(.horizontal, 10)
                         }
-                      
+                        
                         if let reactions = message.reactions, !reactions.isEmpty{
                             HStack(spacing: 2){
                                 ForEach(Array(Set(reactions.values)), id:\.self){ emoji in
@@ -200,7 +248,15 @@ struct PublicMessageBubbleView: View {
                             
                             Button(role: .destructive) {
                                 Task {
-                                    await publicChatViewModel.deleteMessage(messageID: message.id)
+                                    do{
+                                        await publicChatViewModel.deleteMessage(messageID: message.id)
+                                        let fileURL = try await chatFileViewModel.downloadAndSaveFile(from: message.content)
+                                        try FileManager.default.removeItem(at: fileURL)
+                                        
+                                    } catch {
+                                        print("Error al eliminar archivo: \(error.localizedDescription)")
+                                    }
+                                    
                                 }
                             } label: {
                                 Label("Eliminar", systemImage: "trash")
@@ -242,7 +298,7 @@ struct PublicMessageBubbleView: View {
                                 .foregroundColor(.yellow)
                         }
                         
-
+                        
                     }
                     
                     if isCurrentUser && showAvatarAndName {
@@ -260,7 +316,7 @@ struct PublicMessageBubbleView: View {
                 .frame(maxWidth: 260, alignment: isCurrentUser ? .trailing : .leading)
                 .padding(.horizontal, isCurrentUser && !showAvatarAndName ? 50 : 0)
                 .padding(.horizontal, !isCurrentUser && !showAvatarAndName ? 50 : 0)
-
+                
                 if isCurrentUser && showAvatarAndName{
                     publicChatViewModel.profileImage(user)
                         .frame(width: 40, height: 40)
