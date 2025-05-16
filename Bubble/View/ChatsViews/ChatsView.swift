@@ -42,7 +42,7 @@ struct ChatsView: View {
                 }else{
 
                     List {
-                        ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
+                        ForEach(chatsViewModel.filteredChats, id: \.id) { chat in
                             ListChatRowView(chat: chat)
                                 .swipeActions {
                                     Button("Borrar", systemImage: "trash.fill") {
@@ -52,7 +52,8 @@ struct ChatsView: View {
                                     .tint(.red)
                                 }
                         }
-                        .listStyle(PlainListStyle())
+                       //.listStyle(PlainListStyle())
+                        .listStyle(.plain)
                         
                     }.overlay(content: {
                         if isShowingToggle{
