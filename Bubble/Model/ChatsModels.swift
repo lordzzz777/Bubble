@@ -62,6 +62,7 @@ struct MessageModel: Identifiable, Codable, Hashable {
     var replyingToNickname: String?
     
     var reactions:[String: String]? = nil // UserID : Emoji
+    var audioDuration: Double?
     
     var dictionary: [String: Any] {
         var dict: [String: Any] = [
@@ -93,4 +94,6 @@ enum MessageType: String, Codable {
     case image
     case video
     case communityInvitation
+    case audio
+    case file
 }

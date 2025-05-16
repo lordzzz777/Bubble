@@ -11,12 +11,16 @@ import PhotosUI
 import SwiftUI
 import Photos
 
+
 enum MediaPickerError: Error {
     case noSelection
     case invalidData
 }
 
+// MARK: - Service Imajenes en chats
 actor ChatMediaService{
+    
+    private var audioRecorder: AVAudioRecorder?
     
     /// Selecciona una imagen desde la galería usando `PhotosPickerItem`.
     func pikerImage(from selection: PhotosPickerItem?) async throws -> UIImage {
@@ -108,4 +112,39 @@ actor ChatMediaService{
             PHAssetChangeRequest.creationRequestForAsset(from: image)
         }
     }
+
+    // MARK: - Service Grabación de notas de voz ...
+    
+    /// Inicia la grabación de una nota de voz y guarda el archivo localmente.
+    func startRecording() throws -> URL {
+        let filename = UUID().uuidString + ".m4a"
+        let dir = FileManager.default.temporaryDirectory
+        let fileURL = dir.appendingPathComponent(filename)
+        
+        let settings: [String: Any] = [
+            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+            AVSampleRateKey: 12000,
+            AVNumberOfChannelsKey: 1,
+            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+        ]
+        
+        audioRecorder = try AVAudioRecorder(url: fileURL, settings: settings)
+        audioRecorder?.record()
+        
+        return fileURL
+    }
+    
+    /// Finaliza la grabación y devuelve la URL local del archivo de audio.
+    func stopRecording() -> URL? {
+        guard let recorder = audioRecorder else {
+            print("Error: No hay grabadora activa.")
+            return nil
+        }
+        
+        recorder.stop()
+        let url = recorder.url
+        audioRecorder = nil // Limpieza de la instancia
+        return url
+    }
+    
 }

@@ -14,6 +14,8 @@ import Kingfisher
 @Observable @MainActor
 class PublicChatViewModel {
     private let publicChatService = PublicChatService()
+    private let audioService = ChatAudioService()
+    private let chatMediaService = ChatMediaService()
     
     var messages: [MessageModel] = []
     var visibleUsers: [UserModel] = []
@@ -267,9 +269,85 @@ class PublicChatViewModel {
             $0.content == "Mensaje eliminado" && $0.timestamp.dateValue() < cutoffDate
         }
         
+//        for message in deletedMessages {
+//            
+//            // Eliminar del Storage si es tipo multimedia
+//            switch message.type{
+//            case .image: //elimina la imagen
+//                guard message.content.hasPrefix("https://") || message.content.hasPrefix("gs://") else {
+//                    print("URL de audio inválida, se omite: \(message.content)")
+//                    break
+//                }
+//                do{
+//                    let localURL = try await chatMediaService.downloadAndStoreImageLocally(from: message.content)
+//                    try await chatMediaService.deleteImage(localURL: localURL, storageURL: message.content)
+//                    print("Imagen asociada al mensaje \(message.id) eliminada de Storage.")
+//                }catch{
+//                    print("No se pudo eliminar imagen del mensaje \(message.id): \(error.localizedDescription)")
+//                }
+//                
+//            case .audio: // eliminar el audio
+//                
+//                guard message.content.hasPrefix("https://") || message.content.hasPrefix("gs://") else {
+//                    print("URL de audio inválida, se omite: \(message.content)")
+//                    break
+//                }
+//
+//                do{
+//                    try await audioService.deleteVoiceNote(from: message.content)
+//                    print("Audio asociado al mensaje \(message.id) eliminado de Storage.")
+//                }catch{
+//                    print("No se pudo eliminar audio del mensaje \(message.id): \(error.localizedDescription)")
+//                }
+//                
+//            default:
+//                break
+//            }
+//            
+//            // Eliminar de Firestore
+//            await permanentlyDeleteMessage(messageID: message.id)
+//        }
         for message in deletedMessages {
+            
+            // Validar que tenga una URL válida de Storage (solo para tipos multimedia)
+            guard message.type == .audio || message.type == .image else {
+                await permanentlyDeleteMessage(messageID: message.id)
+                continue
+            }
+            
+            guard message.content.hasPrefix("https://") || message.content.hasPrefix("gs://") else {
+                print("URL inválida, se omite: \(message.content)")
+                await permanentlyDeleteMessage(messageID: message.id)
+                continue
+            }
+            
+            // Eliminar del Storage según tipo
+            switch message.type {
+            case .image:
+                do {
+                    let localURL = try await chatMediaService.downloadAndStoreImageLocally(from: message.content)
+                    try await chatMediaService.deleteImage(localURL: localURL, storageURL: message.content)
+                    print("Imagen eliminada: \(message.id)")
+                } catch {
+                    print("No se pudo eliminar imagen \(message.id): \(error.localizedDescription)")
+                }
+                
+            case .audio:
+                do {
+                    try await audioService.deleteVoiceNote(from: message.content)
+                    print("Audio eliminado: \(message.id)")
+                } catch {
+                    print("No se pudo eliminar audio \(message.id): \(error.localizedDescription)")
+                }
+                
+            default:
+                break // no necesario pero por claridad
+            }
+            
+            // Finalmente, eliminar el mensaje de Firestore
             await permanentlyDeleteMessage(messageID: message.id)
         }
+
     }
     
     /// Agrega una reacción (emoji) a un mensaje en el chat público.
@@ -323,4 +401,5 @@ class PublicChatViewModel {
             print("Error en la espera del toast")
         }
     }
+    
 }
