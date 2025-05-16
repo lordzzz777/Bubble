@@ -218,4 +218,15 @@ actor PrivateChatService {
             throw PrivateChatServiceError.sendMessageFailed
         }
     }
+    
+    /// Lee una sola vez el documento `users/{id}` y devuelve el `UserModel`.
+    /// - Returns: `UserModel` si existe, `nil` si el doc. no está.
+    /// - Throws: Propaga cualquier error de Firestore.
+    func getUserOnce(by id: String) async throws -> UserModel? {
+        guard !id.isEmpty else { return nil }
+        
+        let docRef = database.collection("users").document(id)
+        let snapshot = try await docRef.getDocument()
+        return try snapshot.data(as: UserModel.self)
+    }
 }
