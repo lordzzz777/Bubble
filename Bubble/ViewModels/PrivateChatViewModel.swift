@@ -343,4 +343,48 @@ class PrivateChatViewModel {
         let friendID = getFriendID(chat.participants)
         return usersCache[friendID]?.nickname.lowercased()
     }
+    
+    /// Edita un mensaje en Firestore.
+    func editMessage(chatsID: String, messageID: String, newCountent: String) async throws {
+        do{
+            try await privateChatService.editMessage(chatsID: chatsID, messageID: messageID, newContent: newCountent)
+        }catch{
+            errorTitle = "Error al eliminar"
+            errorMessage = "No se pudo marcar como eliminado."
+            showError = true
+            
+            print("Error desde el ViewModel -> no se ha podido editart: ")
+            throw error
+        }
+    }
+    
+    /// Marca un mensaje como eliminado (edita el contenido).
+    func deleteMessageMark(chatsID: String, messageID: String) async throws {
+        
+        do{
+            try await privateChatService.deleteMessage(chatID: chatsID, messgeID: messageID)
+            
+        }catch{
+            errorTitle = "Error marcar eliminar"
+            errorMessage = "No se pudo marcar como eliminado."
+            showError = true
+            
+            print("Error desde el ViewModel -> no se ha podido marcar como eliminado: ")
+            throw error
+        }
+    }
+    
+    /// Elimina permanentemente un mensaje de Firestore.
+    func permanentlyDeleteMessage(chatsID: String, messageID: String) async throws {
+        do{
+            try await privateChatService.permanentlyDeleteMessage(chatID: chatsID, messageID: messageID)
+        }catch{
+            errorTitle = "Error al eliminar"
+            errorMessage = "No se pudo eliminado el mensaje."
+            showError = true
+            
+            print("Error desde el ViewModel -> no se ha podido eliminado el mensaje: ")
+            throw error
+        }
+    }
 }
