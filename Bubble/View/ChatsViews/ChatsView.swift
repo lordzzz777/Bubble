@@ -140,6 +140,7 @@ struct ChatsView: View {
             .sheet(isPresented: $createCommunityViewModel.showCreateNewCommunity, onDismiss: {
                 Task {
                     await createCommunityViewModel.removeImageFromFirebaseStorage(imageURL: createCommunityViewModel.community.imgUrl)
+                    
                 }
             }) {
                 CreateCommunityView(createCommunityViewModel: createCommunityViewModel)

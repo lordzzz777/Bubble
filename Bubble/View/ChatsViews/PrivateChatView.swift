@@ -6,6 +6,10 @@
 //
 
 import SwiftUI
+import FirebaseFirestore
+import FirebaseAuth
+import PhotosUI
+import Kingfisher
 
 struct PrivateChatView: View {
 
@@ -38,7 +42,7 @@ struct PrivateChatView: View {
                             // Cada grupo de mensajes (por día)
                             ForEach(privateChatViewModel.groupedMessages, id: \.key) { group in
                                 // Separador por día
-                                HStack(spacing: 8) {
+                                HStack(spacing: -8) {
                                     line
                                     Text(privateChatViewModel.dateHeader(for: group.key))
                                     line
@@ -50,6 +54,7 @@ struct PrivateChatView: View {
                                 
                                 // Mensajes correspondientes a la fecha
                                 ForEach(group.value, id: \.self) { message in
+                                    
                                     if message.type == .friendRequest {
                                         Text(privateChatViewModel.checkIfMessageWasSentByCurrentUser(message)
                                              ? "Le enviaste una solicitud a \(user.nickname)"
@@ -75,11 +80,13 @@ struct PrivateChatView: View {
                                             isEditing: $isEditing,
                                             editingMessageID:  $editingMessageID
                                         )
+                                        .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
+                                        .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
 
                                     }
                                 }
-                            }
-                            
+                            }.padding(.bottom, 20)
+
                             if privateChatViewModel.friendStatus == .none {
                                 Text("Tú y \(user.nickname) no son amigos")
                                     .foregroundStyle(.red)
@@ -88,6 +95,7 @@ struct PrivateChatView: View {
                                     .opacity(checkingFriendStatus ? 0 : 1)
                             }
                         }
+                        .padding(.bottom, 20)
                         .onChange(of: privateChatViewModel.lastMessage) { _, lastMessage in
                             withAnimation {
                                 proxy.scrollTo(lastMessage, anchor: .bottom)

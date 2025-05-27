@@ -10,12 +10,19 @@ import FirebaseFirestore
 import FirebaseAuth
 import FirebaseCore
 
+enum ChatParticipantRiole {
+    case me(UserModel)
+    case friend(UserModel)
+}
+
 @Observable @MainActor
 class PrivateChatViewModel {
     
     private let privateChatService: PrivateChatService = PrivateChatService()
     
     var user: UserModel?
+    var friendUser: UserModel?
+
     var chats: [ChatModel] = []
     var messages: [MessageModel] = []
     var showError: Bool = false
