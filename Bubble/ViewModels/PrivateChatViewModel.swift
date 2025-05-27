@@ -26,26 +26,56 @@ class PrivateChatViewModel {
     var searchQuery = "" // Variables para la búsqueda
     var errorTitle: String = ""
     var errorMessage: String = ""
-    var lastMessage: MessageModel = .init(senderUserID: "", content: "", timestamp: .init(), type: MessageType.text)
-
+    var lastMessage: MessageModel = .init(
+        senderUserID: "",
+        content: "",
+        timestamp: .init(),
+        type: MessageType.text
+    )
+    
     // Tareas de escucha
     private var chatTask: Task<Void, Never>?
     private var publicChatTask: Task<Void, Never>?
     private var userTask: Task<Void, Never>?
     
+    /// Caché en memoria de los amigos ya descargados (clave = userID).
+    private var usersCache: [String: UserModel] = [:]
+    
     /// Agrupa los mensajes por fecha y los ordena cronológicamente.
     ///
-    /// - Returns: Un array de tuplas donde la clave es la fecha (`Date`) y el valor es una lista de mensajes (`[MessageModel]`).
+    /// - Returns: Un array de tuplas donde la clave es la fecha (`Date`)
+    /// y el valor es una lista de mensajes (`[MessageModel]`).
     var groupedMessages: [(key: Date, value: [MessageModel])] {
         let calendar = Calendar.current
         let sortedMessages = messages.sorted { $0.timestamp.dateValue() < $1.timestamp.dateValue() }
         let groups = Dictionary(grouping: sortedMessages) { message in
             calendar.startOfDay(for: message.timestamp.dateValue())
         }
-
+        
         return groups.sorted { $0.key < $1.key }
     }
     
+    /// Devuelve los chats que coinciden con la búsqueda del usuario.
+    var filteredChats: [ChatModel] {
+        let query = searchQuery
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        
+        guard query.isEmpty == false else { return chats }
+        
+        return chats.filter { chat in
+            // 1. Coincidencia en el último mensaje
+            if chat.lastMessage.lowercased().contains(query) { return true }
+            
+            // 2. Coincidencia en el nombre del amigo
+            if let name = friendDisplayName(for: chat),
+               name.contains(query) {
+                return true
+            }
+            return false
+        }
+    }
+
     func checkIfUserIsFriend(userID: String) async  {
         do {
             let areUserFriends = try await privateChatService.checkIfFriend(friendID: userID)
@@ -78,7 +108,7 @@ class PrivateChatViewModel {
             showError = true
         }
     }
-
+    
     /// Envía un mensaje en un chat privado.
     ///
     /// - Parameters:
@@ -221,27 +251,66 @@ class PrivateChatViewModel {
     /// Obtiene la lista de chats en los que el usuario participa y los almacena en la variable `chats`.
     /// Esta función escucha cambios en tiempo real.
     /// - Note: Cancela cualquier tarea en ejecución antes de iniciar una nueva.
-    func fetchChats() async{
+    func fetchChats() async {
+        // Cancela una escucha anterior
         chatTask?.cancel()
         
-        chatTask = Task {[weak self] in
-            guard let self = self else {return}
-            do{
-                for try await chat in await privateChatService.getChats(){
+        chatTask = Task(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
+            
+            do {
+                // Stream/Sequence que emite arrays de ChatModel
+                for try await chatsSnapshot in await privateChatService.getChats() {
                     guard !Task.isCancelled else { return }
-                    self.chats = chat
-                    self.chats = self.chats.sorted(by: { $0.lastMessageTimestamp.seconds > $1.lastMessageTimestamp.seconds })
+                    
+                    // Ordena primero
+                    let ordered = chatsSnapshot.sorted {
+                        $0.lastMessageTimestamp.seconds > $1.lastMessageTimestamp.seconds
+                    }
+                    
+                    // Prefetch de usuarios CONCURRENTEMENTE
+                    await withTaskGroup(of: Void.self) { group in
+                        for chat in ordered {
+                            let friendID = getFriendID(chat.participants)
+                            
+                            // -->  Si ya está cacheado, pasa al siguiente
+                            guard usersCache[friendID] == nil else { continue }
+                            
+                            group.addTask { [weak self] in
+                                guard let self else { return }
+                                
+                                do {
+                                    // getUserOnce(by:) debe ser una función que devuelva 1 solo UserModel,
+                                    // no un flujo de cambios en tiempo real.
+                                    let user = try await privateChatService.getUserOnce(by: friendID)
+                                    
+                                    // Cualquier mutación del ViewModel se hace en MainActor
+                                    await MainActor.run { usersCache[friendID] = user }
+                                } catch {
+                                    // No abortamos el TaskGroup; solo registramos el fallo
+                                    print("No se pudo precargar usuario \(friendID): \(error)")
+                                }
+                            }
+                        }
+                    }
+
+
+                    
+                    // Salta al MainActor para mutar estado
+                    await MainActor.run {
+                        self.chats = ordered
+                    }
                 }
-                
-            }catch{
-                self.errorTitle = "Error al obtener los chats"
-                self.errorMessage = "Ocurrió un error desconocido al obtener los chas, intentelo mas tarde"
-                self.showError = true
+            } catch {
+                await MainActor.run {
+                    self.errorTitle   = "Error al obtener los chats"
+                    self.errorMessage = "Ocurrió un error desconocido al obtener los chats, inténtalo más tarde."
+                    self.showError    = true
+                }
             }
         }
-        
     }
-    
+
     /// Obtiene la información de un usuario en tiempo real y la almacena en la variable `user`.
     /// - Parameter userID: El ID del usuario que se desea obtener.
     func fetchUser(chat: ChatModel) {
@@ -267,5 +336,11 @@ class PrivateChatViewModel {
                 self.showError = true
             }
         }
+    }
+    
+    /// Nombre (en minúsculas) del otro participante, si está en caché.
+    private func friendDisplayName(for chat: ChatModel) -> String? {
+        let friendID = getFriendID(chat.participants)
+        return usersCache[friendID]?.nickname.lowercased()
     }
 }
