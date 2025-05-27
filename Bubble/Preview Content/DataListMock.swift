@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import FirebaseFirestore
 
 //struct ModelListMock: Identifiable {
 //    var id = UUID()
@@ -24,3 +25,28 @@ import Foundation
 //    .init(nameAlias: "Monica36", nameImage: "monica", dataTimer: "20:07"),
 //    .init(nameAlias: "Veronica27", nameImage: "veronica", dataTimer: "21:07")*/
 //]
+
+@Observable
+class Mock {
+    
+    // ─── Mensaje de ejemplo ──────────────────────────────────────────────
+    let sampleMessage = MessageModel(
+        id: "84iKQucP0pOCPOFOp4Db",
+        senderUserID: "1UAaH1mnl6XOQbPJqNz6qnnN8ku1",
+        content: "Hola. ¿Cómo estás?",
+        timestamp: Timestamp(),          // ahora mismo
+        type: .text
+    )
+    
+    // ─── Usuario de ejemplo ─────────────────────────────────────────────
+    let sampleUser = UserModel(
+        id: "ZvwqAdAu9uhXmmDrXuWXCosfuNC2",
+        nickname: "Lordzzz",
+        imgUrl: "https://example.com/avatar.png",
+        lastConnectionTimeStamp: Timestamp(),
+        isOnline: true,
+        chats: [],
+        friends: [],
+        isDeleted: false
+    )
+}
