@@ -76,6 +76,15 @@ class PrivateChatViewModel {
         }
     }
 
+    /// Comprueba si el usuario con `userID` ya es amigo del usuario actual.
+    ///
+    /// - Hace la llamada a `PrivateChatService.checkIfFriend`.
+    /// - Si la respuesta es `true` → actualiza `friendStatus` a `.accepted`.
+    /// - Si hay un error → muestra alerta mediante `errorTitle/errorMessage`.
+    ///
+    /// El método está `async` porque depende de Firestore.
+    ///
+    /// - Parameter userID: Identificador del posible amigo.
     func checkIfUserIsFriend(userID: String) async  {
         do {
             let areUserFriends = try await privateChatService.checkIfFriend(friendID: userID)
@@ -362,7 +371,7 @@ class PrivateChatViewModel {
     func deleteMessageMark(chatsID: String, messageID: String) async throws {
         
         do{
-            try await privateChatService.deleteMessage(chatID: chatsID, messgeID: messageID)
+            try await privateChatService.deleteMessage(chatID: chatsID, messageID: messageID)
             
         }catch{
             errorTitle = "Error marcar eliminar"
@@ -375,7 +384,7 @@ class PrivateChatViewModel {
     }
     
     /// Elimina permanentemente un mensaje de Firestore.
-    func permanentlyDeleteMessage(chatsID: String, messageID: String) async throws {
+    private func permanentlyDeleteMessage(chatsID: String, messageID: String) async throws {
         do{
             try await privateChatService.permanentlyDeleteMessage(chatID: chatsID, messageID: messageID)
         }catch{
@@ -387,4 +396,28 @@ class PrivateChatViewModel {
             throw error
         }
     }
+    
+    /// Elimina permanentemente en Firestore los mensajes que llevan
+    /// cierto tiempo marcados como "Mensaje eliminado".
+    ///
+    /// - Parameters:
+    ///   - chatID:  ID del chat al que pertenecen los mensajes.
+    ///   - seconds: Tiempo (en segundos) que debe haber transcurrido desde
+    ///              que se marcaron como eliminados para borrarlos.
+    ///              Valor por defecto: 3600 seg = 1 hora.
+    func cleanUpDeletedMessages(chatID: String, olderThan seconds: TimeInterval = 3600) async {
+    let cutoffDate = Date().addingTimeInterval(-seconds)
+    
+    // 1. Filtra los mensajes marcados como borrados y antiguos
+    let deletable = messages.filter {
+        $0.content == "Mensaje eliminado" &&
+        $0.timestamp.dateValue() < cutoffDate
+    }
+    
+    // 2. Elimina cada uno en Firestore
+    for msg in deletable {
+        try? await permanentlyDeleteMessage(chatsID: chatID, messageID: msg.id)
+    }
+}
+
 }

@@ -13,14 +13,16 @@ import Kingfisher
 struct ListChatRowView: View {
     
     let chat: ChatModel
-    @State private var chatsViewModel = PrivateChatViewModel()
+    @State private var chatsPrivateViewModel = PrivateChatViewModel()
     @State private var addNewFriendViewModel = AddNewFriendViewModel()
+    
     
     private let uid = Auth.auth().currentUser?.uid ?? ""
     
     var body: some View {
         VStack {
-            if let user = chatsViewModel.user {
+            
+            if let user = chatsPrivateViewModel.user {
                 NavigationLink(destination: {
                     if user.isDeleted {
                         VStack{
@@ -32,7 +34,7 @@ struct ListChatRowView: View {
                         .padding()
                     } else {
                         PrivateChatView(user: user, chat: chat)
-                            .environment(chatsViewModel)
+                            .environment(chatsPrivateViewModel)
                     }
                 }, label: {
                     HStack {
@@ -129,7 +131,7 @@ struct ListChatRowView: View {
                             }
                             .buttonStyle(BorderlessButtonStyle())
                         }
-                        Text(chatsViewModel.formatMessageTimestamp(chat.lastMessageTimestamp))
+                        Text(chatsPrivateViewModel.formatMessageTimestamp(chat.lastMessageTimestamp))
                             .foregroundStyle(.secondary)
                             .font(.caption2)
                             .multilineTextAlignment(.trailing)
@@ -140,7 +142,7 @@ struct ListChatRowView: View {
             }
         }
         .onAppear {
-            chatsViewModel.fetchUser(chat: chat)
+            chatsPrivateViewModel.fetchUser(chat: chat)
         }
     }
 }

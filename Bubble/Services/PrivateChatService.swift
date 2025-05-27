@@ -144,7 +144,15 @@ actor PrivateChatService {
                         return
                     }
                     
-                    let messages = documents.compactMap { try? $0.data(as: MessageModel.self) }
+                    let messages = documents.compactMap { doc -> MessageModel? in
+                        // Intenta decodificar el documento a MessageModel
+                        guard var msg = try? doc.data(as: MessageModel.self) else { return nil }
+                        // Sobrescribe el id con el verdadero documentID
+                        msg.id = doc.documentID
+                        return msg
+                    }
+
+//                    let messages = documents.compactMap { try? $0.data(as: MessageModel.self) }
                     continuation.yield(messages)
                 }
             
@@ -231,6 +239,10 @@ actor PrivateChatService {
    
     /// Actualiza el contenido de un mensaje específico por ID.
     func editMessage(chatsID: String, messageID: String, newContent: String) async throws {
+        guard !messageID.isEmpty, !chatsID.isEmpty else{
+            throw PrivateChatServiceError.fetchingMessagesFailed
+        }
+        
         let chatRef = Firestore.firestore().collection("chats").document(chatsID)
         let messageRef = chatRef.collection("messages").document(messageID)
 
@@ -244,9 +256,13 @@ actor PrivateChatService {
     }
     
     /// Marca un mensaje como eliminado, sin borrarlo físicamente.
-    func deleteMessage(chatID: String, messgeID: String) async throws {
+    func deleteMessage(chatID: String, messageID: String) async throws {
+        guard !messageID.isEmpty, !chatID.isEmpty else{
+            throw PrivateChatServiceError.fetchingMessagesFailed
+        }
+        
         let chatRef = Firestore.firestore().collection("chats").document(chatID)
-        let messageRef = chatRef.collection("messages").document(messgeID)
+        let messageRef = chatRef.collection("messages").document(messageID)
         
         do{
             try await messageRef.updateData(["content": "Mensaje eliminado"])
@@ -258,6 +274,10 @@ actor PrivateChatService {
     
     /// Elimina físicamente un mensaje de Firestore.
     func permanentlyDeleteMessage(chatID: String, messageID: String) async throws {
+        guard !messageID.isEmpty, !chatID.isEmpty else{
+            throw PrivateChatServiceError.fetchingMessagesFailed
+        }
+        
         let chatRef = Firestore.firestore().collection("chats").document(chatID)
         let messageRef = chatRef.collection("messages").document(messageID)
         

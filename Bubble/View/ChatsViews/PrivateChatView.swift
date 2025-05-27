@@ -10,9 +10,12 @@ import SwiftUI
 struct PrivateChatView: View {
 
     @Environment(PrivateChatViewModel.self) private var chatsViewModel
+    
     @State private var privateChatViewModel = PrivateChatViewModel()
     @State private var messageText: String = ""
     @State private var checkingFriendStatus: Bool = false
+    @State private var isEditing: Bool = false
+    @State private var editingMessageID: String? = nil
     
     var user: UserModel
     var chat: ChatModel
@@ -63,7 +66,16 @@ struct PrivateChatView: View {
                                     }
                                     
                                     if message.type == .text {
-                                        MessageBubbleView(message: message)
+                                        //MessageBubbleView(message: message)
+                                        MessageBubbleView(
+                                            chatID: chat.id,
+                                            message: message,
+                                            user: user,
+                                            messageText: $messageText,
+                                            isEditing: $isEditing,
+                                            editingMessageID:  $editingMessageID
+                                        )
+
                                     }
                                 }
                             }
@@ -88,15 +100,36 @@ struct PrivateChatView: View {
                     ZStack(alignment: .bottomTrailing) {
                         TextField("Escribe tu mensaje", text: $messageText)
                             .padding(.trailing, 20)
+//                            .onSubmit {
+//                                Task {
+//                                    if !messageText.isEmpty {
+//                                        await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageText)
+//                                        messageText = ""
+//                                    }
+//                                }
+//                            }
                             .onSubmit {
                                 Task {
-                                    if !messageText.isEmpty {
-                                        await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageText)
-                                        messageText = ""
+                                    guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                                    
+                                    if isEditing, let id = editingMessageID {
+                                        try? await privateChatViewModel.editMessage(
+                                            chatsID: chat.id,
+                                            messageID: id,
+                                            newCountent: messageText
+                                        )
+                                        isEditing = false
+                                        editingMessageID = nil
+                                    } else {
+                                        await privateChatViewModel.sendMessage(
+                                            chatID: chat.id,
+                                            messageText: messageText
+                                        )
                                     }
+                                    messageText = ""
                                 }
                             }
-                        
+
                         if !messageText.isEmpty {
                             Button {
                                 messageText = ""
@@ -136,7 +169,16 @@ struct PrivateChatView: View {
                     checkingFriendStatus = true
                     await privateChatViewModel.checkIfUserIsFriend(userID: user.id)
                     checkingFriendStatus = false
+                    
+                    while true {
+                        await privateChatViewModel.cleanUpDeletedMessages(
+                            chatID: chat.id,
+                            olderThan: 60   // ajusta el tiempo de eliminacion a tu gusto
+                        )
+                        try? await Task.sleep(nanoseconds: 10 * 1_000_000_000)
+                    }
                 }
+
             }
             .task {
                 await privateChatViewModel.fetchMessages(chatID: chat.id)
