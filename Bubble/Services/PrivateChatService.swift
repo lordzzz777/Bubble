@@ -23,7 +23,6 @@ actor PrivateChatService {
     private let uid = Auth.auth().currentUser?.uid ?? ""
     private var listenerRegistration: ListenerRegistration?
     
-    
     /// Obtiene los chats en tiempo real en los que el usuario participa.
     /// - Returns: Un `AsyncThrowingStream` que emite un array de `ChatModel` y maneja errores.
     func getChats() -> AsyncThrowingStream<[ChatModel], Error>  {
@@ -145,7 +144,15 @@ actor PrivateChatService {
                         return
                     }
                     
-                    let messages = documents.compactMap { try? $0.data(as: MessageModel.self) }
+                    let messages = documents.compactMap { doc -> MessageModel? in
+                        // Intenta decodificar el documento a MessageModel
+                        guard var msg = try? doc.data(as: MessageModel.self) else { return nil }
+                        // Sobrescribe el id con el verdadero documentID
+                        msg.id = doc.documentID
+                        return msg
+                    }
+
+//                    let messages = documents.compactMap { try? $0.data(as: MessageModel.self) }
                     continuation.yield(messages)
                 }
             
@@ -229,4 +236,58 @@ actor PrivateChatService {
         let snapshot = try await docRef.getDocument()
         return try snapshot.data(as: UserModel.self)
     }
+   
+    /// Actualiza el contenido de un mensaje específico por ID.
+    func editMessage(chatsID: String, messageID: String, newContent: String) async throws {
+        guard !messageID.isEmpty, !chatsID.isEmpty else{
+            throw PrivateChatServiceError.fetchingMessagesFailed
+        }
+        
+        let chatRef = Firestore.firestore().collection("chats").document(chatsID)
+        let messageRef = chatRef.collection("messages").document(messageID)
+
+        do{
+            try await messageRef.updateData(["content": newContent])
+            print("Editando mensaje con ID: \(messageID)")
+        }catch{
+            print("Error desde server: No se pudo editar: ")
+            throw error
+        }
+    }
+    
+    /// Marca un mensaje como eliminado, sin borrarlo físicamente.
+    func deleteMessage(chatID: String, messageID: String) async throws {
+        guard !messageID.isEmpty, !chatID.isEmpty else{
+            throw PrivateChatServiceError.fetchingMessagesFailed
+        }
+        
+        let chatRef = Firestore.firestore().collection("chats").document(chatID)
+        let messageRef = chatRef.collection("messages").document(messageID)
+        
+        do{
+            try await messageRef.updateData(["content": "Mensaje eliminado"])
+        }catch{
+            print("Mensaje del server -> Error, el mensaje no se ha actualizado")
+            throw error
+        }
+    }
+    
+    /// Elimina físicamente un mensaje de Firestore.
+    func permanentlyDeleteMessage(chatID: String, messageID: String) async throws {
+        guard !messageID.isEmpty, !chatID.isEmpty else{
+            throw PrivateChatServiceError.fetchingMessagesFailed
+        }
+        
+        let chatRef = Firestore.firestore().collection("chats").document(chatID)
+        let messageRef = chatRef.collection("messages").document(messageID)
+        
+        do{
+            try await messageRef.delete()
+            print("Mensaje eliminado con exito")
+        }catch{
+            print("Mensaje del server -> Error Al eliminar mensaje: ")
+            throw error
+        }
+    }
+
 }

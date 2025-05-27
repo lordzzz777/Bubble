@@ -46,34 +46,32 @@ struct PublicChatView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack {
-                            LazyVStack {
-                                ForEach(publicChatViewModel.messages.indices, id: \.self) { index in
-                                    let message = publicChatViewModel.messages[index]
-                                    let nextMessage = index + 1 < publicChatViewModel.messages.count ? publicChatViewModel.messages[index + 1] : nil
-                                    let showAvatarAndName = nextMessage?.senderUserID != message.senderUserID
-                                    
-                                    if let user = publicChatViewModel.visibleUsers.first(where: { $0.id == message.senderUserID }) {
-                                        PublicMessageBubbleView(
-                                            messageText: $messageText,
-                                            isEditing: $isEditing,
-                                            editingMessageID: $editingMessageID,
-                                            replyingToMessageID: $replyingToMessageID,
-                                            replyingToNickname: $replyingToNickname,
-                                            message: message,
-                                            user: user,
-                                            userColor: publicChatViewModel.getColorForUser(userID: message.senderUserID),
-                                            showAvatarAndName: showAvatarAndName,
-                                            onImageTap: { url in
-                                                selectedImageURL = url
-                                                withAnimation {
-                                                    showImageOverlay = true
-                                                }
+                            ForEach(publicChatViewModel.messages.indices, id: \.self) { index in
+                                let message = publicChatViewModel.messages[index]
+                                let nextMessage = index + 1 < publicChatViewModel.messages.count ? publicChatViewModel.messages[index + 1] : nil
+                                let showAvatarAndName = nextMessage?.senderUserID != message.senderUserID
+                                
+                                if let user = publicChatViewModel.visibleUsers.first(where: { $0.id == message.senderUserID }) {
+                                    PublicMessageBubbleView(
+                                        messageText: $messageText,
+                                        isEditing: $isEditing,
+                                        editingMessageID: $editingMessageID,
+                                        replyingToMessageID: $replyingToMessageID,
+                                        replyingToNickname: $replyingToNickname,
+                                        message: message,
+                                        user: user,
+                                        userColor: publicChatViewModel.getColorForUser(userID: message.senderUserID),
+                                        showAvatarAndName: showAvatarAndName,
+                                        onImageTap: { url in
+                                            selectedImageURL = url
+                                            withAnimation {
+                                                showImageOverlay = true
                                             }
-                                            
-                                        )
-                                        .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
-                                        .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
-                                    }
+                                        }
+                                        
+                                    )
+                                    .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
+                                    .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
                                 }
                             }
                         }
@@ -294,7 +292,7 @@ struct PublicChatView: View {
                     print("Error al seleccionar archivo: \(error.localizedDescription)")
                 }
             }
-
+            
             
             .onDisappear {
                 publicChatViewModel.isPublicChatVisible = false

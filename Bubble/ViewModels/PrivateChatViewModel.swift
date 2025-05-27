@@ -10,12 +10,19 @@ import FirebaseFirestore
 import FirebaseAuth
 import FirebaseCore
 
+enum ChatParticipantRiole {
+    case me(UserModel)
+    case friend(UserModel)
+}
+
 @Observable @MainActor
 class PrivateChatViewModel {
     
     private let privateChatService: PrivateChatService = PrivateChatService()
     
     var user: UserModel?
+    var friendUser: UserModel?
+
     var chats: [ChatModel] = []
     var messages: [MessageModel] = []
     var showError: Bool = false
@@ -76,6 +83,15 @@ class PrivateChatViewModel {
         }
     }
 
+    /// Comprueba si el usuario con `userID` ya es amigo del usuario actual.
+    ///
+    /// - Hace la llamada a `PrivateChatService.checkIfFriend`.
+    /// - Si la respuesta es `true` → actualiza `friendStatus` a `.accepted`.
+    /// - Si hay un error → muestra alerta mediante `errorTitle/errorMessage`.
+    ///
+    /// El método está `async` porque depende de Firestore.
+    ///
+    /// - Parameter userID: Identificador del posible amigo.
     func checkIfUserIsFriend(userID: String) async  {
         do {
             let areUserFriends = try await privateChatService.checkIfFriend(friendID: userID)
@@ -343,4 +359,72 @@ class PrivateChatViewModel {
         let friendID = getFriendID(chat.participants)
         return usersCache[friendID]?.nickname.lowercased()
     }
+    
+    /// Edita un mensaje en Firestore.
+    func editMessage(chatsID: String, messageID: String, newCountent: String) async throws {
+        do{
+            try await privateChatService.editMessage(chatsID: chatsID, messageID: messageID, newContent: newCountent)
+        }catch{
+            errorTitle = "Error al eliminar"
+            errorMessage = "No se pudo marcar como eliminado."
+            showError = true
+            
+            print("Error desde el ViewModel -> no se ha podido editart: ")
+            throw error
+        }
+    }
+    
+    /// Marca un mensaje como eliminado (edita el contenido).
+    func deleteMessageMark(chatsID: String, messageID: String) async throws {
+        
+        do{
+            try await privateChatService.deleteMessage(chatID: chatsID, messageID: messageID)
+            
+        }catch{
+            errorTitle = "Error marcar eliminar"
+            errorMessage = "No se pudo marcar como eliminado."
+            showError = true
+            
+            print("Error desde el ViewModel -> no se ha podido marcar como eliminado: ")
+            throw error
+        }
+    }
+    
+    /// Elimina permanentemente un mensaje de Firestore.
+    private func permanentlyDeleteMessage(chatsID: String, messageID: String) async throws {
+        do{
+            try await privateChatService.permanentlyDeleteMessage(chatID: chatsID, messageID: messageID)
+        }catch{
+            errorTitle = "Error al eliminar"
+            errorMessage = "No se pudo eliminado el mensaje."
+            showError = true
+            
+            print("Error desde el ViewModel -> no se ha podido eliminado el mensaje: ")
+            throw error
+        }
+    }
+    
+    /// Elimina permanentemente en Firestore los mensajes que llevan
+    /// cierto tiempo marcados como "Mensaje eliminado".
+    ///
+    /// - Parameters:
+    ///   - chatID:  ID del chat al que pertenecen los mensajes.
+    ///   - seconds: Tiempo (en segundos) que debe haber transcurrido desde
+    ///              que se marcaron como eliminados para borrarlos.
+    ///              Valor por defecto: 3600 seg = 1 hora.
+    func cleanUpDeletedMessages(chatID: String, olderThan seconds: TimeInterval = 3600) async {
+    let cutoffDate = Date().addingTimeInterval(-seconds)
+    
+    // 1. Filtra los mensajes marcados como borrados y antiguos
+    let deletable = messages.filter {
+        $0.content == "Mensaje eliminado" &&
+        $0.timestamp.dateValue() < cutoffDate
+    }
+    
+    // 2. Elimina cada uno en Firestore
+    for msg in deletable {
+        try? await permanentlyDeleteMessage(chatsID: chatID, messageID: msg.id)
+    }
+}
+
 }
