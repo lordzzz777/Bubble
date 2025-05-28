@@ -10,9 +10,12 @@ import FirebaseAuth
 import Kingfisher
 
 /// Burbuja de mensaje que ofrece **Editar** y **Eliminar** mediante menú de
+/// Poder contestar aun post en especifico ....
 /// contexto cuando el autor es el usuario autenticado.
 struct MessageBubbleView: View {
     @Environment(PrivateChatViewModel.self) private var privateChatViewModel
+    @State private var chatFileViewModel = ChatFileViewModel()
+    @State private var chatAudioViewModel = ChatAudioViewModel()
     
     let chatID: String
     var message: MessageModel
@@ -22,6 +25,9 @@ struct MessageBubbleView: View {
     @Binding var messageText: String
     @Binding var isEditing: Bool
     @Binding var editingMessageID: String?
+    @Binding var replyingToMessageID: String?
+    @Binding var replyingToNickname: String?
+    @Bindable var userProfileView: NewAccountViewModel = .init()
     
     private var isCurrentUser: Bool{
         message.senderUserID == Auth.auth().currentUser?.uid
@@ -32,8 +38,7 @@ struct MessageBubbleView: View {
         isCurrentUser ? .green.opacity(0.7) : .cyan.opacity(0.7)
     }
     
-    @Bindable var userProfileView: NewAccountViewModel = .init()
-    // @State private var privateChatViewModel = PrivateChatViewModel()
+   
     
     var body: some View {
         if message.content == "Mensaje eliminado" {
@@ -61,8 +66,35 @@ struct MessageBubbleView: View {
                         Rectangle() // line de separación
                             .fill(.black.opacity(0.60))
                             .frame(width: 250, height: 1, alignment: .center)
-// ............... Caja de respuesta .........................
-//__________________________________________________________//
+                        
+                     // Caja de referencia si es respuesta ........
+                        if let replyText = message.replyingToText, let replyNickname = message.replyingToNickname {
+                            HStack {
+                                Rectangle().fill(.orange)
+                                    .frame(width: 3, height: 60)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("\(replyNickname)")
+                                        .font(.caption.bold())
+                                    Rectangle()
+                                        .fill(.black.opacity(0.60))
+                                        .frame(width: 250, height: 1, alignment: .center)
+                                        .padding(.vertical, 10)
+                                    
+                                    Text("\(replyText)")
+                                        .font(.caption2)
+                                        .lineLimit(2)
+                                }
+                            }
+                            .padding(4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(.white.opacity(0.35))
+                                    .stroke(Color.black.opacity(0.5), lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                     //_________________________//
                         
                         switch message.type{
                             
@@ -72,6 +104,8 @@ struct MessageBubbleView: View {
                         }
                         
 // ................ Reacciones emojis .......................
+                        
+//__________________________________________________________//
                         HStack {
                             Spacer()
                             Text(privateChatViewModel.formatTime(from: message.timestamp))
@@ -84,27 +118,15 @@ struct MessageBubbleView: View {
                     .background(
                         RoundedRectangle(cornerRadius: 10)
                             .fill(bubbleColor)
-//                            .overlay(content: {
-//                                Image(.bubble)
-//                                    .renderingMode(.template)
-//                                    .resizable()
-//                                    .scaledToFill()
-//                                    .frame(minWidth: 370, maxHeight: 370, alignment: .center)
-//                                    .foregroundStyle(bubbleColor)
-//                                    .scaleEffect( x: isCurrentUser ? 1 : -1, y: 1)
-//                                    .offset(x: isCurrentUser ? -10 : 10, y: -3)
-//                            })
-
-
-//                        RoundedRectangle(cornerRadius: 10)
-//                            .fill(privateChatViewModel.checkIfMessageWasSentByCurrentUser(message) ? .green.opacity(0.7) : .cyan.opacity(0.7))
                     )
                     .contextMenu{
                         if isCurrentUser {
-                            Button("Editar") {
+                            Button(action: {
                                 messageText = message.content
                                 editingMessageID = message.id
                                 isEditing = true
+                            }){
+                               Label("Editar", systemImage: "pencil")
                             }
                             
                             Button(role: .destructive) {
@@ -112,15 +134,25 @@ struct MessageBubbleView: View {
                                     do {
                                         try await privateChatViewModel.deleteMessageMark(chatsID: chatID,
                                                                                          messageID: message.id)
+                                        let fileURL = try await chatFileViewModel.downloadAndSaveFile(from: message.content)
+                                        try FileManager.default.removeItem(at: fileURL)
                                     } catch {
-                                        /* El ViewModel ya actualiza errorTitle / errorMessage */
+                                        print("Error al eliminar archivo: \(error.localizedDescription)")
                                     }
                                 }
                             } label: {
                                 Label("Eliminar", systemImage: "trash")
                             }
+                        }else {
+                            Button(action: {
+                                replyingToMessageID = message.id
+                                replyingToNickname = user?.nickname
+                            }, label: {
+                                Label("Responder", systemImage: "arrowshape.turn.up.left")
+                            })
                         }
                     }
+                    
                     TriangleRight()
                         .fill(bubbleColor)
                         .frame(width: 10, height: 10)
@@ -138,17 +170,17 @@ struct MessageBubbleView: View {
     }
 }
 
-#Preview {
-    @Previewable @State var mock = Mock()
-    MessageBubbleView(
-        chatID: "previewChat",
-        message: mock.sampleMessage,
-        user: mock.sampleUser,
-        messageText: .constant(""),
-        isEditing: .constant(false),
-        editingMessageID: .constant(nil)
-    )
-    .environment(PrivateChatViewModel())
-}
-
+//#Preview {
+//    @Previewable @State var mock = Mock()
+//    MessageBubbleView(
+//        chatID: "previewChat",
+//        message: mock.sampleMessage,
+//        user: mock.sampleUser,
+//        messageText: .constant(""),
+//        isEditing: .constant(false),
+//        editingMessageID: .constant(nil)
+//    )
+//    .environment(PrivateChatViewModel())
+//}
+//
 

@@ -20,6 +20,9 @@ struct PrivateChatView: View {
     @State private var checkingFriendStatus: Bool = false
     @State private var isEditing: Bool = false
     @State private var editingMessageID: String? = nil
+    @State private var replyingToMessageID: String? = nil
+    @State private var replyingToNickname: String? = nil
+    @State private var textFieldHeight: CGFloat = 40
     
     var user: UserModel
     var chat: ChatModel
@@ -36,6 +39,7 @@ struct PrivateChatView: View {
                     .font(.footnote.bold())
                     .padding()
                 }
+                
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack {
@@ -78,7 +82,9 @@ struct PrivateChatView: View {
                                             user: user,
                                             messageText: $messageText,
                                             isEditing: $isEditing,
-                                            editingMessageID:  $editingMessageID
+                                            editingMessageID:  $editingMessageID,
+                                            replyingToMessageID: $replyingToMessageID,
+                                            replyingToNickname: $replyingToNickname,
                                         )
                                         .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
                                         .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
@@ -103,19 +109,35 @@ struct PrivateChatView: View {
                         }
                     }
                 }
+                Spacer()
+                
+                if let nickname = replyingToNickname {
+                    HStack {
+                        Text("Respondiendo a \(nickname)")
+                            .font(.footnote)
+                            .foregroundStyle(.blue)
+                        Spacer()
+                        Button(action: {
+                            replyingToMessageID = nil
+                            replyingToNickname = nil
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
                 
                 if privateChatViewModel.friendStatus == .accepted {
                     ZStack(alignment: .bottomTrailing) {
-                        TextField("Escribe tu mensaje", text: $messageText)
+                        TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
+                            Task{
+                                // logica de tarea por hacer ...
+                            }
+                        })
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .frame(minHeight: textFieldHeight)
                             .padding(.trailing, 20)
-//                            .onSubmit {
-//                                Task {
-//                                    if !messageText.isEmpty {
-//                                        await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageText)
-//                                        messageText = ""
-//                                    }
-//                                }
-//                            }
                             .onSubmit {
                                 Task {
                                     guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }

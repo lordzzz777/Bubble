@@ -425,6 +425,6 @@ class PrivateChatViewModel {
     for msg in deletable {
         try? await permanentlyDeleteMessage(chatsID: chatID, messageID: msg.id)
     }
-}
+ }
 
 }
