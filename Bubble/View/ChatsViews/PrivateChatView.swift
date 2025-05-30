@@ -55,41 +55,71 @@ struct PrivateChatView: View {
                                 .font(.caption2)
                                 .padding(.top, 20)
                                 .padding(.horizontal, 10)
-                                
+                               
                                 // Mensajes correspondientes a la fecha
                                 ForEach(group.value, id: \.self) { message in
-                                    
-                                    if message.type == .friendRequest {
+                                    switch message.type {
+                                    case .friendRequest:
                                         Text(privateChatViewModel.checkIfMessageWasSentByCurrentUser(message)
                                              ? "Le enviaste una solicitud a \(user.nickname)"
                                              : "\(user.nickname) te envió una solicitud de amistad")
-                                        .font(.footnote)
-                                        .foregroundStyle(.secondary)
-                                        .italic()
-                                    }
-                                    
-                                    if message.type == .acceptedFriendRequest {
+                                        .font(.footnote).foregroundStyle(.secondary).italic()
+                                    case .acceptedFriendRequest:
                                         Text("Tú y \(user.nickname) ahora son amigos")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    
-                                    if message.type == .text {
-                                        //MessageBubbleView(message: message)
+                                            .font(.caption).foregroundStyle(.secondary)
+                                    case .text:
+                                        // ⬇️  NUEVO: busca el perfil del remitente
+                                        let sender = privateChatViewModel.userModel(for: message.senderUserID)
+                                        
                                         MessageBubbleView(
                                             chatID: chat.id,
                                             message: message,
-                                            user: user,
+                                            currentUser: privateChatViewModel.me,   // ← tu propio UserModel
+                                            friendUser: user,
+                                            senderUser: sender,                     // ← quien envió el mensaje
                                             messageText: $messageText,
                                             isEditing: $isEditing,
-                                            editingMessageID:  $editingMessageID,
+                                            editingMessageID: $editingMessageID,
                                             replyingToMessageID: $replyingToMessageID,
-                                            replyingToNickname: $replyingToNickname,
+                                            replyingToNickname: $replyingToNickname
                                         )
                                         .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
                                         .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
-
+                                        
+                                    default:
+                                        EmptyView()
+                                        
                                     }
+//                                    if message.type == .friendRequest {
+//                                        Text(privateChatViewModel.checkIfMessageWasSentByCurrentUser(message)
+//                                             ? "Le enviaste una solicitud a \(user.nickname)"
+//                                             : "\(user.nickname) te envió una solicitud de amistad")
+//                                        .font(.footnote)
+//                                        .foregroundStyle(.secondary)
+//                                        .italic()
+//                                    }
+//                                    
+//                                    if message.type == .acceptedFriendRequest {
+//                                        Text("Tú y \(user.nickname) ahora son amigos")
+//                                            .font(.caption)
+//                                            .foregroundStyle(.secondary)
+//                                    }
+//                                    
+//                                    if message.type == .text {
+//                                        MessageBubbleView(
+//                                            chatID: chat.id,
+//                                            message: message,
+//                                            user: user,
+//                                            messageText: $messageText,
+//                                            isEditing: $isEditing,
+//                                            editingMessageID:  $editingMessageID,
+//                                            replyingToMessageID: $replyingToMessageID,
+//                                            replyingToNickname: $replyingToNickname,
+//                                        )
+//                                        .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
+//                                        .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
+//
+//                                    }
                                 }
                             }.padding(.bottom, 20)
 
@@ -131,34 +161,36 @@ struct PrivateChatView: View {
                 if privateChatViewModel.friendStatus == .accepted {
                     ZStack(alignment: .bottomTrailing) {
                         TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
-                            Task{
-                                // logica de tarea por hacer ...
+                            Task {
+                                guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                                
+                                if isEditing, let id = editingMessageID {
+                                    try? await privateChatViewModel.editMessage(
+                                        chatsID: chat.id,
+                                        messageID: id,
+                                        newCountent: messageText
+                                    )
+                                    isEditing = false
+                                    editingMessageID = nil
+                                } else {
+                                    let originalText = privateChatViewModel.messages.first(where: { $0.id == replyingToMessageID })?.content
+                                    await  privateChatViewModel.sendPrivateMessage(
+                                        chatID: chat.id,
+                                        messageText: messageText,
+                                        replyingToMessageID: replyingToMessageID,
+                                        replyingToText: originalText,
+                                        replyingToNickname: replyingToNickname
+                                    )
+                                                                        
+                                    replyingToMessageID = nil
+                                    replyingToNickname = nil
+                                }
+                                messageText = ""
                             }
                         })
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .frame(minHeight: textFieldHeight)
                             .padding(.trailing, 20)
-                            .onSubmit {
-                                Task {
-                                    guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-                                    
-                                    if isEditing, let id = editingMessageID {
-                                        try? await privateChatViewModel.editMessage(
-                                            chatsID: chat.id,
-                                            messageID: id,
-                                            newCountent: messageText
-                                        )
-                                        isEditing = false
-                                        editingMessageID = nil
-                                    } else {
-                                        await privateChatViewModel.sendMessage(
-                                            chatID: chat.id,
-                                            messageText: messageText
-                                        )
-                                    }
-                                    messageText = ""
-                                }
-                            }
 
                         if !messageText.isEmpty {
                             Button {
@@ -216,6 +248,14 @@ struct PrivateChatView: View {
                     print(privateChatViewModel.errorMessage)
                 }
             }
+            .alert(isPresented: $privateChatViewModel.showError) {
+                Alert(
+                    title: Text(privateChatViewModel.errorTitle),
+                    message: Text(privateChatViewModel.errorMessage),
+                    dismissButton: .default(Text("OK"))
+                )
+            }
+
         }
     }
     

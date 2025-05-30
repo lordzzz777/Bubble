@@ -19,7 +19,31 @@ struct MessageBubbleView: View {
     
     let chatID: String
     var message: MessageModel
+    
+    var currentUser: UserModel?
+    
     var user: UserModel?
+    var friendUser: UserModel?
+    var senderUser:  UserModel?
+    var showAvatar: Bool = true
+    
+    private var isCurrentUser: Bool {
+        message.senderUserID == currentUser?.id
+    }
+    
+    private var displayName: String {
+        isCurrentUser
+        ? (currentUser?.nickname ?? "Yo")
+        : (friendUser?.nickname  ?? "Usuario")
+    }
+    
+    private var avatarURL: URL? {
+        URL(string: isCurrentUser
+            ? (currentUser?.imgUrl ?? "")
+            : (friendUser?.imgUrl  ?? ""))
+    }
+
+
     
     // Bindings recibidos desde `PrivateChatView`
     @Binding var messageText: String
@@ -29,9 +53,6 @@ struct MessageBubbleView: View {
     @Binding var replyingToNickname: String?
     @Bindable var userProfileView: NewAccountViewModel = .init()
     
-    private var isCurrentUser: Bool{
-        message.senderUserID == Auth.auth().currentUser?.uid
-    }
     
     // Colores para el remitente y el receptor
     private var bubbleColor: Color {
@@ -57,11 +78,15 @@ struct MessageBubbleView: View {
                     VStack(alignment: .leading) {
                         //  Nombre del usuario
                         
-                        Text(isCurrentUser ? "Tú" : user?.nickname ?? "Usuario")
-
+                       // Text(isCurrentUser ? "Tú" : user?.nickname ?? "Usuario")
+                        Text(displayName)
                             .font(.footnote.bold())
+                           // .redacted(reason: senderUser == nil && !isCurrentUser ? .placeholder : [])
+                            //.shimmering(active: senderUser == nil && !isCurrentUser)
+
                             .foregroundColor(.primary)
                             .padding(.horizontal, 10)
+                        
                         
                         Rectangle() // line de separación
                             .fill(.black.opacity(0.60))
@@ -158,6 +183,35 @@ struct MessageBubbleView: View {
                         .frame(width: 10, height: 10)
                         .offset(x:  -9, y: 10)
                         .scaleEffect( x: isCurrentUser ? 1 : -1, y: 1)
+                    
+                    // Avatars ...
+                    if showAvatar {
+                        if let url = avatarURL {
+                            KFImage(url)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 30, height: 30)
+                                .clipShape(Circle())
+                                .offset(y: 30)
+                            
+                        } else {
+                            Circle()
+                                .fill(.gray.opacity(0.3))
+                                .frame(width: 30, height: 30)
+                                .redacted(reason: .placeholder)
+                                .offset(y: 30)
+                                .shimmering()
+                        }
+                    }
+//                    if showAvatar && !isCurrentUser {
+//                        KFImage(URL(string: user?.imgUrl ?? ""))
+//                            .resizable()
+//                            .scaledToFill()
+//                            .frame(width: 30, height: 30)
+//                            .clipShape(Circle())
+//                            .offset(y: 30)
+//                    }
+
                 }
                 .frame(maxWidth: 260, alignment: privateChatViewModel.checkIfMessageWasSentByCurrentUser(message) ? .trailing : .leading)
 
