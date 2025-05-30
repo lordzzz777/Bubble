@@ -65,6 +65,7 @@ class PrivateChatViewModel {
             print("Error: no puedo cargar mi proìo usuario")
         }
     }
+    
     /// Agrupa los mensajes por fecha y los ordena cronológicamente.
     ///
     /// - Returns: Un array de tuplas donde la clave es la fecha (`Date`)

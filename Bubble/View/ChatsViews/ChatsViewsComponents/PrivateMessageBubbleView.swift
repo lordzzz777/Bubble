@@ -202,6 +202,7 @@ struct PrivateMessageBubbleView: View {
                     
                 }
             }
+            .padding(.bottom, showAvatar ? 20 : 0)
         }
     }
 }

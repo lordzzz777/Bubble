@@ -92,8 +92,8 @@ struct PrivateChatView: View {
                                         
                                     }
                                 }
-                            }.padding(.bottom, 20)
-
+                            }
+                            
                             if privateChatViewModel.friendStatus == .none {
                                 Text("Tú y \(user.nickname) no son amigos")
                                     .foregroundStyle(.red)
