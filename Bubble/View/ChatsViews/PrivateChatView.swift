@@ -68,15 +68,16 @@ struct PrivateChatView: View {
                                         Text("Tú y \(user.nickname) ahora son amigos")
                                             .font(.caption).foregroundStyle(.secondary)
                                     case .text:
-                                        // ⬇️  NUEVO: busca el perfil del remitente
+                                      
                                         let sender = privateChatViewModel.userModel(for: message.senderUserID)
-                                        
-                                        MessageBubbleView(
+                                        let showAvatar = privateChatViewModel.shouldShowAvatar(currentMessage: message, in: group.value)
+                                        PrivateMessageBubbleView(
                                             chatID: chat.id,
                                             message: message,
-                                            currentUser: privateChatViewModel.me,   // ← tu propio UserModel
+                                            currentUser: privateChatViewModel.me,
                                             friendUser: user,
-                                            senderUser: sender,                     // ← quien envió el mensaje
+                                            senderUser: sender,
+                                            showAvatar: showAvatar,
                                             messageText: $messageText,
                                             isEditing: $isEditing,
                                             editingMessageID: $editingMessageID,
@@ -90,36 +91,6 @@ struct PrivateChatView: View {
                                         EmptyView()
                                         
                                     }
-//                                    if message.type == .friendRequest {
-//                                        Text(privateChatViewModel.checkIfMessageWasSentByCurrentUser(message)
-//                                             ? "Le enviaste una solicitud a \(user.nickname)"
-//                                             : "\(user.nickname) te envió una solicitud de amistad")
-//                                        .font(.footnote)
-//                                        .foregroundStyle(.secondary)
-//                                        .italic()
-//                                    }
-//                                    
-//                                    if message.type == .acceptedFriendRequest {
-//                                        Text("Tú y \(user.nickname) ahora son amigos")
-//                                            .font(.caption)
-//                                            .foregroundStyle(.secondary)
-//                                    }
-//                                    
-//                                    if message.type == .text {
-//                                        MessageBubbleView(
-//                                            chatID: chat.id,
-//                                            message: message,
-//                                            user: user,
-//                                            messageText: $messageText,
-//                                            isEditing: $isEditing,
-//                                            editingMessageID:  $editingMessageID,
-//                                            replyingToMessageID: $replyingToMessageID,
-//                                            replyingToNickname: $replyingToNickname,
-//                                        )
-//                                        .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
-//                                        .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
-//
-//                                    }
                                 }
                             }.padding(.bottom, 20)
 

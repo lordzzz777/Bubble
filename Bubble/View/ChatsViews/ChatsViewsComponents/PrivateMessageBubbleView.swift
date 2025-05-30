@@ -12,7 +12,7 @@ import Kingfisher
 /// Burbuja de mensaje que ofrece **Editar** y **Eliminar** mediante menú de
 /// Poder contestar aun post en especifico ....
 /// contexto cuando el autor es el usuario autenticado.
-struct MessageBubbleView: View {
+struct PrivateMessageBubbleView: View {
     @Environment(PrivateChatViewModel.self) private var privateChatViewModel
     @State private var chatFileViewModel = ChatFileViewModel()
     @State private var chatAudioViewModel = ChatAudioViewModel()
@@ -25,7 +25,7 @@ struct MessageBubbleView: View {
     var user: UserModel?
     var friendUser: UserModel?
     var senderUser:  UserModel?
-    var showAvatar: Bool = true
+    var showAvatar: Bool
     
     private var isCurrentUser: Bool {
         message.senderUserID == currentUser?.id
@@ -42,8 +42,8 @@ struct MessageBubbleView: View {
             ? (currentUser?.imgUrl ?? "")
             : (friendUser?.imgUrl  ?? ""))
     }
-
-
+    
+    
     
     // Bindings recibidos desde `PrivateChatView`
     @Binding var messageText: String
@@ -59,7 +59,7 @@ struct MessageBubbleView: View {
         isCurrentUser ? .green.opacity(0.7) : .cyan.opacity(0.7)
     }
     
-   
+    
     
     var body: some View {
         if message.content == "Mensaje eliminado" {
@@ -76,14 +76,8 @@ struct MessageBubbleView: View {
                 
                 VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: -10) {
                     VStack(alignment: .leading) {
-                        //  Nombre del usuario
-                        
-                       // Text(isCurrentUser ? "Tú" : user?.nickname ?? "Usuario")
                         Text(displayName)
                             .font(.footnote.bold())
-                           // .redacted(reason: senderUser == nil && !isCurrentUser ? .placeholder : [])
-                            //.shimmering(active: senderUser == nil && !isCurrentUser)
-
                             .foregroundColor(.primary)
                             .padding(.horizontal, 10)
                         
@@ -92,7 +86,7 @@ struct MessageBubbleView: View {
                             .fill(.black.opacity(0.60))
                             .frame(width: 250, height: 1, alignment: .center)
                         
-                     // Caja de referencia si es respuesta ........
+                        // Caja de referencia si es respuesta ........
                         if let replyText = message.replyingToText, let replyNickname = message.replyingToNickname {
                             HStack {
                                 Rectangle().fill(.orange)
@@ -119,18 +113,17 @@ struct MessageBubbleView: View {
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
-                     //_________________________//
                         
                         switch message.type{
-                            
+                            // aqui se le añade los caso oae compartir audio, imagenes...
                         default:
                             Text(message.content)
                                 .padding(.horizontal, 10)
                         }
                         
-// ................ Reacciones emojis .......................
+                        // ................ Reacciones emojis .......................
                         
-//__________________________________________________________//
+                        //__________________________________________________________//
                         HStack {
                             Spacer()
                             Text(privateChatViewModel.formatTime(from: message.timestamp))
@@ -151,7 +144,7 @@ struct MessageBubbleView: View {
                                 editingMessageID = message.id
                                 isEditing = true
                             }){
-                               Label("Editar", systemImage: "pencil")
+                                Label("Editar", systemImage: "pencil")
                             }
                             
                             Button(role: .destructive) {
@@ -177,15 +170,15 @@ struct MessageBubbleView: View {
                             })
                         }
                     }
-                    
-                    TriangleRight()
-                        .fill(bubbleColor)
-                        .frame(width: 10, height: 10)
-                        .offset(x:  -9, y: 10)
-                        .scaleEffect( x: isCurrentUser ? 1 : -1, y: 1)
-                    
-                    // Avatars ...
                     if showAvatar {
+                        // pico de la burbuja ..
+                        TriangleRight()
+                            .fill(bubbleColor)
+                            .frame(width: 10, height: 10)
+                            .offset(x:  -9, y: 10)
+                            .scaleEffect( x: isCurrentUser ? 1 : -1, y: 1)
+                        
+                        // Avatars ...
                         if let url = avatarURL {
                             KFImage(url)
                                 .resizable()
@@ -195,26 +188,15 @@ struct MessageBubbleView: View {
                                 .offset(y: 30)
                             
                         } else {
-                            Circle()
-                                .fill(.gray.opacity(0.3))
-                                .frame(width: 30, height: 30)
-                                .redacted(reason: .placeholder)
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.system(size: 30))
                                 .offset(y: 30)
-                                .shimmering()
                         }
                     }
-//                    if showAvatar && !isCurrentUser {
-//                        KFImage(URL(string: user?.imgUrl ?? ""))
-//                            .resizable()
-//                            .scaledToFill()
-//                            .frame(width: 30, height: 30)
-//                            .clipShape(Circle())
-//                            .offset(y: 30)
-//                    }
-
+                    
                 }
                 .frame(maxWidth: 260, alignment: privateChatViewModel.checkIfMessageWasSentByCurrentUser(message) ? .trailing : .leading)
-
+                
                 .task {
                     await userProfileView.loadUserData()
                     
@@ -236,5 +218,4 @@ struct MessageBubbleView: View {
 //    )
 //    .environment(PrivateChatViewModel())
 //}
-//
 

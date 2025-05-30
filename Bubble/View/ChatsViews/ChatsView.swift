@@ -162,7 +162,7 @@ struct ChatsView: View {
     private func startEmptyStateTimer() {
         // Espera p.ej. 1,5 s antes de mostrar
         Task {
-            try? await Task.sleep(for: .seconds(1.5))
+            try? await Task.sleep(for: .seconds(3))
             if chatsViewModel.chats.isEmpty {
                 withAnimation { showEmptyState = true }
             }
