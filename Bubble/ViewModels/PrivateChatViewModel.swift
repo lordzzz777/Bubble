@@ -408,6 +408,7 @@ class PrivateChatViewModel {
     func userModel(for id: String) -> UserModel? {
         return usersCache[id] ?? (id == user?.id ? user : nil)
     }
+    
     /// Obtiene la información de un usuario en tiempo real y la almacena en la variable `user`.
     /// - Parameter userID: El ID del usuario que se desea obtener.
     func fetchUser(chat: ChatModel) {
@@ -559,5 +560,38 @@ class PrivateChatViewModel {
         let nextMessage = messages[index + 1]
         return currentMessage.senderUserID != nextMessage.senderUserID
     }
-
+    
+    /// Agrega una reacción (emoji) a un mensaje en el chat público.
+    ///
+    /// - Parameters:
+    ///   - chatsID: El ID del mensaje al que se quiere reaccionar.
+    ///   - emoji: El emoji que se va a agregar como reacción.
+    ///   - userID: El ID del usuario que reacciona (aunque no se usa porque se obtiene desde Firebase).
+    func addReacToMessage(chatsID: String, messageID:String, emoji: String, userID: String) async {
+        guard let userID = Auth.auth().currentUser?.uid else {return}
+        
+        do{
+            try await privateChatService.reactToMessage(chatsID: chatsID, messageID: messageID, emoji: emoji, userID: userID)
+            
+        }catch{
+            errorTitle = "Error al reaccionar"
+            errorMessage = "No se pudo enviar la reacción."
+            showError = true
+        }
+    }
+    
+    /// Elimina la reacción de un mensaje para el usuario actual.
+    ///
+    /// - Parameter messageID: El ID del mensaje del cual se quiere quitar la reacción.
+    func reacToMessageRemove(from chatsID: String, messageID: String) async {
+        guard let userID = Auth.auth().currentUser?.uid else {return}
+        
+        do{
+            try await privateChatService.removeReaction(fromChatsIDID: chatsID, messageID: messageID, userID: userID)
+        }catch{
+            errorTitle = "Error"
+            errorMessage = "No se pudo eliminar la reacción."
+            showError = true
+        }
+    }
 }
