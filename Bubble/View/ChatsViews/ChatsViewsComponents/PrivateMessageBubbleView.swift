@@ -9,9 +9,6 @@ import SwiftUI
 import FirebaseAuth
 import Kingfisher
 
-/// Burbuja de mensaje que ofrece **Editar** y **Eliminar** mediante menú de
-/// Poder contestar aun post en especifico ....
-/// contexto cuando el autor es el usuario autenticado.
 struct PrivateMessageBubbleView: View {
     @Environment(PrivateChatViewModel.self) private var privateChatViewModel
     @State private var chatFileViewModel = ChatFileViewModel()
@@ -159,14 +156,10 @@ struct PrivateMessageBubbleView: View {
                             HStack(spacing: 2){
                                 ForEach(Array(Set(reactions.values)), id:\.self){ emoji in
                                     Text(emoji).font(.callout)
-                                     //   .padding(8)
-                                       // .background(Color.gray.opacity(0.5))
-                                       // .clipShape(Circle())
-                                       // .shadow(radius: 2)
                                }
                             }.offset(x: 15, y: 10)
                         }
-                        //__________________________________________________________//
+                        
                         HStack {
                             Spacer()
                             Text(privateChatViewModel.formatTime(from: message.timestamp))

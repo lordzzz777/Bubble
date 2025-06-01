@@ -151,7 +151,6 @@ struct PublicMessageBubbleView: View {
                             
                         case .file:
                             HStack(spacing: 10){
-                                //  FileThumbnailView(fileURL: URL(string: message.content) ?? URL(fileURLWithPath: "/dev/null"))
                                 SmartFileThumbnailView(fileURL: URL(string: message.content) ?? URL(fileURLWithPath: "/dev/null"))
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(URL(string: message.content)?.lastPathComponent ?? "Archivo")
