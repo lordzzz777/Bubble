@@ -138,7 +138,8 @@ struct ListChatRowView: View {
                     }
                 })
             } else {
-                ProgressView()
+                ChatRowSkeleton()
+               //ProgressView()
             }
         }
         .onAppear {

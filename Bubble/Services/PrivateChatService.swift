@@ -226,6 +226,35 @@ actor PrivateChatService {
         }
     }
     
+    /// Envía un mensaje avanzado al chat y actualiza los metadatos del chat en Firestore.
+    ///
+    /// Este método guarda un `MessageModel` completo en la subcolección `messages`
+    /// del chat especificado y actualiza los campos de resumen en el documento principal del chat.
+    ///
+    /// - Parameters:
+    ///   - chatID: El identificador del chat al que se enviará el mensaje.
+    ///   - message: El objeto `MessageModel` completo a enviar.
+    /// - Throws: `PrivateChatServiceError.sendMessageFailed` si ocurre un error al escribir en Firestore.
+    func sendAdvancedMessage(chatID: String, message: MessageModel) async throws{
+        do{
+            try await database.collection("chats")
+                .document(chatID).collection("messages")
+                .document(message.id)
+                .setData(message.dictionary)
+            
+            let updataChatInfo: [String: Any] = [
+                "lastMessageTimestamp": message.timestamp,
+                "lastMessageSenderUserID": uid,
+                "lastMessage": message.content,
+                "lastMessageType": message.type.rawValue
+            ]
+
+            try await database.collection("chats").document(chatID).updateData(updataChatInfo)
+        }catch{
+            throw PrivateChatServiceError.sendMessageFailed
+        }
+    }
+    
     /// Lee una sola vez el documento `users/{id}` y devuelve el `UserModel`.
     /// - Returns: `UserModel` si existe, `nil` si el doc. no está.
     /// - Throws: Propaga cualquier error de Firestore.

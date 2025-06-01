@@ -76,11 +76,12 @@ struct PublicChatView: View {
                             }
                         }
                         .padding(.bottom, 20)
-                        .onChange(of: publicChatViewModel.messages) { _,_ in
+                        .onChange(of: publicChatViewModel.messages) { _,lastMessage in
                             withAnimation {
-                                if let lastMessage = publicChatViewModel.messages.last {
-                                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                                }
+//                                if let lastMessage = publicChatViewModel.messages.last {
+//                                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
+//                                }
+                                proxy.scrollTo(lastMessage, anchor: .bottom)
                             }
                         }
                     }

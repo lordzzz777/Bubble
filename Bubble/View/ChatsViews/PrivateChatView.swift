@@ -20,6 +20,9 @@ struct PrivateChatView: View {
     @State private var checkingFriendStatus: Bool = false
     @State private var isEditing: Bool = false
     @State private var editingMessageID: String? = nil
+    @State private var replyingToMessageID: String? = nil
+    @State private var replyingToNickname: String? = nil
+    @State private var textFieldHeight: CGFloat = 40
     
     var user: UserModel
     var chat: ChatModel
@@ -36,6 +39,7 @@ struct PrivateChatView: View {
                     .font(.footnote.bold())
                     .padding()
                 }
+                
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack {
@@ -51,42 +55,45 @@ struct PrivateChatView: View {
                                 .font(.caption2)
                                 .padding(.top, 20)
                                 .padding(.horizontal, 10)
-                                
+                               
                                 // Mensajes correspondientes a la fecha
                                 ForEach(group.value, id: \.self) { message in
-                                    
-                                    if message.type == .friendRequest {
+                                    switch message.type {
+                                    case .friendRequest:
                                         Text(privateChatViewModel.checkIfMessageWasSentByCurrentUser(message)
                                              ? "Le enviaste una solicitud a \(user.nickname)"
                                              : "\(user.nickname) te envió una solicitud de amistad")
-                                        .font(.footnote)
-                                        .foregroundStyle(.secondary)
-                                        .italic()
-                                    }
-                                    
-                                    if message.type == .acceptedFriendRequest {
+                                        .font(.footnote).foregroundStyle(.secondary).italic()
+                                    case .acceptedFriendRequest:
                                         Text("Tú y \(user.nickname) ahora son amigos")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    
-                                    if message.type == .text {
-                                        //MessageBubbleView(message: message)
-                                        MessageBubbleView(
+                                            .font(.caption).foregroundStyle(.secondary)
+                                    case .text:
+                                      
+                                        let sender = privateChatViewModel.userModel(for: message.senderUserID)
+                                        let showAvatar = privateChatViewModel.shouldShowAvatar(currentMessage: message, in: group.value)
+                                        PrivateMessageBubbleView(
                                             chatID: chat.id,
                                             message: message,
-                                            user: user,
+                                            currentUser: privateChatViewModel.me,
+                                            friendUser: user,
+                                            senderUser: sender,
+                                            showAvatar: showAvatar,
                                             messageText: $messageText,
                                             isEditing: $isEditing,
-                                            editingMessageID:  $editingMessageID
+                                            editingMessageID: $editingMessageID,
+                                            replyingToMessageID: $replyingToMessageID,
+                                            replyingToNickname: $replyingToNickname
                                         )
                                         .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
                                         .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
-
+                                        
+                                    default:
+                                        EmptyView()
+                                        
                                     }
                                 }
-                            }.padding(.bottom, 20)
-
+                            }
+                            
                             if privateChatViewModel.friendStatus == .none {
                                 Text("Tú y \(user.nickname) no son amigos")
                                     .foregroundStyle(.red)
@@ -103,40 +110,58 @@ struct PrivateChatView: View {
                         }
                     }
                 }
+                Spacer()
+                
+                if let nickname = replyingToNickname {
+                    HStack {
+                        Text("Respondiendo a \(nickname)")
+                            .font(.footnote)
+                            .foregroundStyle(.blue)
+                        Spacer()
+                        Button(action: {
+                            replyingToMessageID = nil
+                            replyingToNickname = nil
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
                 
                 if privateChatViewModel.friendStatus == .accepted {
                     ZStack(alignment: .bottomTrailing) {
-                        TextField("Escribe tu mensaje", text: $messageText)
-                            .padding(.trailing, 20)
-//                            .onSubmit {
-//                                Task {
-//                                    if !messageText.isEmpty {
-//                                        await privateChatViewModel.sendMessage(chatID: chat.id, messageText: messageText)
-//                                        messageText = ""
-//                                    }
-//                                }
-//                            }
-                            .onSubmit {
-                                Task {
-                                    guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-                                    
-                                    if isEditing, let id = editingMessageID {
-                                        try? await privateChatViewModel.editMessage(
-                                            chatsID: chat.id,
-                                            messageID: id,
-                                            newCountent: messageText
-                                        )
-                                        isEditing = false
-                                        editingMessageID = nil
-                                    } else {
-                                        await privateChatViewModel.sendMessage(
-                                            chatID: chat.id,
-                                            messageText: messageText
-                                        )
-                                    }
-                                    messageText = ""
+                        TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
+                            Task {
+                                guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                                
+                                if isEditing, let id = editingMessageID {
+                                    try? await privateChatViewModel.editMessage(
+                                        chatsID: chat.id,
+                                        messageID: id,
+                                        newCountent: messageText
+                                    )
+                                    isEditing = false
+                                    editingMessageID = nil
+                                } else {
+                                    let originalText = privateChatViewModel.messages.first(where: { $0.id == replyingToMessageID })?.content
+                                    await  privateChatViewModel.sendPrivateMessage(
+                                        chatID: chat.id,
+                                        messageText: messageText,
+                                        replyingToMessageID: replyingToMessageID,
+                                        replyingToText: originalText,
+                                        replyingToNickname: replyingToNickname
+                                    )
+                                                                        
+                                    replyingToMessageID = nil
+                                    replyingToNickname = nil
                                 }
+                                messageText = ""
                             }
+                        })
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .frame(minHeight: textFieldHeight)
+                            .padding(.trailing, 20)
 
                         if !messageText.isEmpty {
                             Button {
@@ -194,6 +219,14 @@ struct PrivateChatView: View {
                     print(privateChatViewModel.errorMessage)
                 }
             }
+            .alert(isPresented: $privateChatViewModel.showError) {
+                Alert(
+                    title: Text(privateChatViewModel.errorTitle),
+                    message: Text(privateChatViewModel.errorMessage),
+                    dismissButton: .default(Text("OK"))
+                )
+            }
+
         }
     }
     

@@ -21,8 +21,9 @@ class PrivateChatViewModel {
     private let privateChatService: PrivateChatService = PrivateChatService()
     
     var user: UserModel?
+    var me: UserModel?
     var friendUser: UserModel?
-
+    
     var chats: [ChatModel] = []
     var messages: [MessageModel] = []
     var showError: Bool = false
@@ -47,6 +48,23 @@ class PrivateChatViewModel {
     
     /// Caché en memoria de los amigos ya descargados (clave = userID).
     private var usersCache: [String: UserModel] = [:]
+    
+    init(){
+        Task{
+           await laadCurrentUser()
+        }
+    }
+    
+    ///Cargar mi usuario al iniciar la app
+    private func laadCurrentUser() async {
+        guard let uid = Auth.auth().currentUser?.uid else {return}
+        
+        do{
+            self.me = try await privateChatService.getUserOnce(by: uid)
+        }catch{
+            print("Error: no puedo cargar mi proìo usuario")
+        }
+    }
     
     /// Agrupa los mensajes por fecha y los ordena cronológicamente.
     ///
@@ -267,56 +285,116 @@ class PrivateChatViewModel {
     /// Obtiene la lista de chats en los que el usuario participa y los almacena en la variable `chats`.
     /// Esta función escucha cambios en tiempo real.
     /// - Note: Cancela cualquier tarea en ejecución antes de iniciar una nueva.
+//    func fetchChats() async  throws {
+//        // Cancela una escucha anterior
+//        chatTask?.cancel()
+//        
+//        chatTask = Task(priority: .userInitiated) { [weak self] in
+//            guard let self else { return }
+//            
+//            do {
+//                // Stream/Sequence que emite arrays de ChatModel
+//                for try await chatsSnapshot in await privateChatService.getChats() {
+//                    guard !Task.isCancelled else { return }
+//                    
+//                    // Ordena primero
+//                    let ordered = chatsSnapshot.sorted {
+//                        $0.lastMessageTimestamp.seconds > $1.lastMessageTimestamp.seconds
+//                    }
+//                    
+//                    // Prefetch de usuarios CONCURRENTEMENTE
+//                    await withTaskGroup(of: Void.self) { group in
+//                        for chat in ordered {
+//                            for id in chat.participants{
+//                                guard usersCache[id] == nil else {return}
+//                                group.addTask {
+//                                    let u = try await privateChatService.getUserOnce(by: id)
+//                                    await MainActor.run{ usersCache[id] = u}
+//                                }
+//                            }
+//                            let friendID = getFriendID(chat.participants)
+//                            
+//                            // -->  Si ya está cacheado, pasa al siguiente
+//                            guard usersCache[friendID] == nil else { continue }
+//                            
+//                            group.addTask { [weak self] in
+//                                guard let self else { return }
+//                                
+//                                do {
+//                                    // getUserOnce(by:) debe ser una función que devuelva 1 solo UserModel,
+//                                    // no un flujo de cambios en tiempo real.
+//                                    let user = try await privateChatService.getUserOnce(by: friendID)
+//                                    
+//                                    // Cualquier mutación del ViewModel se hace en MainActor
+//                                    await MainActor.run { usersCache[friendID] = user }
+//                                } catch {
+//                                    // No abortamos el TaskGroup; solo registramos el fallo
+//                                    print("No se pudo precargar usuario \(friendID): \(error)")
+//                                }
+//                            }
+//                        }
+//                    }
+//
+//
+//                    
+//                    // Salta al MainActor para mutar estado
+//                    await MainActor.run {
+//                        self.chats = ordered
+//                    }
+//                }
+//            } catch {
+//                await MainActor.run {
+//                    self.errorTitle   = "Error al obtener los chats"
+//                    self.errorMessage = "Ocurrió un error desconocido al obtener los chats, inténtalo más tarde."
+//                    self.showError    = true
+//                }
+//            }
+//        }
+//    }
     func fetchChats() async {
-        // Cancela una escucha anterior
+        
         chatTask?.cancel()
         
         chatTask = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             
             do {
-                // Stream/Sequence que emite arrays de ChatModel
                 for try await chatsSnapshot in await privateChatService.getChats() {
                     guard !Task.isCancelled else { return }
                     
-                    // Ordena primero
+                    // 1. Ordena los chats
                     let ordered = chatsSnapshot.sorted {
                         $0.lastMessageTimestamp.seconds > $1.lastMessageTimestamp.seconds
                     }
                     
-                    // Prefetch de usuarios CONCURRENTEMENTE
+                    // 2. Prefetch concurrente de *todos* los participantes
                     await withTaskGroup(of: Void.self) { group in
                         for chat in ordered {
-                            let friendID = getFriendID(chat.participants)
-                            
-                            // -->  Si ya está cacheado, pasa al siguiente
-                            guard usersCache[friendID] == nil else { continue }
-                            
-                            group.addTask { [weak self] in
-                                guard let self else { return }
+                            for id in chat.participants {
                                 
-                                do {
-                                    // getUserOnce(by:) debe ser una función que devuelva 1 solo UserModel,
-                                    // no un flujo de cambios en tiempo real.
-                                    let user = try await privateChatService.getUserOnce(by: friendID)
-                                    
-                                    // Cualquier mutación del ViewModel se hace en MainActor
-                                    await MainActor.run { usersCache[friendID] = user }
-                                } catch {
-                                    // No abortamos el TaskGroup; solo registramos el fallo
-                                    print("No se pudo precargar usuario \(friendID): \(error)")
+                                // !! usa `continue`, no `return`
+                                guard usersCache[id] == nil else { continue }
+                                
+                                group.addTask { [weak self] in
+                                    guard let self else { return }
+                                    do {
+                                        if let u = try await self.privateChatService.getUserOnce(by: id) {
+                                            await MainActor.run {
+                                                self.usersCache[id] = u
+                                            }
+                                        }
+                                    } catch {
+                                        print(" !No se pudo precargar usuario \(id): \(error)")
+                                    }
                                 }
                             }
                         }
                     }
-
-
                     
-                    // Salta al MainActor para mutar estado
-                    await MainActor.run {
-                        self.chats = ordered
-                    }
+                    // 3. Actualiza la lista de chats en el hilo principal
+                    await MainActor.run { self.chats = ordered }
                 }
+                
             } catch {
                 await MainActor.run {
                     self.errorTitle   = "Error al obtener los chats"
@@ -327,6 +405,9 @@ class PrivateChatViewModel {
         }
     }
 
+    func userModel(for id: String) -> UserModel? {
+        return usersCache[id] ?? (id == user?.id ? user : nil)
+    }
     /// Obtiene la información de un usuario en tiempo real y la almacena en la variable `user`.
     /// - Parameter userID: El ID del usuario que se desea obtener.
     func fetchUser(chat: ChatModel) {
@@ -425,6 +506,58 @@ class PrivateChatViewModel {
     for msg in deletable {
         try? await permanentlyDeleteMessage(chatsID: chatID, messageID: msg.id)
     }
-}
+ }
+    
+    /// Envía un mensaje privado en un chat determinado, incluyendo opcionalmente información de respuesta.
+    ///
+    /// - Parameters:
+    ///   - chatID: El identificador único del chat donde se enviará el mensaje.
+    ///   - messageText: El contenido textual del mensaje a enviar.
+    ///   - replyingToMessageID: (Opcional) El ID del mensaje al que se está respondiendo.
+    ///   - replyingToText: (Opcional) El contenido del mensaje al que se responde, para mostrar referencia visual.
+    ///   - replyingToNickname: (Opcional) El nickname del autor del mensaje al que se responde.
+    ///
+    /// Este método crea una instancia de `MessageModel`, la envía a Firestore mediante `sendAdvancedMessage`,
+    /// y actualiza el estado local con `lastMessage` para permitir scroll automático u otras reacciones en la interfaz.
+    func sendPrivateMessage(
+        chatID: String,
+        messageText: String,
+        replyingToMessageID: String? = nil,
+        replyingToText: String? = nil,
+        replyingToNickname: String? = nil
+    ) async{
+        guard let userID = Auth.auth().currentUser?.uid else { return }
+        
+        let message = MessageModel(
+            id: UUID().uuidString,
+            senderUserID: userID,
+            content: messageText,
+            timestamp: Timestamp(date: .now),
+            type: .text,
+            replyToMessageID: replyingToMessageID,
+            replyingToText: replyingToText,
+            replyingToNickname: replyingToNickname
+        )
+        
+        do {
+            try await privateChatService.sendAdvancedMessage(chatID: chatID, message: message)
+            lastMessage = message
+        } catch {
+            showError = true
+            errorTitle = "Error"
+            errorMessage = "No se pudo enviar el mensaje."
+        }
+    }
+    
+    func shouldShowAvatar(currentMessage: MessageModel, in messages: [MessageModel]) -> Bool {
+        guard let index = messages.firstIndex(where: { $0.id == currentMessage.id }) else {
+            return true
+        }
+        if index + 1 >= messages.count {
+            return true
+        }
+        let nextMessage = messages[index + 1]
+        return currentMessage.senderUserID != nextMessage.senderUserID
+    }
 
 }
