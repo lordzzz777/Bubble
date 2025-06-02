@@ -9,19 +9,17 @@ import SwiftUI
 import FirebaseAuth
 import Kingfisher
 
-/// Burbuja de mensaje que ofrece **Editar** y **Eliminar** mediante menú de
-/// Poder contestar aun post en especifico ....
-/// contexto cuando el autor es el usuario autenticado.
 struct PrivateMessageBubbleView: View {
     @Environment(PrivateChatViewModel.self) private var privateChatViewModel
     @State private var chatFileViewModel = ChatFileViewModel()
     @State private var chatAudioViewModel = ChatAudioViewModel()
     
+    // Estado ventada modal de los emojis
+    @State private var isEmojiPickerVisible: Bool = false
+    
     let chatID: String
     var message: MessageModel
-    
     var currentUser: UserModel?
-    
     var user: UserModel?
     var friendUser: UserModel?
     var senderUser:  UserModel?
@@ -62,6 +60,38 @@ struct PrivateMessageBubbleView: View {
     
     
     var body: some View {
+        
+        // Condicional para llasmar a las reaccione emojis
+        if isEmojiPickerVisible{
+            ScrollView(.horizontal, showsIndicators: false){
+                HStack(spacing: 8){
+                    ForEach(EmojiData.emojiCategories["Reacciones"] ?? [], id: \.self) { emoji in
+                        
+                        Button(action: {
+                            Task{
+                                if message.reactions?[Auth.auth().currentUser?.uid ?? ""] == emoji{
+                                    await privateChatViewModel.reacToMessageRemove(from: chatID, messageID: message.id)
+                                }else{
+                                    
+                                    await  privateChatViewModel.addReacToMessage(chatsID: chatID,messageID: message.id, emoji: emoji, userID: message.senderUserID)
+                                }
+                                
+                                isEmojiPickerVisible = false
+                            }
+                        }){
+                            Text(emoji).font(.largeTitle)
+                        }
+                    }
+                }.background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(.gray.opacity(0.45))
+                        .stroke(Color.black.opacity(0.5), lineWidth: 1)
+                )
+                .padding(.horizontal)
+            }
+            .transition(.opacity)
+        }
+        
         if message.content == "Mensaje eliminado" {
             HStack {
                 Spacer()
@@ -121,9 +151,15 @@ struct PrivateMessageBubbleView: View {
                                 .padding(.horizontal, 10)
                         }
                         
-                        // ................ Reacciones emojis .......................
+                        // Aqui se pintan las reacciones emojis.
+                        if let reactions = message.reactions, !reactions.isEmpty{
+                            HStack(spacing: 2){
+                                ForEach(Array(Set(reactions.values)), id:\.self){ emoji in
+                                    Text(emoji).font(.callout)
+                                }
+                            }.offset(x: 15, y: 10)
+                        }
                         
-                        //__________________________________________________________//
                         HStack {
                             Spacer()
                             Text(privateChatViewModel.formatTime(from: message.timestamp))
@@ -138,6 +174,15 @@ struct PrivateMessageBubbleView: View {
                             .fill(bubbleColor)
                     )
                     .contextMenu{
+                        // boton de ventana modal emogis
+                        Button(action: {
+                            isEmojiPickerVisible.toggle()
+                        }, label: {
+                            Text("Emojis")
+                            Image(systemName: "face.smiling")
+                                .foregroundColor(.yellow)
+                        })
+                        
                         if isCurrentUser {
                             Button(action: {
                                 messageText = message.content
@@ -169,6 +214,8 @@ struct PrivateMessageBubbleView: View {
                                 Label("Responder", systemImage: "arrowshape.turn.up.left")
                             })
                         }
+                        
+
                     }
                     if showAvatar {
                         // pico de la burbuja ..
