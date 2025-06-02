@@ -45,16 +45,28 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				View/ChatsViews/ChatsViewsComponents/PrivateMessageBubbleView.swift,
 			);
 			target = 6E352CA22D4442640096AC3E /* Bubble */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		6E2CAE392DED21280031FACF /* Exceptions for "Bubble" folder in "Copy Bundle Resources" phase from "Bubble" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = 6E352CA12D4442640096AC3E /* Resources */;
+			membershipExceptions = (
+				View/ChatsViews/ChatsViewsComponents/PrivateMessageBubbleView.swift,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		6E352CA52D4442640096AC3E /* Bubble */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				6EFF52132D48486D00BFE462 /* Exceptions for "Bubble" folder in "Bubble" target */,
+				6E2CAE392DED21280031FACF /* Exceptions for "Bubble" folder in "Copy Bundle Resources" phase from "Bubble" target */,
 			);
 			path = Bubble;
 			sourceTree = "<group>";
