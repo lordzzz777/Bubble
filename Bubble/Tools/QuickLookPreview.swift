@@ -17,7 +17,7 @@ class FilePreviewItem: NSObject, QLPreviewItem {
         self.fileURL = url
     }
     
-    // ✅ Requerido por QLPreviewItem: debe ser no opcional
+    // Requerido por QLPreviewItem: debe ser no opcional
     var previewItemURL: URL? {
         return fileURL
     }

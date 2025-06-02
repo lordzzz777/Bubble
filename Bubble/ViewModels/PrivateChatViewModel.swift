@@ -285,72 +285,6 @@ class PrivateChatViewModel {
     /// Obtiene la lista de chats en los que el usuario participa y los almacena en la variable `chats`.
     /// Esta función escucha cambios en tiempo real.
     /// - Note: Cancela cualquier tarea en ejecución antes de iniciar una nueva.
-//    func fetchChats() async  throws {
-//        // Cancela una escucha anterior
-//        chatTask?.cancel()
-//        
-//        chatTask = Task(priority: .userInitiated) { [weak self] in
-//            guard let self else { return }
-//            
-//            do {
-//                // Stream/Sequence que emite arrays de ChatModel
-//                for try await chatsSnapshot in await privateChatService.getChats() {
-//                    guard !Task.isCancelled else { return }
-//                    
-//                    // Ordena primero
-//                    let ordered = chatsSnapshot.sorted {
-//                        $0.lastMessageTimestamp.seconds > $1.lastMessageTimestamp.seconds
-//                    }
-//                    
-//                    // Prefetch de usuarios CONCURRENTEMENTE
-//                    await withTaskGroup(of: Void.self) { group in
-//                        for chat in ordered {
-//                            for id in chat.participants{
-//                                guard usersCache[id] == nil else {return}
-//                                group.addTask {
-//                                    let u = try await privateChatService.getUserOnce(by: id)
-//                                    await MainActor.run{ usersCache[id] = u}
-//                                }
-//                            }
-//                            let friendID = getFriendID(chat.participants)
-//                            
-//                            // -->  Si ya está cacheado, pasa al siguiente
-//                            guard usersCache[friendID] == nil else { continue }
-//                            
-//                            group.addTask { [weak self] in
-//                                guard let self else { return }
-//                                
-//                                do {
-//                                    // getUserOnce(by:) debe ser una función que devuelva 1 solo UserModel,
-//                                    // no un flujo de cambios en tiempo real.
-//                                    let user = try await privateChatService.getUserOnce(by: friendID)
-//                                    
-//                                    // Cualquier mutación del ViewModel se hace en MainActor
-//                                    await MainActor.run { usersCache[friendID] = user }
-//                                } catch {
-//                                    // No abortamos el TaskGroup; solo registramos el fallo
-//                                    print("No se pudo precargar usuario \(friendID): \(error)")
-//                                }
-//                            }
-//                        }
-//                    }
-//
-//
-//                    
-//                    // Salta al MainActor para mutar estado
-//                    await MainActor.run {
-//                        self.chats = ordered
-//                    }
-//                }
-//            } catch {
-//                await MainActor.run {
-//                    self.errorTitle   = "Error al obtener los chats"
-//                    self.errorMessage = "Ocurrió un error desconocido al obtener los chats, inténtalo más tarde."
-//                    self.showError    = true
-//                }
-//            }
-//        }
-//    }
     func fetchChats() async {
         
         chatTask?.cancel()
@@ -408,6 +342,7 @@ class PrivateChatViewModel {
     func userModel(for id: String) -> UserModel? {
         return usersCache[id] ?? (id == user?.id ? user : nil)
     }
+    
     /// Obtiene la información de un usuario en tiempo real y la almacena en la variable `user`.
     /// - Parameter userID: El ID del usuario que se desea obtener.
     func fetchUser(chat: ChatModel) {
@@ -559,5 +494,38 @@ class PrivateChatViewModel {
         let nextMessage = messages[index + 1]
         return currentMessage.senderUserID != nextMessage.senderUserID
     }
-
+    
+    /// Agrega una reacción (emoji) a un mensaje en el chat público.
+    ///
+    /// - Parameters:
+    ///   - chatsID: El ID del mensaje al que se quiere reaccionar.
+    ///   - emoji: El emoji que se va a agregar como reacción.
+    ///   - userID: El ID del usuario que reacciona (aunque no se usa porque se obtiene desde Firebase).
+    func addReacToMessage(chatsID: String, messageID:String, emoji: String, userID: String) async {
+        guard let userID = Auth.auth().currentUser?.uid else {return}
+        
+        do{
+            try await privateChatService.reactToMessage(chatsID: chatsID, messageID: messageID, emoji: emoji, userID: userID)
+            
+        }catch{
+            errorTitle = "Error al reaccionar"
+            errorMessage = "No se pudo enviar la reacción."
+            showError = true
+        }
+    }
+    
+    /// Elimina la reacción de un mensaje para el usuario actual.
+    ///
+    /// - Parameter messageID: El ID del mensaje del cual se quiere quitar la reacción.
+    func reacToMessageRemove(from chatsID: String, messageID: String) async {
+        guard let userID = Auth.auth().currentUser?.uid else {return}
+        
+        do{
+            try await privateChatService.removeReaction(fromChatsIDID: chatsID, messageID: messageID, userID: userID)
+        }catch{
+            errorTitle = "Error"
+            errorMessage = "No se pudo eliminar la reacción."
+            showError = true
+        }
+    }
 }
