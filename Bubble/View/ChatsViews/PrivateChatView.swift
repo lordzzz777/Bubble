@@ -12,9 +12,13 @@ import PhotosUI
 import Kingfisher
 
 struct PrivateChatView: View {
-
-    @Environment(PrivateChatViewModel.self) private var chatsViewModel
     
+    // ViewModels
+    @Environment(PrivateChatViewModel.self) private var chatsViewModel
+    @State private var audioViewMode = ChatAudioViewModel()
+    @State private var chatMediaViewModel = ChatMediaViewModel()
+    
+    // UI State
     @State private var privateChatViewModel = PrivateChatViewModel()
     @State private var messageText: String = ""
     @State private var checkingFriendStatus: Bool = false
@@ -24,9 +28,10 @@ struct PrivateChatView: View {
     @State private var replyingToNickname: String? = nil
     @State private var textFieldHeight: CGFloat = 40
     
+    // Datos del contexto
     var user: UserModel
     var chat: ChatModel
-
+    
     var body: some View {
         if let user = chatsViewModel.user {
             VStack {
@@ -55,7 +60,7 @@ struct PrivateChatView: View {
                                 .font(.caption2)
                                 .padding(.top, 20)
                                 .padding(.horizontal, 10)
-                               
+                                
                                 // Mensajes correspondientes a la fecha
                                 ForEach(group.value, id: \.self) { message in
                                     switch message.type {
@@ -67,8 +72,8 @@ struct PrivateChatView: View {
                                     case .acceptedFriendRequest:
                                         Text("Tú y \(user.nickname) ahora son amigos")
                                             .font(.caption).foregroundStyle(.secondary)
-                                    case .text:
-                                      
+                                    case .text, .audio:
+                                        
                                         let sender = privateChatViewModel.userModel(for: message.senderUserID)
                                         let showAvatar = privateChatViewModel.shouldShowAvatar(currentMessage: message, in: group.value)
                                         PrivateMessageBubbleView(
@@ -104,12 +109,11 @@ struct PrivateChatView: View {
                         }
                         .padding(.bottom, 20)
                         .onChange(of: privateChatViewModel.lastMessage) { _, lastMessage in
-                            withAnimation {
-                                proxy.scrollTo(lastMessage, anchor: .bottom)
-                            }
+                            withAnimation { proxy.scrollTo(lastMessage, anchor: .bottom) }
                         }
                     }
                 }
+                
                 Spacer()
                 
                 if let nickname = replyingToNickname {
@@ -129,48 +133,65 @@ struct PrivateChatView: View {
                     .padding(.horizontal)
                 }
                 
+                // Boton de audio
+                if audioViewMode.isRecording{
+                    VStack(spacing: 6) {
+                        
+                        // Muestra Honda de sonido al grabar
+                        RecordingWaveformView(audioViewModel: audioViewMode)
+                            .frame(height: 36)
+                            .padding(.horizontal)
+                        
+                        // Muestra el tiempo de grabacion en acción real
+                        Text(audioViewMode.recordingElapsedTime)
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.gray)
+                    }.padding(.bottom, 4)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+                
                 if privateChatViewModel.friendStatus == .accepted {
                     ZStack(alignment: .bottomTrailing) {
-                        TextField(isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...", text: $messageText, onCommit:  {
-                            Task {
-                                guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-                                
-                                if isEditing, let id = editingMessageID {
-                                    try? await privateChatViewModel.editMessage(
-                                        chatsID: chat.id,
-                                        messageID: id,
-                                        newCountent: messageText
-                                    )
-                                    isEditing = false
-                                    editingMessageID = nil
-                                } else {
-                                    let originalText = privateChatViewModel.messages.first(where: { $0.id == replyingToMessageID })?.content
-                                    await  privateChatViewModel.sendPrivateMessage(
-                                        chatID: chat.id,
-                                        messageText: messageText,
-                                        replyingToMessageID: replyingToMessageID,
-                                        replyingToText: originalText,
-                                        replyingToNickname: replyingToNickname
-                                    )
-                                                                        
-                                    replyingToMessageID = nil
-                                    replyingToNickname = nil
-                                }
-                                messageText = ""
-                            }
-                        })
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .frame(minHeight: textFieldHeight)
+                        HStack(spacing: 6){
+                            TextField(
+                                isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...",
+                                text: $messageText,
+                                onCommit: {
+                                awaitSendText()
+                            })
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .frame(minHeight: textFieldHeight)
                             .padding(.trailing, 20)
-
-                        if !messageText.isEmpty {
-                            Button {
-                                messageText = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.gray)
+                            
+                            if !messageText.isEmpty && isEditing == true{
+                                Button {
+                                    messageText = ""
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.gray)
+                                }
+                                .padding(6)
                             }
-                        }
+                            
+                            Button {
+                                awaitSendText()
+                            } label: {
+                                Image( systemName: isEditing ?  "pencil.circle.fill" : "arrow.up.circle.fill")
+                                   // .rotationEffect(.degrees(45))
+                                    .font(.title2)
+                            }
+                            .opacity(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0 : 1)
+                            .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .animation(.easeInOut(duration: 0.15), value: messageText)
+                            
+                            
+
+                            if messageText.isEmpty {
+                                privateButtonTap()
+                                    .animation(.easeInOut(duration: 0.15), value: messageText)
+                            }
+                            
+                        }.padding(.trailing, 4)
                     }
                     .padding(8)
                     .clipShape(
@@ -211,7 +232,7 @@ struct PrivateChatView: View {
                         try? await Task.sleep(nanoseconds: 10 * 1_000_000_000)
                     }
                 }
-
+                
             }
             .task {
                 await privateChatViewModel.fetchMessages(chatID: chat.id)
@@ -226,13 +247,67 @@ struct PrivateChatView: View {
                     dismissButton: .default(Text("OK"))
                 )
             }
-
+            
         }
     }
     
     // Vista auxiliar para dibujar una línea
     private var line: some View {
-           VStack { Divider() }
+        VStack { Divider() }
+    }
+    
+    private func awaitSendText(){
+        Task{
+            await privateChatViewModel.sendText(
+                in:               chat.id,
+                text:             messageText,
+                isEditing:        isEditing,
+                editingMessageID: editingMessageID,
+                replyingToMessageID: replyingToMessageID,
+                replyingToNickname:  replyingToNickname
+            )
+            
+            // Reset de los @State locales (la VM se encarga del resto)
+            messageText         = ""
+            isEditing           = false
+            editingMessageID    = nil
+            replyingToMessageID = nil
+            replyingToNickname  = nil
+        }
+    }
+    
+    // metodo parqa el la logica de la grabadora
+    @ViewBuilder
+    func privateButtonTap() -> some View{
+        VoiceRecordingButton(
+            onStart: {
+                Task{
+                    
+                    try? await audioViewMode.startRecording()
+                    await audioViewMode.startRecordingWaveformUpdates()
+                    
+                }
+            },
+            onFinish: {
+                Task{
+                    
+                    await audioViewMode.stopRecording()
+                    try? await audioViewMode.uploadVoiceNote()
+                    if let url = audioViewMode.uploadedAudioURL{
+                        let duration = audioViewMode.audioDuration ?? 0
+                        // try await chatMediaViewModel.sendVoiceMessage(with: url, duration: duration)
+                        try? await chatMediaViewModel.sendVoiceMessage(
+                            scope: .privateChat(chat.id),
+                            url: url,
+                            duration: duration
+                        )
+                    }
+                    
+                }
+            },
+            onCancel: {
+                audioViewMode.reset()
+            })
     }
 }
 

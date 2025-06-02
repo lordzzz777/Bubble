@@ -145,6 +145,13 @@ struct PrivateMessageBubbleView: View {
                         }
                         
                         switch message.type{
+                        case .audio:
+                            AudioMessageView(
+                                audioURLString: message.content,
+                                duration: message.audioDuration ?? 0,
+                                chatAudioViewModel: chatAudioViewModel
+                            )
+                            
                             // aqui se le añade los caso oae compartir audio, imagenes...
                         default:
                             Text(message.content)

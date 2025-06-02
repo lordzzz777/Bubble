@@ -11,12 +11,18 @@ import PhotosUI
 import SwiftUI
 import AVFoundation
 
+enum ChatScope{
+    case `public`, privateChat(String)
+}
+
 @Observable @MainActor
-class ChatMediaViewModel{
+final class ChatMediaViewModel{
+    
+    // MARK: - Servicios auxiliares
     private let chatMediaService = ChatMediaService()
     private let chatPublicService = PublicChatService()
-   // var audioPlayer: AVAudioPlayer?
-    
+   
+    // MARK: - Estado de errores (Bindable en la UI si lo deseas)
     var messages: [MessageModel] = []
     var showError: Bool = false
     var errorTitle: String = ""
@@ -101,12 +107,38 @@ class ChatMediaViewModel{
     /// - Parameters:
     ///   - url: URL del audio ya subido a Firebase Storage.
     ///   - duration: Duración en segundos de la nota de voz.
-    func sendVoiceMessage(with url: String, duration: Double) async throws{
+//    func sendVoiceMessage(with url: String, duration: Double) async throws{
+//        do{
+//            guard let currentUserID = Auth.auth().currentUser?.uid else {
+//                print("Usuario no encontrado")
+//                return
+//            }
+//            
+//            let message = MessageModel(
+//                id: UUID().uuidString,
+//                senderUserID: currentUserID,
+//                content: url,
+//                timestamp: Timestamp(date: .now),
+//                type: .audio,
+//                audioDuration: duration
+//            )
+//            
+//            try await saveMessageToFirestore(message)
+//            messages.append(message)
+//        }catch{
+//            showError = true
+//            errorTitle = "Error al enviar nota de voz"
+//            errorMessage = "No se pudo guardar el mensaje con la URL del audio."
+//        }
+//    }
+    
+    func sendVoiceMessage(scope: ChatScope, url: String, duration: Double) async throws{
         do{
             guard let currentUserID = Auth.auth().currentUser?.uid else {
                 print("Usuario no encontrado")
                 return
             }
+            let ref = Firestore.firestore()
             
             let message = MessageModel(
                 id: UUID().uuidString,
@@ -117,8 +149,26 @@ class ChatMediaViewModel{
                 audioDuration: duration
             )
             
-            try await saveMessageToFirestore(message)
-            messages.append(message)
+            switch scope{
+                
+            case .public:
+                try await saveMessage(
+                    to:ref
+                    .collection("public_chats")
+                    .document("global_chat")
+                    .collection("messages")
+                    , message: message)
+                
+            case .privateChat(let chatID):
+                
+                try await saveMessage(
+                    to: Firestore.firestore()
+                    .collection("chats")
+                    .document(chatID)
+                    .collection("messages"),
+                    message: message)
+            }
+
         }catch{
             showError = true
             errorTitle = "Error al enviar nota de voz"
@@ -126,24 +176,28 @@ class ChatMediaViewModel{
         }
     }
     
+    private func saveMessage(to ref: CollectionReference, message: MessageModel) async throws {
+        try await ref.document(message.id).setData(message.dictionary)
+    }
+    
     /// Guarda un mensaje en la colección de mensajes del chat público en Firestore.
     /// - Parameter message: El mensaje a guardar.
-    func saveMessageToFirestore(_ message: MessageModel) async throws {
-        do{
-            print("Intentando guardar mensaje: \(message.id)")
-            
-            let docRef = Firestore.firestore()
-                .collection("public_chats")
-                .document("global_chat")
-                .collection("messages")
-                .document(message.id)
-            try await docRef.setData(message.dictionary)
-        }catch{
-            showError = true
-            errorTitle = "Error al guardar mensaje"
-            errorMessage = "No se pudo guardar la nota de voz en Firestore."
-        }
-    }
+//    func saveMessageToFirestore(_ message: MessageModel) async throws {
+//        do{
+//            print("Intentando guardar mensaje: \(message.id)")
+//            
+//            let docRef = Firestore.firestore()
+//                .collection("public_chats")
+//                .document("global_chat")
+//                .collection("messages")
+//                .document(message.id)
+//            try await docRef.setData(message.dictionary)
+//        }catch{
+//            showError = true
+//            errorTitle = "Error al guardar mensaje"
+//            errorMessage = "No se pudo guardar la nota de voz en Firestore."
+//        }
+//    }
     
 }
 

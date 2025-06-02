@@ -78,9 +78,6 @@ struct PublicChatView: View {
                         .padding(.bottom, 20)
                         .onChange(of: publicChatViewModel.messages) { _,lastMessage in
                             withAnimation {
-//                                if let lastMessage = publicChatViewModel.messages.last {
-//                                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
-//                                }
                                 proxy.scrollTo(lastMessage, anchor: .bottom)
                             }
                         }
@@ -186,29 +183,40 @@ struct PublicChatView: View {
                         publicChatViewModel.updateHeight(messageText: messageText, textFieldHeight: $textFieldHeight)
                     }
                     
-                    if !messageText.isEmpty{
-                        
-                        Button(action: {
-                            Task {
-                                await publicChatViewModel.handleSendOrEdit(
-                                    messageText: $messageText,
-                                    editingMessageID: $editingMessageID,
-                                    textFieldHeight: $textFieldHeight,
-                                    isEditing: $isEditing,
-                                    replyingToMessageID: $replyingToMessageID
-                                )
-                            }
-                        }) {
-                            withAnimation(.linear){
-                                Image(systemName: isEditing ?  "paperplane.fill" : "arrow.up.circle.fill")
-                                    .font(.system(size: 22).bold())
-                            }
+                    if !messageText.isEmpty && isEditing == true{
+                        Button {
+                            messageText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.gray)
                         }
-                        
+                        .padding(6)
                     }
                     
-                    buttonTag()// Boton de grabación
                     
+                    
+                    Button(action: {
+                        Task {
+                            await publicChatViewModel.handleSendOrEdit(
+                                messageText: $messageText,
+                                editingMessageID: $editingMessageID,
+                                textFieldHeight: $textFieldHeight,
+                                isEditing: $isEditing,
+                                replyingToMessageID: $replyingToMessageID
+                            )
+                        }
+                    }) {
+                        Image(systemName: isEditing ? "pencil.circle.fill" : "arrow.up.circle.fill")
+                            .font(.title2)
+                    }
+                    .opacity(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0 : 1)
+                    .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .animation(.easeInOut(duration: 0.15), value: messageText)
+                    
+                    if messageText.isEmpty {
+                        buttonTag()// Boton de grabación
+                            .animation(.easeInOut(duration: 0.15), value: messageText)
+                    }
                 }
                 .padding()
                 .focused($isTextFieldFocused)
@@ -316,16 +324,18 @@ struct PublicChatView: View {
                     try? await audioViewModel.uploadVoiceNote()
                     if let url = audioViewModel.uploadedAudioURL{
                         let duration = audioViewModel.audioDuration ?? 0
-                        try? await chatMediaViewModel.sendVoiceMessage(with: url, duration: duration)
+                        try? await chatMediaViewModel.sendVoiceMessage(
+                            scope: .public,
+                            url: url,
+                            duration: duration
+                        )
                     }
                 }
             },
             onCancel: {
                 audioViewModel.reset()
-            },
-            
+            }
         )
-        
     }
 }
 

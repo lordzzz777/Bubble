@@ -528,4 +528,33 @@ class PrivateChatViewModel {
             showError = true
         }
     }
+    
+    func sendText(
+        in chatID: String,
+        text: String,
+        isEditing: Bool,
+        editingMessageID: String?,
+        replyingToMessageID: String?,
+        replyingToNickname: String?
+    ) async {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return}
+        
+        if isEditing, let id = editingMessageID{
+            do{
+               try await editMessage(chatsID: chatID, messageID: id, newCountent: trimmed)
+            }catch{
+                print("Error des de ViewModel: error al editar mensaje")
+            }
+        }else{
+            let original = messages.first { $0.id == replyingToMessageID}?.content
+            await sendPrivateMessage(
+                chatID:              chatID,
+                messageText:         trimmed,
+                replyingToMessageID: replyingToMessageID,
+                replyingToText:      original,
+                replyingToNickname:  replyingToNickname
+            )
+        }
+    }
 }
