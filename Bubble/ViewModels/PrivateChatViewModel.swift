@@ -339,6 +339,9 @@ class PrivateChatViewModel {
         }
     }
 
+    /// Devuelve el `UserModel` asociado al `id` recibido.
+    /// - Parameter id: Identificador del usuario que se busca.
+    /// - Returns: El modelo si está en caché o si coincide con el usuario actual.
     func userModel(for id: String) -> UserModel? {
         return usersCache[id] ?? (id == user?.id ? user : nil)
     }
@@ -484,6 +487,11 @@ class PrivateChatViewModel {
         }
     }
     
+    /// Indica si hay que mostrar el avatar junto al mensaje actual.
+    /// - Parameters:
+    ///   - currentMessage: Mensaje que se está dibujando.
+    ///   - messages: Array completo de mensajes (ordenados de antiguo → nuevo).
+    /// - Returns: `true` si el avatar debe mostrarse.
     func shouldShowAvatar(currentMessage: MessageModel, in messages: [MessageModel]) -> Bool {
         guard let index = messages.firstIndex(where: { $0.id == currentMessage.id }) else {
             return true
@@ -529,6 +537,7 @@ class PrivateChatViewModel {
         }
     }
     
+    /// Maneja el envío o la edición de un mensaje desde la vista, centralizando toda la lógica en el ViewModel.
     func sendText(
         in chatID: String,
         text: String,
