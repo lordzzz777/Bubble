@@ -234,6 +234,32 @@ struct PublicMessageBubbleView: View {
                         alignment: .top
                     )
                     .contextMenu {
+                        
+                        Button(action: {
+                            
+                            // logica reenviar a mi lista de contactos ...
+                            
+                        }, label: {
+                            Text("Reenviar")
+                            Image(systemName: "arrowshape.turn.up.right")
+                        })
+                        
+                        Button(action: {
+                            Task{
+                                await publicChatViewModel.copyToClopboard(message.content, $showCopiedToast)
+                            }
+                        }, label: {
+                            Text("Copiar")
+                            Image(systemName: "document.on.document")
+                        })
+                        
+                        Button(action: {
+                            isEmojiPickerVisible.toggle()
+                        }) {
+                            Text("Emojis")
+                            Image(systemName: "face.smiling")
+                                .foregroundColor(.yellow)
+                        }
                         if isCurrentUser {
                             Button(action: {
                                 withAnimation(.spring(duration: .zero)) {
@@ -270,33 +296,6 @@ struct PublicMessageBubbleView: View {
                             })
                             
                         }
-                        
-                        Button(action: {
-                            
-                            // logica reenviar a mi lista de contactos ...
-                            
-                        }, label: {
-                            Text("Reenviar")
-                            Image(systemName: "arrowshape.turn.up.right")
-                        })
-                        
-                        Button(action: {
-                            Task{
-                                await publicChatViewModel.copyToClopboard(message.content, $showCopiedToast)
-                            }
-                        }, label: {
-                            Text("Copiar")
-                            Image(systemName: "document.on.document")
-                        })
-                        
-                        Button(action: {
-                            isEmojiPickerVisible.toggle()
-                        }) {
-                            Text("Emojis")
-                            Image(systemName: "face.smiling")
-                                .foregroundColor(.yellow)
-                        }
-                        
                         
                     }
                     
