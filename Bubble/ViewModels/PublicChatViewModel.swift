@@ -268,45 +268,6 @@ class PublicChatViewModel {
         let deletedMessages = messages.filter {
             $0.content == "Mensaje eliminado" && $0.timestamp.dateValue() < cutoffDate
         }
-        
-//        for message in deletedMessages {
-//            
-//            // Eliminar del Storage si es tipo multimedia
-//            switch message.type{
-//            case .image: //elimina la imagen
-//                guard message.content.hasPrefix("https://") || message.content.hasPrefix("gs://") else {
-//                    print("URL de audio inválida, se omite: \(message.content)")
-//                    break
-//                }
-//                do{
-//                    let localURL = try await chatMediaService.downloadAndStoreImageLocally(from: message.content)
-//                    try await chatMediaService.deleteImage(localURL: localURL, storageURL: message.content)
-//                    print("Imagen asociada al mensaje \(message.id) eliminada de Storage.")
-//                }catch{
-//                    print("No se pudo eliminar imagen del mensaje \(message.id): \(error.localizedDescription)")
-//                }
-//                
-//            case .audio: // eliminar el audio
-//                
-//                guard message.content.hasPrefix("https://") || message.content.hasPrefix("gs://") else {
-//                    print("URL de audio inválida, se omite: \(message.content)")
-//                    break
-//                }
-//
-//                do{
-//                    try await audioService.deleteVoiceNote(from: message.content)
-//                    print("Audio asociado al mensaje \(message.id) eliminado de Storage.")
-//                }catch{
-//                    print("No se pudo eliminar audio del mensaje \(message.id): \(error.localizedDescription)")
-//                }
-//                
-//            default:
-//                break
-//            }
-//            
-//            // Eliminar de Firestore
-//            await permanentlyDeleteMessage(messageID: message.id)
-//        }
         for message in deletedMessages {
             
             // Validar que tenga una URL válida de Storage (solo para tipos multimedia)

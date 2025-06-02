@@ -23,11 +23,9 @@ actor PrivateChatService {
     private let uid = Auth.auth().currentUser?.uid ?? ""
     private var listenerRegistration: ListenerRegistration?
     
-    
     /// Obtiene los chats en tiempo real en los que el usuario participa.
     /// - Returns: Un `AsyncThrowingStream` que emite un array de `ChatModel` y maneja errores.
     func getChats() -> AsyncThrowingStream<[ChatModel], Error>  {
-        let database = Firestore.firestore()
         let chatsRef = database.collection("chats")
             .whereField("participants", arrayContains: uid)
             .order(by: "lastMessageTimestamp", descending: false)
@@ -145,7 +143,15 @@ actor PrivateChatService {
                         return
                     }
                     
-                    let messages = documents.compactMap { try? $0.data(as: MessageModel.self) }
+                    let messages = documents.compactMap { doc -> MessageModel? in
+                        // Intenta decodificar el documento a MessageModel
+                        guard var msg = try? doc.data(as: MessageModel.self) else { return nil }
+                        // Sobrescribe el id con el verdadero documentID
+                        msg.id = doc.documentID
+                        return msg
+                    }
+
+//                    let messages = documents.compactMap { try? $0.data(as: MessageModel.self) }
                     continuation.yield(messages)
                 }
             
@@ -174,7 +180,6 @@ actor PrivateChatService {
     /// - Parameter uiD: El ID del usuario cuyos chats se desean eliminar.
     /// - Throws: Lanza un error si la eliminación falla.
     func deleteAllChatsForUser(uiD: String) async throws {
-        let database = Firestore.firestore()
         let chatsRef = database.collection("chats").whereField("participants", arrayContains: uid)
         
         do{
@@ -218,4 +223,125 @@ actor PrivateChatService {
             throw PrivateChatServiceError.sendMessageFailed
         }
     }
+    
+    /// Envía un mensaje avanzado al chat y actualiza los metadatos del chat en Firestore.
+    ///
+    /// Este método guarda un `MessageModel` completo en la subcolección `messages`
+    /// del chat especificado y actualiza los campos de resumen en el documento principal del chat.
+    ///
+    /// - Parameters:
+    ///   - chatID: El identificador del chat al que se enviará el mensaje.
+    ///   - message: El objeto `MessageModel` completo a enviar.
+    /// - Throws: `PrivateChatServiceError.sendMessageFailed` si ocurre un error al escribir en Firestore.
+    func sendAdvancedMessage(chatID: String, message: MessageModel) async throws{
+        do{
+            try await database.collection("chats")
+                .document(chatID).collection("messages")
+                .document(message.id)
+                .setData(message.dictionary)
+            
+            let updataChatInfo: [String: Any] = [
+                "lastMessageTimestamp": message.timestamp,
+                "lastMessageSenderUserID": uid,
+                "lastMessage": message.content,
+                "lastMessageType": message.type.rawValue
+            ]
+
+            try await database.collection("chats").document(chatID).updateData(updataChatInfo)
+        }catch{
+            throw PrivateChatServiceError.sendMessageFailed
+        }
+    }
+    
+    /// Lee una sola vez el documento `users/{id}` y devuelve el `UserModel`.
+    /// - Returns: `UserModel` si existe, `nil` si el doc. no está.
+    /// - Throws: Propaga cualquier error de Firestore.
+    func getUserOnce(by id: String) async throws -> UserModel? {
+        guard !id.isEmpty else { return nil }
+        
+        let docRef = database.collection("users").document(id)
+        let snapshot = try await docRef.getDocument()
+        return try snapshot.data(as: UserModel.self)
+    }
+   
+    /// Actualiza el contenido de un mensaje específico por ID.
+    func editMessage(chatsID: String, messageID: String, newContent: String) async throws {
+        guard !messageID.isEmpty, !chatsID.isEmpty else{
+            throw PrivateChatServiceError.fetchingMessagesFailed
+        }
+        
+        let chatRef = database.collection("chats").document(chatsID)
+        let messageRef = chatRef.collection("messages").document(messageID)
+
+        do{
+            try await messageRef.updateData(["content": newContent])
+            print("Editando mensaje con ID: \(messageID)")
+        }catch{
+            print("Error desde server: No se pudo editar: ")
+            throw error
+        }
+    }
+    
+    /// Marca un mensaje como eliminado, sin borrarlo físicamente.
+    func deleteMessage(chatID: String, messageID: String) async throws {
+        guard !messageID.isEmpty, !chatID.isEmpty else{
+            throw PrivateChatServiceError.fetchingMessagesFailed
+        }
+        
+        let chatRef = database.collection("chats").document(chatID)
+        let messageRef = chatRef.collection("messages").document(messageID)
+        
+        do{
+            try await messageRef.updateData(["content": "Mensaje eliminado"])
+        }catch{
+            print("Mensaje del server -> Error, el mensaje no se ha actualizado")
+            throw error
+        }
+    }
+    
+    /// Elimina físicamente un mensaje de Firestore.
+    func permanentlyDeleteMessage(chatID: String, messageID: String) async throws {
+        guard !messageID.isEmpty, !chatID.isEmpty else{
+            throw PrivateChatServiceError.fetchingMessagesFailed
+        }
+        
+        let chatRef = database.collection("chats").document(chatID)
+        let messageRef = chatRef.collection("messages").document(messageID)
+        
+        do{
+            try await messageRef.delete()
+            print("Mensaje eliminado con exito")
+        }catch{
+            print("Mensaje del server -> Error Al eliminar mensaje: ")
+            throw error
+        }
+    }
+    
+    /// Agrega metodo para actualizar la reacción
+    func reactToMessage(chatsID: String, messageID: String, emoji: String, userID: String) async throws {
+        let chatRef = database.collection("chats").document(chatsID)
+        let messageRef = chatRef.collection("messages").document(messageID)
+        
+        do {
+            try await messageRef.updateData(["reactions.\(userID)": emoji])
+        } catch {
+            print("Error Server: no se guardó la reacción")
+            throw error
+        }
+    }
+    
+    
+    /// Elimina la reaccion del mensaje
+    func removeReaction(fromChatsIDID chatsID: String, messageID: String, userID: String) async throws {
+        let chatRef = database.collection("chats").document(chatsID)
+        let messageRef = chatRef.collection("messages").document(messageID)
+        
+        do {
+            try await messageRef.updateData(["reactions.\(userID)": FieldValue.delete()])
+        }catch{
+            print("Error Server: no se elimino la reacción")
+            throw error
+        }
+    }
+    
 }

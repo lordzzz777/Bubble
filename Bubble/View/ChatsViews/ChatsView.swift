@@ -18,6 +18,7 @@ struct ChatsView: View {
     @State private var createCommunityViewModel = CreateCommunityViewModel()
     @State private var isMessageDestructive = false
     @State private var isShowingToggle = false
+    @State private var showEmptyState = false
     
     // Esta es la variable que almacenará el valor seleccionado del Picker
     @State private var chatIdSelected: String = ""
@@ -30,19 +31,21 @@ struct ChatsView: View {
             // Usamos un Picker con un estilo segmentado
             VStack{
                 
-                if $chatsViewModel.chats.isEmpty {
-                    
-                    Image(systemName: "bubble.left.and.exclamationmark.bubble.right")
-                        .font(.system(size: 100))
-                    
-                    Text("No tienes chats aún")
-                        .font(.largeTitle.bold())
-                        .padding(.bottom, 20)
-                    
+                if $chatsViewModel.chats.isEmpty  {
+                    if showEmptyState {
+                        VStack {
+                            Image(systemName: "bubble.left.and.exclamationmark.bubble.right")
+                                .font(.system(size: 100))
+                            
+                            Text("No tienes chats aún")
+                                .font(.largeTitle.bold())
+                                .padding(.bottom, 20)
+                        }.transition(.opacity)
+                    }
                 }else{
 
                     List {
-                        ForEach(chatsViewModel.chats, id: \.lastMessageTimestamp) { chat in
+                        ForEach(chatsViewModel.filteredChats, id: \.id) { chat in
                             ListChatRowView(chat: chat)
                                 .swipeActions {
                                     Button("Borrar", systemImage: "trash.fill") {
@@ -52,7 +55,8 @@ struct ChatsView: View {
                                     .tint(.red)
                                 }
                         }
-                        .listStyle(PlainListStyle())
+                       //.listStyle(PlainListStyle())
+                        .listStyle(.plain)
                         
                     }.overlay(content: {
                         if isShowingToggle{
@@ -91,6 +95,13 @@ struct ChatsView: View {
             }
             .onChange(of: userViewModel.user?.isOnline) { _, _ in
                 Task { await userViewModel.loadUser() }
+            }
+            .onAppear {
+                startEmptyStateTimer()
+            }
+            .onChange(of: chatsViewModel.chats) { _, chats in
+                // En cuanto lleguen chats cancelamos el mensaje
+                if !chats.isEmpty { showEmptyState = false }
             }
 
             // Alerta de Error
@@ -139,6 +150,7 @@ struct ChatsView: View {
             .sheet(isPresented: $createCommunityViewModel.showCreateNewCommunity, onDismiss: {
                 Task {
                     await createCommunityViewModel.removeImageFromFirebaseStorage(imageURL: createCommunityViewModel.community.imgUrl)
+                    
                 }
             }) {
                 CreateCommunityView(createCommunityViewModel: createCommunityViewModel)
@@ -146,6 +158,17 @@ struct ChatsView: View {
         }
     }
     
+    /// Temporizador
+    private func startEmptyStateTimer() {
+        // Espera p.ej. 1,5 s antes de mostrar
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            if chatsViewModel.chats.isEmpty {
+                withAnimation { showEmptyState = true }
+            }
+        }
+    }
+
 }
 
 #Preview {
