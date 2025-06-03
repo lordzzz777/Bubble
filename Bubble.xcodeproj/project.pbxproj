@@ -363,11 +363,13 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Bubble/Preview Content\"";
-				DEVELOPMENT_TEAM = 6Z8MU97UL5;
+				DEVELOPMENT_TEAM = W5HZTU6SV8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Bubble/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Se necesita la cámara para tomar fotos y enviarlas en el chat.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Bubble necesita permiso para usar su microfono para notas de voz";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Guardaremos la foto que captures en tu carrete";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -378,7 +380,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.lordzzz.Bubble;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lordzzz2.Bubble;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -400,7 +402,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Bubble/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Se necesita la cámara para tomar fotos y enviarlas en el chat.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Bubble necesita permiso para usar su microfono para notas de voz";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Guardaremos la foto que captures en tu carrete";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -411,7 +415,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.lordzzz.Bubble;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lordzzz2.Bubble;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
