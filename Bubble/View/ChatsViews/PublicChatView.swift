@@ -22,6 +22,7 @@ struct PublicChatView: View {
     
     @State private var selectedImageItem: PhotosPickerItem?
     @State private var isShowingPhotosPicker = false
+    @State private var isShowingCamera = false
     
     @State private var replyingToMessageID: String? = nil
     @State private var replyingToNickname: String? = nil
@@ -123,17 +124,16 @@ struct PublicChatView: View {
                 }
                 HStack(spacing: 8) {
                     Menu(content: {
-                        
-                        Button { // Agregar archivos
-                            isShowingFileImporter = true
+                        Button { // Camara de foto
+                            isShowingCamera = true
                         } label: {
-                            Text("Agrgar archivos").bold()
-                            Image(systemName: "doc")
+                            Text("Cámara de fotos").bold()
+                            Image(systemName: "camera")
                                 .font(.system(size: 22))
                                 .foregroundStyle(.primary)
                         }
                         
-                        Button { // Agregar archivos
+                        Button { // Carrete de foto
                             isShowingPhotosPicker  = true
                         } label: {
                             Text("Carrete de fotos").bold()
@@ -143,10 +143,10 @@ struct PublicChatView: View {
                         }
                         
                         Button { // Agregar archivos
-                            // ...
+                            isShowingFileImporter = true
                         } label: {
-                            Text("Cámara de fotos").bold()
-                            Image(systemName: "camera")
+                            Text("Agrgar archivos").bold()
+                            Image(systemName: "doc")
                                 .font(.system(size: 22))
                                 .foregroundStyle(.primary)
                         }
@@ -246,7 +246,7 @@ struct PublicChatView: View {
             }
             .onChange(of: selectedImageItem){ oldValue, newValue in
                 Task{
-                    await chatMediaViewModel.sendImageFromPicker(newValue)
+                    await chatMediaViewModel.sendImageFromPicker(newValue, scope: .public)
                     selectedImageItem = nil
                 }
             }
@@ -281,7 +281,19 @@ struct PublicChatView: View {
                     
                 }
             }
-            
+            .sheet(isPresented: $isShowingCamera) {
+                CameraPicker { image in
+                    isShowingCamera = false
+                    guard let img = image else { return }           // cancelado
+                    
+                    Task {
+                        try? await chatMediaViewModel.sendCameraImage( // helper en el VM
+                            img,
+                            scope: .public
+                        )
+                    }
+                }
+            }
             .fileImporter(
                 isPresented: $isShowingFileImporter,
                 allowedContentTypes: [.item],

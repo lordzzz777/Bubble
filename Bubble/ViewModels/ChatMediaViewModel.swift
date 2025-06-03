@@ -29,7 +29,7 @@ final class ChatMediaViewModel{
     var errorMessage: String = ""
     
     /// Envía un mensaje con imagen seleccionada desde el picker.
-    func sendImageFromPicker(_ pickerItem: PhotosPickerItem?) async {
+    func sendImageFromPicker(_ pickerItem: PhotosPickerItem?, scope: ChatScope) async {
         do {
             // 1. Obtener imagen seleccionada
             let image = try await chatMediaService.pikerImage(from: pickerItem)
@@ -44,12 +44,43 @@ final class ChatMediaViewModel{
             
             // 4. Crear y enviar mensaje
             try await sendImageMessage(with: imageURL)
+            
+            try await sendImageMessage(with: imageURL, scope: scope)
         } catch {
+            errorTitle   = "Error al enviar imagen"
             errorMessage = error.localizedDescription
             showError = true
         }
     }
     
+    // 2. Igual que con audio: decide colección según el scope
+    private func sendImageMessage(with url: String, scope: ChatScope) async throws {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        let message = MessageModel(
+            id:           UUID().uuidString,
+            senderUserID: uid,
+            content:      url,
+            timestamp:    Timestamp(date: .now),
+            type:         .image
+        )
+        
+        let ref: CollectionReference
+        switch scope {
+        case .public:
+            ref = Firestore.firestore()
+                .collection("public_chats")
+                .document("global_chat")
+                .collection("messages")
+        case .privateChat(let chatID):
+            ref = Firestore.firestore()
+                .collection("chats")
+                .document(chatID)
+                .collection("messages")
+        }
+        
+        try await ref.document(message.id).setData(message.dictionary)
+    }
     
     /// Crea y envía un mensaje con URL de imagen.
     func sendImageMessage(with imageURL: String) async throws {
@@ -180,6 +211,12 @@ final class ChatMediaViewModel{
         try await ref.document(message.id).setData(message.dictionary)
     }
     
+    func sendCameraImage(_ image: UIImage, scope: ChatScope) async throws {
+        guard let data = await chatMediaService.compressImage(image) else { return }
+        let url = try await chatMediaService.uploadImage(data)
+        try await sendImageMessage(with: url, scope: scope)
+    }
+
     /// Guarda un mensaje en la colección de mensajes del chat público en Firestore.
     /// - Parameter message: El mensaje a guardar.
 //    func saveMessageToFirestore(_ message: MessageModel) async throws {

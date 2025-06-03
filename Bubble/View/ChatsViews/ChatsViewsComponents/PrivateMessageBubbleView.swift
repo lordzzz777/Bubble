@@ -41,7 +41,7 @@ struct PrivateMessageBubbleView: View {
             : (friendUser?.imgUrl  ?? ""))
     }
     
-    
+    var privateOnImageTap: ((URL) -> Void)? = nil
     
     // Bindings recibidos desde `PrivateChatView`
     @Binding var messageText: String
@@ -151,6 +151,22 @@ struct PrivateMessageBubbleView: View {
                                 duration: message.audioDuration ?? 0,
                                 chatAudioViewModel: chatAudioViewModel
                             )
+                        case .image:
+                            if let url = URL(string: message.content){
+                                KFImage(source: .network(url))
+                                    .cacheOriginalImage()          
+                                    .placeholder { ProgressView() }
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(maxWidth: 220, maxHeight: 220)
+                                    .clipShape(
+                                        RoundedRectangle(cornerRadius: 10)
+                                    )
+                                    .onTapGesture {
+                                        privateOnImageTap?(url)
+                                    }
+                                    
+                            }
                             
                             // aqui se le añade los caso oae compartir audio, imagenes...
                         default:

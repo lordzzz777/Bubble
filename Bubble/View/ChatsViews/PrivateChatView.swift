@@ -18,6 +18,16 @@ struct PrivateChatView: View {
     @State private var audioViewMode = ChatAudioViewModel()
     @State private var chatMediaViewModel = ChatMediaViewModel()
     
+    // Paara mostrar y añadir, una imajen del carrete
+    @State private var selectedImageItem: PhotosPickerItem?
+    @State private var isShowingPhotosPicker = false
+    
+    // Para mostrar imajen flotante
+    @State private var selectedImageURL: URL? = nil
+    @State private var showImageOverlay = false
+    @State private var isShowingCamera = false
+
+    
     // UI State
     @State private var privateChatViewModel = PrivateChatViewModel()
     @State private var messageText: String = ""
@@ -27,6 +37,7 @@ struct PrivateChatView: View {
     @State private var replyingToMessageID: String? = nil
     @State private var replyingToNickname: String? = nil
     @State private var textFieldHeight: CGFloat = 40
+    @State private var selectedFileURL: URL? = nil
     
     // Datos del contexto
     var user: UserModel
@@ -72,7 +83,7 @@ struct PrivateChatView: View {
                                     case .acceptedFriendRequest:
                                         Text("Tú y \(user.nickname) ahora son amigos")
                                             .font(.caption).foregroundStyle(.secondary)
-                                    case .text, .audio:
+                                    case .text, .audio, .image:
                                         
                                         let sender = privateChatViewModel.userModel(for: message.senderUserID)
                                         let showAvatar = privateChatViewModel.shouldShowAvatar(currentMessage: message, in: group.value)
@@ -83,11 +94,18 @@ struct PrivateChatView: View {
                                             friendUser: user,
                                             senderUser: sender,
                                             showAvatar: showAvatar,
+                                            privateOnImageTap: { url in
+                                                selectedImageURL = url
+                                                withAnimation {
+                                                    showImageOverlay = true
+                                                }
+                                            },
                                             messageText: $messageText,
                                             isEditing: $isEditing,
                                             editingMessageID: $editingMessageID,
                                             replyingToMessageID: $replyingToMessageID,
-                                            replyingToNickname: $replyingToNickname
+                                            replyingToNickname: $replyingToNickname,
+                                            
                                         )
                                         .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
                                         .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
@@ -153,12 +171,44 @@ struct PrivateChatView: View {
                 if privateChatViewModel.friendStatus == .accepted {
                     ZStack(alignment: .bottomTrailing) {
                         HStack(spacing: 6){
+                            Menu(content:{
+                                Button { // LLama a la cámar
+                                    isShowingCamera = true
+                                } label: {
+                                    Text("Cámara de fotos").bold()
+                                    Image(systemName: "camera")
+                                        .font(.system(size: 22))
+                                        .foregroundStyle(.primary)
+                                }
+                                
+                                Button { // LLama a la modal del carrete
+                                    isShowingPhotosPicker  = true
+                                } label: {
+                                    Text("Carrete de fotos").bold()
+                                    Image(systemName: "photo.on.rectangle")
+                                        .font(.system(size: 22))
+                                        .foregroundStyle(.primary)
+                                }
+                                
+                            }, label: {
+                                Image(systemName: "paperclip").font(.system(size: 22).bold())
+                                    .foregroundStyle(.primary)
+                            })
+                            
+                            // Agregar imagen de carrete
+                            .photosPicker(
+                                isPresented: $isShowingPhotosPicker,
+                                selection: $selectedImageItem,
+                                matching: .images
+                            )
+
+                            
                             TextField(
                                 isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...",
                                 text: $messageText,
                                 onCommit: {
-                                awaitSendText()
-                            })
+                                    awaitSendText()
+                                })
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .frame(minHeight: textFieldHeight)
                             .padding(.trailing, 20)
@@ -177,7 +227,7 @@ struct PrivateChatView: View {
                                 awaitSendText()
                             } label: {
                                 Image( systemName: isEditing ?  "pencil.circle.fill" : "arrow.up.circle.fill")
-                                   // .rotationEffect(.degrees(45))
+                                // .rotationEffect(.degrees(45))
                                     .font(.title2)
                             }
                             .opacity(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0 : 1)
@@ -185,13 +235,14 @@ struct PrivateChatView: View {
                             .animation(.easeInOut(duration: 0.15), value: messageText)
                             
                             
-
+                            
                             if messageText.isEmpty {
                                 privateButtonTap()
                                     .animation(.easeInOut(duration: 0.15), value: messageText)
                             }
                             
                         }.padding(.trailing, 4)
+                        
                     }
                     .padding(8)
                     .clipShape(
@@ -234,12 +285,71 @@ struct PrivateChatView: View {
                 }
                 
             }
+            .onChange(of: selectedImageItem) { _, newItem in
+                Task {
+                    await chatMediaViewModel.sendImageFromPicker(
+                        newItem,
+                        scope: .privateChat(chat.id)
+                    )
+                    selectedImageItem = nil
+                }
+            }
+            .overlay {
+                if showImageOverlay, let url = selectedImageURL {
+                    
+                    // Capa semitransparente
+                    Color.black.opacity(0.6)
+                        .ignoresSafeArea()
+                    
+                    // Contenedor que conoce el tamaño de pantalla disponible
+                    GeometryReader { geo in
+                        ScrollView([.horizontal, .vertical], showsIndicators: false) {
+                            KFImage(url)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)                 // ← mantiene proporción
+                                .frame(                                         // ← NO crece más de la pantalla
+                                    maxWidth:  geo.size.width,
+                                    maxHeight: geo.size.height
+                                )
+                                .clipped()
+                        }
+                        // Para centrar cuando la imagen sea más pequeña que la pantalla
+                        .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
+                    }
+                    .transition(.scale.combined(with: .opacity))
+                    .onTapGesture { withAnimation { showImageOverlay = false } }
+                    .contextMenu(menuItems: {
+                        Button("Copiar"){
+                            // ...
+                        }
+                        
+                        Button("Compartir"){
+                           // ...
+                        }
+                    })
+                }
+            }
             .task {
                 await privateChatViewModel.fetchMessages(chatID: chat.id)
                 if privateChatViewModel.showError {
                     print(privateChatViewModel.errorMessage)
                 }
             }
+            
+            .sheet(isPresented: $isShowingCamera) {
+                CameraPicker { image in
+                    isShowingCamera = false
+                    guard let img = image else { return }           // cancelado
+                    
+                    Task {
+                        try? await chatMediaViewModel.sendCameraImage( // helper en el VM
+                            img,
+                            scope: .privateChat(chat.id)
+                        )
+                    }
+                }
+            }
+
             .alert(isPresented: $privateChatViewModel.showError) {
                 Alert(
                     title: Text(privateChatViewModel.errorTitle),
