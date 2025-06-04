@@ -17,6 +17,7 @@ struct PrivateChatView: View {
     @Environment(PrivateChatViewModel.self) private var chatsViewModel
     @State private var audioViewMode = ChatAudioViewModel()
     @State private var chatMediaViewModel = ChatMediaViewModel()
+    @State private var chatFileViewModel = ChatFileViewModel()
     
     // Paara mostrar y añadir, una imajen del carrete
     @State private var selectedImageItem: PhotosPickerItem?
@@ -26,7 +27,13 @@ struct PrivateChatView: View {
     @State private var selectedImageURL: URL? = nil
     @State private var showImageOverlay = false
     @State private var isShowingCamera = false
+    
+    // Variable que guarda el estado del de copia (poerta papeles)
+    @State private var showCopiedToast = false
 
+    // Agregar archivo PDF
+    @State private var isShowingFileImporter = false
+    @State private var selectedFileURL: URL? = nil
     
     // UI State
     @State private var privateChatViewModel = PrivateChatViewModel()
@@ -37,7 +44,7 @@ struct PrivateChatView: View {
     @State private var replyingToMessageID: String? = nil
     @State private var replyingToNickname: String? = nil
     @State private var textFieldHeight: CGFloat = 40
-    @State private var selectedFileURL: URL? = nil
+    
     
     // Datos del contexto
     var user: UserModel
@@ -83,7 +90,7 @@ struct PrivateChatView: View {
                                     case .acceptedFriendRequest:
                                         Text("Tú y \(user.nickname) ahora son amigos")
                                             .font(.caption).foregroundStyle(.secondary)
-                                    case .text, .audio, .image:
+                                    case .text, .audio, .image, .file:
                                         
                                         let sender = privateChatViewModel.userModel(for: message.senderUserID)
                                         let showAvatar = privateChatViewModel.shouldShowAvatar(currentMessage: message, in: group.value)
@@ -105,7 +112,7 @@ struct PrivateChatView: View {
                                             editingMessageID: $editingMessageID,
                                             replyingToMessageID: $replyingToMessageID,
                                             replyingToNickname: $replyingToNickname,
-                                            
+                                            showCopiedToast: $showCopiedToast
                                         )
                                         .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
                                         .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
@@ -186,6 +193,15 @@ struct PrivateChatView: View {
                                 } label: {
                                     Text("Carrete de fotos").bold()
                                     Image(systemName: "photo.on.rectangle")
+                                        .font(.system(size: 22))
+                                        .foregroundStyle(.primary)
+                                }
+                                
+                                Button { // Agregar archivos
+                                    isShowingFileImporter = true
+                                } label: {
+                                    Text("Agrgar archivos").bold()
+                                    Image(systemName: "doc")
                                         .font(.system(size: 22))
                                         .foregroundStyle(.primary)
                                 }
@@ -306,27 +322,36 @@ struct PrivateChatView: View {
                         ScrollView([.horizontal, .vertical], showsIndicators: false) {
                             KFImage(url)
                                 .resizable()
-                                .aspectRatio(contentMode: .fit)                 // ← mantiene proporción
-                                .frame(                                         // ← NO crece más de la pantalla
+                                .aspectRatio(contentMode: .fit)
+                                .frame(
                                     maxWidth:  geo.size.width,
                                     maxHeight: geo.size.height
                                 )
                                 .clipped()
                         }
-                        // Para centrar cuando la imagen sea más pequeña que la pantalla
+                // Para centrar cuando la imagen sea más pequeña que la pantalla
                         .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
+                        
                     }
                     .transition(.scale.combined(with: .opacity))
                     .onTapGesture { withAnimation { showImageOverlay = false } }
                     .contextMenu(menuItems: {
-                        Button("Copiar"){
-                            // ...
-                        }
+                        // boton de copiar al portapapeles
+                        Button(action: {
+                            Task{
+                                await  privateChatViewModel.privateCopyToClopboard(url, $showCopiedToast)
+                            }
+                        }, label: {
+                            Text("Copiar")
+                            Image(systemName: "document.on.document")
+                                .foregroundColor(.yellow)
+                        })
                         
                         Button("Compartir"){
                            // ...
                         }
                     })
+                    
                 }
             }
             .task {
@@ -349,7 +374,30 @@ struct PrivateChatView: View {
                     }
                 }
             }
-
+            .fileImporter(
+                isPresented: $isShowingFileImporter,
+                allowedContentTypes: [.item],
+                allowsMultipleSelection: false){ result in
+                    switch result {
+                    case .success(let urls):
+                        if let selectedURL = urls.first {
+                            selectedFileURL = selectedURL
+                            Task{
+                                do{
+                                    try await chatFileViewModel.validateFileSize(selectedURL)
+                                    await chatFileViewModel.sendFileMessage(selectedURL, scope:.privateChat(chat.id), replyingTo: replyingToMessageID)
+                                    replyingToMessageID = nil
+                                }catch{
+                                    print("Error al validad archivo")
+                                }
+                            }
+                        }
+                    case .failure(let error):
+                        print("Error al seleccionar archivo: \(error.localizedDescription)")
+                    }
+                }
+            
+            
             .alert(isPresented: $privateChatViewModel.showError) {
                 Alert(
                     title: Text(privateChatViewModel.errorTitle),

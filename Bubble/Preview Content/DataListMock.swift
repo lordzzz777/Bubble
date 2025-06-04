@@ -26,27 +26,87 @@ import FirebaseFirestore
 //    .init(nameAlias: "Veronica27", nameImage: "veronica", dataTimer: "21:07")*/
 //]
 
-@Observable
-class Mock {
+//@Observable
+//class Mock {
+//    
+//    // ─── Mensaje de ejemplo ──────────────────────────────────────────────
+//    let sampleMessage = MessageModel(
+//        id: "84iKQucP0pOCPOFOp4Db",
+//        senderUserID: "1UAaH1mnl6XOQbPJqNz6qnnN8ku1",
+//        content: "Hola. ¿Cómo estás?",
+//        timestamp: Timestamp(),          // ahora mismo
+//        type: .text
+//    )
+//    
+//    // ─── Usuario de ejemplo ─────────────────────────────────────────────
+//    let sampleUser = UserModel(
+//        id: "ZvwqAdAu9uhXmmDrXuWXCosfuNC2",
+//        nickname: "Lordzzz",
+//        imgUrl: "https://example.com/avatar.png",
+//        lastConnectionTimeStamp: Timestamp(),
+//        isOnline: true,
+//        chats: [],
+//        friends: [],
+//        isDeleted: false
+//    )
+//}
+
+#if DEBUG
+import FirebaseFirestore          // para Timestamp
+
+/// Datos de prueba para vistas Preview.
+struct Mock {
     
-    // ─── Mensaje de ejemplo ──────────────────────────────────────────────
-    let sampleMessage = MessageModel(
-        id: "84iKQucP0pOCPOFOp4Db",
-        senderUserID: "1UAaH1mnl6XOQbPJqNz6qnnN8ku1",
-        content: "Hola. ¿Cómo estás?",
-        timestamp: Timestamp(),          // ahora mismo
-        type: .text
+    // ⚪️ Usuario actual
+    let currentUser = UserModel(
+        id:                     "user_me",
+        nickname:               "Yo",
+        imgUrl:                 "",
+        lastConnectionTimeStamp: Timestamp(date: .now),
+        isOnline:               true,
+        chats:                  [],
+        friends:                [],
+        isDeleted:              false
     )
     
-    // ─── Usuario de ejemplo ─────────────────────────────────────────────
-    let sampleUser = UserModel(
-        id: "ZvwqAdAu9uhXmmDrXuWXCosfuNC2",
-        nickname: "Lordzzz",
-        imgUrl: "https://example.com/avatar.png",
-        lastConnectionTimeStamp: Timestamp(),
-        isOnline: true,
-        chats: [],
-        friends: [],
-        isDeleted: false
+    // 🟣 Amigo con el que chateamos
+    let friendUser = UserModel(
+        id:                     "user_friend",
+        nickname:               "Ana",
+        imgUrl:                 "",
+        lastConnectionTimeStamp: Timestamp(date: .now),
+        isOnline:               true,
+        chats:                  [],
+        friends:                [],
+        isDeleted:              false
+    )
+    
+    // ✉️ Mensaje PDF
+    let samplePDFMessage = MessageModel(
+        id:             "m1",
+        senderUserID:   "user_friend",
+        content:        "https://example.com/ejemplo.pdf",
+        timestamp:      Timestamp(date: .now),
+        type:           .file
+    )
+    
+    // ✉️ Mensaje de audio
+    let sampleAudioMessage = MessageModel(
+        id:             "m2",
+        senderUserID:   "user_me",
+        content:        "https://example.com/nota.m4a",
+        timestamp:      Timestamp(date: .now),
+        type:           .audio,
+        audioDuration:  12.3
+    )
+    
+    // ✉️ Mensaje de texto
+    let sampleTextMessage = MessageModel(
+        id:             "m3",
+        senderUserID:   "user_friend",
+        content:        "¡Hola! Este es un mensaje de prueba 🤖",
+        timestamp:      Timestamp(date: .now),
+        type:           .text
     )
 }
+#endif

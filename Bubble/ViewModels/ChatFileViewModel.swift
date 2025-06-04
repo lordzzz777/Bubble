@@ -9,6 +9,7 @@ import Foundation
 import UniformTypeIdentifiers
 import FirebaseAuth
 import FirebaseCore
+import FirebaseFirestore
 import SwiftUI
 
 @Observable @MainActor
@@ -86,13 +87,19 @@ final class ChatFileViewModel {
         }
     }
     
-    /// Sube un archivo, crea un mensaje de tipo `.file` y lo envía al chat público.
+    /// Sube un archivo y envía un mensaje de tipo `.file`.
+    ///
     /// - Parameters:
     ///   - fileURL: URL local del archivo seleccionado.
-    ///   - messageID: (Opcional) ID del mensaje al que se responde, si es una respuesta.
-    func sendFileMessage(_ fileURL: URL, replyingTo messageID: String? = nil) async {
+    ///   - scope:  Ámbito del chat donde se enviará el mensaje
+    ///             (`.public` o `.privateChat(chatID)`).
+    ///   - messageID: (Opcional) ID del mensaje al que se responde, si aplica.
+    func sendFileMessage(_ fileURL: URL,scope: ChatScope, replyingTo messageID: String? = nil) async {
         do {
-            if let result = try await uploadAndPrepareMessage(from: fileURL) {
+            // Subida a Firebase Storage + metadata
+            guard let result = try await uploadAndPrepareMessage(from: fileURL) else {return}
+            
+            // Crear mensaje Firestore
                 let message = MessageModel(
                     id: UUID().uuidString,
                     senderUserID: Auth.auth().currentUser?.uid ?? "system",
@@ -101,8 +108,24 @@ final class ChatFileViewModel {
                     type: .file,
                     replyToMessageID: messageID
                 )
-                try await publicChatService.sendPublicMessage(message)
+            
+            // Seleccionar colección según el ámbito
+            let ref: CollectionReference
+            switch scope {
+            case .public:
+                ref = Firestore.firestore()
+                    .collection("public_chats")
+                    .document("global_chat")
+                    .collection("messages")
+            case .privateChat(let chatID):
+                ref = Firestore.firestore()
+                    .collection("chats")
+                    .document(chatID)
+                    .collection("messages")
             }
+            
+            try await ref.document(message.id).setData(message.dictionary)
+            
         } catch {
             isShowError = true
             errorTitleMessage = "Error al enviar archivo"
