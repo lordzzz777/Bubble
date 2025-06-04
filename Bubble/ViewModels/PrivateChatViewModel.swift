@@ -574,7 +574,7 @@ class PrivateChatViewModel {
     /// al portapapeles y muestra un toast por 2 segundos.
     ///
     /// - Parameters:
-    ///   - message: cualquier formato de archivo y texto.
+    ///   - message: El elemento que se va a copiar al portapapeles.
     ///   - isCopiedToast: Binding a una variable `@State` en la vista que controla la visibilidad del toast.
     func privateCopyToClopboard(_ message: Any?, _ isCopiedToast:Binding<Bool>) async {
         guard let message = message else {return}

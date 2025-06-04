@@ -309,28 +309,14 @@ struct PrivateChatView: View {
                         ScrollView([.horizontal, .vertical], showsIndicators: false) {
                             KFImage(url)
                                 .resizable()
-                                .aspectRatio(contentMode: .fit)                 // ← mantiene proporción
-                                .frame(                                         // ← NO crece más de la pantalla
+                                .aspectRatio(contentMode: .fit)
+                                .frame(
                                     maxWidth:  geo.size.width,
                                     maxHeight: geo.size.height
                                 )
                                 .clipped()
-                                .overlay(
-                                    Group {
-                                        if showCopiedToast {
-                                            Text("Copiado al porta papeles")
-                                                .font(.caption.bold())
-                                                .padding(8)
-                                                .background(.ultraThinMaterial)
-                                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                .transition(.opacity)
-                                                .offset(y: -40)
-                                        }
-                                    },
-                                    alignment: .top
-                                )
                         }
-                        // Para centrar cuando la imagen sea más pequeña que la pantalla
+                // Para centrar cuando la imagen sea más pequeña que la pantalla
                         .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
                         
                     }

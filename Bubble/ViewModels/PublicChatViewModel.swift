@@ -10,6 +10,7 @@ import FirebaseAuth
 import FirebaseFirestore
 import SwiftUI
 import Kingfisher
+import UniformTypeIdentifiers
 
 @Observable @MainActor
 class PublicChatViewModel {
@@ -348,13 +349,48 @@ class PublicChatViewModel {
     /// Copia un texto al portapapeles y muestra un toast por 2 segundos.
     ///
     /// - Parameters:
-    ///   - text: El texto que se va a copiar al portapapeles.
+    ///   - message: El elemento que se va a copiar al portapapeles.
     ///   - showCopiedToast: Binding a una variable `@State` en la vista que controla la visibilidad del toast.
-    func copyToClopboard(_ text: String,_ showCopiedToast: Binding<Bool>) async {
+    func copyToClopboard(_ message: Any?,_ showCopiedToast: Binding<Bool>) async {
+        guard let message = message else {return}
         
-        UIPasteboard.general.string = text
+        let pasted = UIPasteboard.general
+        
+        switch message {
+            
+        case let str as String:
+            pasted.string = str
+            
+        case let img as UIImage:
+            if let data = img.pngData(){
+                pasted.setData(data, forPasteboardType: UTType.png.identifier)
+            }
+        case let url as URL:
+            if url.isFileURL{
+                guard FileManager.default.fileExists(atPath: url.path()) else {return}
+                
+                pasted.setItems([[UTType.fileURL.identifier: url]], options: [:])
+            }else{
+                do{
+                    let (data, _) = try await URLSession.shared.data(from: url)
+                    
+                    if let imgData = UIImage(data: data), let png = imgData.pngData(){
+                        pasted.setData(png, forPasteboardType: UTType.png.identifier)
+                    }else{
+                        pasted.string = url.absoluteString
+                    }
+                    
+                }catch{
+                    pasted.string = url.absoluteString
+                }
+            }
+            
+        default:
+            print("Error archivo no soportado")
+            return
+        }
+        
         showCopiedToast.wrappedValue = true
-        
         do{
             try await Task.sleep(nanoseconds: 2_000_000_000)
             showCopiedToast.wrappedValue = false

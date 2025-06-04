@@ -32,6 +32,7 @@ struct PublicChatView: View {
     @State private var editingMessageID: String? = nil
     @State private var isShowingFileImporter = false
     @State private var selectedFileURL: URL? = nil
+    @State private var showCopiedToast = false
     
     // Para mostrar imagen flotante
     @State private var selectedImageURL: URL? = nil
@@ -253,31 +254,47 @@ struct PublicChatView: View {
             .onDisappear {
                 publicChatViewModel.isPublicChatVisible = false
             }
-            .overlay{
-                if showImageOverlay, let url = selectedImageURL{
-                    ZStack {
-                        Color.black.opacity(0.6)
-                            .ignoresSafeArea()
-                            .onTapGesture {
-                                withAnimation {
-                                    showImageOverlay = false
-                                }
-                            }
+            .overlay {
+                if showImageOverlay, let url = selectedImageURL {
+                    
+                    // Capa semitransparente
+                    Color.black.opacity(0.6)
+                        .ignoresSafeArea()
+                    
+                    // Contenedor que conoce el tamaño de pantalla disponible
+                    GeometryReader { geo in
+                        ScrollView([.horizontal, .vertical], showsIndicators: false) {
+                            KFImage(url)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(
+                                    maxWidth:  geo.size.width,
+                                    maxHeight: geo.size.height
+                                )
+                                .clipped()
+                        }
+                        // Para centrar cuando la imagen sea más pequeña que la pantalla
+                        .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
                         
-                        KFImage(url)
-                            .resizable()
-                            .scaledToFit()
-                            .padding()
-                            .background(Color.white.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
-                            .shadow(radius: 10)
-                            .onTapGesture {
-                                withAnimation {
-                                    showImageOverlay = false
-                                }
-                            }
                     }
                     .transition(.scale.combined(with: .opacity))
+                    .onTapGesture { withAnimation { showImageOverlay = false } }
+                    .contextMenu(menuItems: {
+                        // boton de copiar al portapapeles
+                        Button(action: {
+                            Task{
+                                await publicChatViewModel.copyToClopboard(url, $showCopiedToast)
+                            }
+                        }, label: {
+                            Text("Copiar")
+                            Image(systemName: "document.on.document")
+                                .foregroundColor(.yellow)
+                        })
+                        
+                        Button("Compartir"){
+                            // ...
+                        }
+                    })
                     
                 }
             }
