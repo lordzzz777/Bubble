@@ -9,6 +9,9 @@ import Foundation
 import FirebaseFirestore
 import FirebaseAuth
 import FirebaseCore
+import SwiftUI
+import UniformTypeIdentifiers
+import Kingfisher
 
 enum ChatParticipantRiole {
     case me(UserModel)
@@ -564,6 +567,58 @@ class PrivateChatViewModel {
                 replyingToText:      original,
                 replyingToNickname:  replyingToNickname
             )
+        }
+    }
+    
+    /// Copia un texto, y cualquier fomato de archivo
+    /// al portapapeles y muestra un toast por 2 segundos.
+    ///
+    /// - Parameters:
+    ///   - message: cualquier formato de archivo y texto.
+    ///   - isCopiedToast: Binding a una variable `@State` en la vista que controla la visibilidad del toast.
+    func privateCopyToClopboard(_ message: Any?, _ isCopiedToast:Binding<Bool>) async {
+        guard let message = message else {return}
+        let pasted = UIPasteboard.general
+        switch message{
+            
+        case let stri as String:
+            pasted.string = stri
+            
+        case let img as UIImage:
+            if let data = img.pngData(){
+                pasted.setData(data, forPasteboardType: UTType.png.identifier)
+            }
+            
+        case let url as URL:
+            if url.isFileURL { // ↳ fichero local
+                guard FileManager.default.fileExists(atPath: url.path) else { return }
+                pasted.setItems([[UTType.fileURL.identifier: url]], options: [:])
+            } else {  // ↳ remota http/https
+                do{
+                    let (data, _) = try await URLSession.shared.data(from: url)
+                    
+                    if let imageData = UIImage(data: data), let png = imageData.pngData(){
+                        pasted.setData(png, forPasteboardType: UTType.png.identifier)
+                    }else{
+                        pasted.string = url.absoluteString
+                    }
+                }catch{
+                    pasted.string = url.absoluteString
+                }
+            }
+            
+        default:
+            print("Error archivo no soportado")
+            return
+        }
+        
+        isCopiedToast.wrappedValue = true
+        
+        do{
+            try await Task.sleep(nanoseconds: 2_000_000_000)
+            isCopiedToast.wrappedValue = false
+        }catch{
+            print("Error en la espera del toast")
         }
     }
 }

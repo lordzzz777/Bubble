@@ -17,6 +17,9 @@ struct PrivateMessageBubbleView: View {
     // Estado ventada modal de los emojis
     @State private var isEmojiPickerVisible: Bool = false
     
+    // Copiar al portapapeles
+   // @State private var showCopiedToast = false
+    
     let chatID: String
     var message: MessageModel
     var currentUser: UserModel?
@@ -49,6 +52,7 @@ struct PrivateMessageBubbleView: View {
     @Binding var editingMessageID: String?
     @Binding var replyingToMessageID: String?
     @Binding var replyingToNickname: String?
+    @Binding var showCopiedToast: Bool
     @Bindable var userProfileView: NewAccountViewModel = .init()
     
     
@@ -196,6 +200,20 @@ struct PrivateMessageBubbleView: View {
                         RoundedRectangle(cornerRadius: 10)
                             .fill(bubbleColor)
                     )
+                    .overlay(
+                        Group {
+                            if showCopiedToast {
+                                Text("Copiado al porta papeles")
+                                    .font(.caption.bold())
+                                    .padding(8)
+                                    .background(.ultraThinMaterial)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .transition(.opacity)
+                                    .offset(y: -40)
+                            }
+                        },
+                        alignment: .top
+                    )
                     .contextMenu{
                         // boton de ventana modal emogis
                         Button(action: {
@@ -206,6 +224,16 @@ struct PrivateMessageBubbleView: View {
                                 .foregroundColor(.yellow)
                         })
                         
+                        // boton de copiar al portapapeles
+                        Button(action: {
+                            Task{
+                              await  privateChatViewModel.privateCopyToClopboard(message.content, $showCopiedToast)
+                            }
+                        }, label: {
+                            Text("Copiar")
+                            Image(systemName: "document.on.document")
+                                .foregroundColor(.yellow)
+                        })
                         if isCurrentUser {
                             Button(action: {
                                 messageText = message.content

@@ -26,6 +26,9 @@ struct PrivateChatView: View {
     @State private var selectedImageURL: URL? = nil
     @State private var showImageOverlay = false
     @State private var isShowingCamera = false
+    
+    // Variable que guarda el estado del de copia (poerta papeles)
+    @State private var showCopiedToast = false
 
     
     // UI State
@@ -105,7 +108,7 @@ struct PrivateChatView: View {
                                             editingMessageID: $editingMessageID,
                                             replyingToMessageID: $replyingToMessageID,
                                             replyingToNickname: $replyingToNickname,
-                                            
+                                            showCopiedToast: $showCopiedToast
                                         )
                                         .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
                                         .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
@@ -312,21 +315,44 @@ struct PrivateChatView: View {
                                     maxHeight: geo.size.height
                                 )
                                 .clipped()
+                                .overlay(
+                                    Group {
+                                        if showCopiedToast {
+                                            Text("Copiado al porta papeles")
+                                                .font(.caption.bold())
+                                                .padding(8)
+                                                .background(.ultraThinMaterial)
+                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                .transition(.opacity)
+                                                .offset(y: -40)
+                                        }
+                                    },
+                                    alignment: .top
+                                )
                         }
                         // Para centrar cuando la imagen sea más pequeña que la pantalla
                         .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
+                        
                     }
                     .transition(.scale.combined(with: .opacity))
                     .onTapGesture { withAnimation { showImageOverlay = false } }
                     .contextMenu(menuItems: {
-                        Button("Copiar"){
-                            // ...
-                        }
+                        // boton de copiar al portapapeles
+                        Button(action: {
+                            Task{
+                                await  privateChatViewModel.privateCopyToClopboard(url, $showCopiedToast)
+                            }
+                        }, label: {
+                            Text("Copiar")
+                            Image(systemName: "document.on.document")
+                                .foregroundColor(.yellow)
+                        })
                         
                         Button("Compartir"){
                            // ...
                         }
                     })
+                    
                 }
             }
             .task {
