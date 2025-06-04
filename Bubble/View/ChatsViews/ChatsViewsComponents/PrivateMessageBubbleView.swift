@@ -16,9 +16,12 @@ struct PrivateMessageBubbleView: View {
     
     // Estado ventada modal de los emojis
     @State private var isEmojiPickerVisible: Bool = false
-    
-    // Copiar al portapapeles
-   // @State private var showCopiedToast = false
+
+   // Para Ver Archivos PDF
+    @State private var previewedFileURL: URL? = nil
+    @State private var unsupportedExtension: String? = nil
+    @State private var isPreviewPresented = false
+    @State private var isDownloading = false
     
     let chatID: String
     var message: MessageModel
@@ -27,6 +30,7 @@ struct PrivateMessageBubbleView: View {
     var friendUser: UserModel?
     var senderUser:  UserModel?
     var showAvatar: Bool
+    var privateOnImageTap: ((URL) -> Void)? = nil
     
     private var isCurrentUser: Bool {
         message.senderUserID == currentUser?.id
@@ -44,7 +48,10 @@ struct PrivateMessageBubbleView: View {
             : (friendUser?.imgUrl  ?? ""))
     }
     
-    var privateOnImageTap: ((URL) -> Void)? = nil
+    // Colores para el remitente y el receptor
+    private var bubbleColor: Color {
+        isCurrentUser ? .green.opacity(0.7) : .cyan.opacity(0.7)
+    }
     
     // Bindings recibidos desde `PrivateChatView`
     @Binding var messageText: String
@@ -54,13 +61,6 @@ struct PrivateMessageBubbleView: View {
     @Binding var replyingToNickname: String?
     @Binding var showCopiedToast: Bool
     @Bindable var userProfileView: NewAccountViewModel = .init()
-    
-    
-    // Colores para el remitente y el receptor
-    private var bubbleColor: Color {
-        isCurrentUser ? .green.opacity(0.7) : .cyan.opacity(0.7)
-    }
-    
     
     
     var body: some View {
@@ -172,7 +172,41 @@ struct PrivateMessageBubbleView: View {
                                     
                             }
                             
-                            // aqui se le añade los caso oae compartir audio, imagenes...
+                        case .file :
+                            HStack(spacing: 10){
+                                SmartFileThumbnailView(fileURL: URL(string: message.content) ?? URL(fileURLWithPath: "/dev/null"))
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(URL(string: message.content)?.lastPathComponent ?? "Archivo")
+                                        .font(.caption)
+                                        .lineLimit(1)
+                                    
+                                    Button {
+                                        Task {
+                                            isDownloading = true
+                                            try await chatFileViewModel.previewsFile(message.content, isPreviewPresented: $isPreviewPresented, previewedFileURL: $previewedFileURL, unsupportedExtension: $unsupportedExtension)
+                                            isDownloading = false
+                                        }
+                                    } label: {
+                                        if isDownloading {
+                                            ProgressView()
+                                        } else {
+                                            Label("Abrir archivo", systemImage: "doc.text.viewfinder")
+                                                .font(.subheadline.bold())
+                                                .foregroundStyle(.white)
+                                                .shadow(radius: 10)
+                                        }
+                                    }
+                                    
+                                    .sheet(isPresented: $isPreviewPresented) {
+                                        if let url = previewedFileURL {
+                                            QuickLookPreview(url: url)
+                                        } else {
+                                            ProgressView("Cargando...")
+                                        }
+                                    }
+                                }
+                            }
+                        // aqui se le añade los caso oae compartir audio, imagenes...
                         default:
                             Text(message.content)
                                 .padding(.horizontal, 10)
@@ -305,16 +339,30 @@ struct PrivateMessageBubbleView: View {
     }
 }
 
-//#Preview {
-//    @Previewable @State var mock = Mock()
-//    MessageBubbleView(
-//        chatID: "previewChat",
-//        message: mock.sampleMessage,
-//        user: mock.sampleUser,
-//        messageText: .constant(""),
-//        isEditing: .constant(false),
-//        editingMessageID: .constant(nil)
-//    )
-//    .environment(PrivateChatViewModel())
-//}
+#Preview {
+    @Previewable @State var msgText           = ""
+    @Previewable @State var isEditing         = false
+    @Previewable @State var editingID: String? = nil
+    @Previewable @State var replyID:   String? = nil
+    @Previewable @State var replyName: String? = nil
+    @Previewable @State var copied            = false
+    let mock = Mock()
+    
+    return PrivateMessageBubbleView(
+        chatID:               "chat_mock",
+        message:              mock.samplePDFMessage,
+        currentUser:          mock.currentUser,
+        user:                 mock.currentUser,
+        friendUser:           mock.friendUser,
+        senderUser:           mock.friendUser,
+        showAvatar:           true,
+        messageText:          $msgText,
+        isEditing:            $isEditing,
+        editingMessageID:     $editingID,
+        replyingToMessageID:  $replyID,
+        replyingToNickname:   $replyName,
+        showCopiedToast:      $copied
+    )
+    .environment(PrivateChatViewModel())
+}
 

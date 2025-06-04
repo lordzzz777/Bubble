@@ -322,7 +322,7 @@ struct PublicChatView: View {
                         selectedFileURL = selectedURL
                         Task {
                             try? await chatFileViewModel.validateFileSize(selectedURL)
-                            await chatFileViewModel.sendFileMessage(selectedURL, replyingTo: replyingToMessageID)
+                            await chatFileViewModel.sendFileMessage(selectedURL, scope: .public, replyingTo: replyingToMessageID)
                             replyingToMessageID = nil
                         }
                     }
