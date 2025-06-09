@@ -13,11 +13,12 @@ struct PrivateMessageBubbleView: View {
     @Environment(PrivateChatViewModel.self) private var privateChatViewModel
     @State private var chatFileViewModel = ChatFileViewModel()
     @State private var chatAudioViewModel = ChatAudioViewModel()
+    @State private var bubbleShareViewModel = BubbleShareViewModel()
     
     // Estado ventada modal de los emojis
     @State private var isEmojiPickerVisible: Bool = false
-
-   // Para Ver Archivos PDF
+    
+    // Para Ver Archivos PDF
     @State private var previewedFileURL: URL? = nil
     @State private var unsupportedExtension: String? = nil
     @State private var isPreviewPresented = false
@@ -158,7 +159,7 @@ struct PrivateMessageBubbleView: View {
                         case .image:
                             if let url = URL(string: message.content){
                                 KFImage(source: .network(url))
-                                    .cacheOriginalImage()          
+                                    .cacheOriginalImage()
                                     .placeholder { ProgressView() }
                                     .resizable()
                                     .scaledToFit()
@@ -169,7 +170,7 @@ struct PrivateMessageBubbleView: View {
                                     .onTapGesture {
                                         privateOnImageTap?(url)
                                     }
-                                    
+                                
                             }
                             
                         case .file :
@@ -206,7 +207,7 @@ struct PrivateMessageBubbleView: View {
                                     }
                                 }
                             }
-                        // aqui se le añade los caso oae compartir audio, imagenes...
+                            // aqui se le añade los caso oae compartir audio, imagenes...
                         default:
                             Text(message.content)
                                 .padding(.horizontal, 10)
@@ -249,6 +250,31 @@ struct PrivateMessageBubbleView: View {
                         alignment: .top
                     )
                     .contextMenu{
+                        // Boton de compartir
+                        if let item = bubbleShareViewModel.shareItem(for: message){
+                            if let url = item as? URL{
+                                let preview = SharePreview(
+                                    url.lastPathComponent,
+                                    image: bubbleShareViewModel.icon(for: url)
+                                )
+                                ShareLink(item: url, preview: preview){
+                                    Label("Compartir", systemImage: "square.and.arrow.up")
+                                }
+                                
+                            }else if let str = item as? String{
+                                ShareLink(item: str) {
+                                    Label("Compartir", systemImage: "square.and.arrow.up")
+                                }
+                            }
+                        }else{
+                            // Archivo / Audio aún descargando -> boton desactivado
+                            if message.type == .file || message.type == .audio {
+                                Label("Preparando…", systemImage: "arrow.down").disabled(true)
+                            }
+                        }
+                        
+                        
+                        
                         // boton de ventana modal emogis
                         Button(action: {
                             isEmojiPickerVisible.toggle()
@@ -261,7 +287,7 @@ struct PrivateMessageBubbleView: View {
                         // boton de copiar al portapapeles
                         Button(action: {
                             Task{
-                              await  privateChatViewModel.privateCopyToClopboard(message.content, $showCopiedToast)
+                                await  privateChatViewModel.privateCopyToClopboard(message.content, $showCopiedToast)
                             }
                         }, label: {
                             Text("Copiar")
@@ -300,8 +326,9 @@ struct PrivateMessageBubbleView: View {
                             })
                         }
                         
-
+                        
                     }
+
                     if showAvatar {
                         // pico de la burbuja ..
                         TriangleRight()
@@ -331,10 +358,18 @@ struct PrivateMessageBubbleView: View {
                 
                 .task {
                     await userProfileView.loadUserData()
+                    await bubbleShareViewModel.prepare(for: message)
                     
                 }
             }
+            .alert("Error",
+                   isPresented: .constant(bubbleShareViewModel.errorMessage != nil)) {
+                Button("OK", role: .cancel) { bubbleShareViewModel.errorMessage = nil }
+            } message: {
+                Text(bubbleShareViewModel.errorMessage ?? "")
+            }
             .padding(.bottom, showAvatar ? 20 : 0)
+
         }
     }
 }

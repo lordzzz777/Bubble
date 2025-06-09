@@ -138,31 +138,6 @@ final class ChatMediaViewModel{
     /// - Parameters:
     ///   - url: URL del audio ya subido a Firebase Storage.
     ///   - duration: Duración en segundos de la nota de voz.
-//    func sendVoiceMessage(with url: String, duration: Double) async throws{
-//        do{
-//            guard let currentUserID = Auth.auth().currentUser?.uid else {
-//                print("Usuario no encontrado")
-//                return
-//            }
-//            
-//            let message = MessageModel(
-//                id: UUID().uuidString,
-//                senderUserID: currentUserID,
-//                content: url,
-//                timestamp: Timestamp(date: .now),
-//                type: .audio,
-//                audioDuration: duration
-//            )
-//            
-//            try await saveMessageToFirestore(message)
-//            messages.append(message)
-//        }catch{
-//            showError = true
-//            errorTitle = "Error al enviar nota de voz"
-//            errorMessage = "No se pudo guardar el mensaje con la URL del audio."
-//        }
-//    }
-    
     func sendVoiceMessage(scope: ChatScope, url: String, duration: Double) async throws{
         do{
             guard let currentUserID = Auth.auth().currentUser?.uid else {
@@ -216,25 +191,6 @@ final class ChatMediaViewModel{
         let url = try await chatMediaService.uploadImage(data)
         try await sendImageMessage(with: url, scope: scope)
     }
-
-    /// Guarda un mensaje en la colección de mensajes del chat público en Firestore.
-    /// - Parameter message: El mensaje a guardar.
-//    func saveMessageToFirestore(_ message: MessageModel) async throws {
-//        do{
-//            print("Intentando guardar mensaje: \(message.id)")
-//            
-//            let docRef = Firestore.firestore()
-//                .collection("public_chats")
-//                .document("global_chat")
-//                .collection("messages")
-//                .document(message.id)
-//            try await docRef.setData(message.dictionary)
-//        }catch{
-//            showError = true
-//            errorTitle = "Error al guardar mensaje"
-//            errorMessage = "No se pudo guardar la nota de voz en Firestore."
-//        }
-//    }
     
 }
 

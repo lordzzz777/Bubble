@@ -15,6 +15,7 @@ struct PublicMessageBubbleView: View {
     @State private var publicChatViewModel =  PublicChatViewModel()
     @State private var chatAudioViewModel = ChatAudioViewModel()
     @State private var chatFileViewModel = ChatFileViewModel()
+    @State private var bubbleShareViewModel = BubbleShareViewModel()
     
     @State private var isEmojiPickerVisible = false
     @State private var showCopiedToast = false
@@ -234,6 +235,28 @@ struct PublicMessageBubbleView: View {
                         alignment: .top
                     )
                     .contextMenu {
+                        // Boton de compartir
+                        if let item = bubbleShareViewModel.shareItem(for: message){
+                            if let url = item as? URL{
+                                let preview = SharePreview(
+                                    url.lastPathComponent,
+                                    image: bubbleShareViewModel.icon(for: url)
+                                )
+                                ShareLink(item: url, preview: preview){
+                                    Label("Compartir", systemImage: "square.and.arrow.up")
+                                }
+                                
+                            }else if let str = item as? String{
+                                ShareLink(item: str) {
+                                    Label("Compartir", systemImage: "square.and.arrow.up")
+                                }
+                            }
+                        }else{
+                            // Archivo / Audio aún descargando -> boton desactivado
+                            if message.type == .file || message.type == .audio {
+                                Label("Preparando…", systemImage: "arrow.down").disabled(true)
+                            }
+                        }
                         
                         Button(action: {
                             
@@ -314,6 +337,15 @@ struct PublicMessageBubbleView: View {
                 .frame(maxWidth: 260, alignment: isCurrentUser ? .trailing : .leading)
                 .padding(.horizontal, isCurrentUser && !showAvatarAndName ? 50 : 0)
                 .padding(.horizontal, !isCurrentUser && !showAvatarAndName ? 50 : 0)
+                .task {
+                    await bubbleShareViewModel.prepare(for: message)
+                }
+                .alert("Error",
+                       isPresented: .constant(bubbleShareViewModel.errorMessage != nil)) {
+                    Button("OK", role: .cancel) { bubbleShareViewModel.errorMessage = nil }
+                } message: {
+                    Text(bubbleShareViewModel.errorMessage ?? "")
+                }
                 
                 if isCurrentUser && showAvatarAndName{
                     publicChatViewModel.profileImage(user)
