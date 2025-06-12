@@ -50,7 +50,7 @@ class PrivateChatViewModel {
     private var userTask: Task<Void, Never>?
     
     /// Caché en memoria de los amigos ya descargados (clave = userID).
-    private var usersCache: [String: UserModel] = [:]
+    var usersCache: [String: UserModel] = [:]
     
     init(){
         Task{

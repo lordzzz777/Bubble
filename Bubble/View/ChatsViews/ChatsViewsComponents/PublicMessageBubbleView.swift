@@ -12,10 +12,13 @@ import Kingfisher
 
 
 struct PublicMessageBubbleView: View {
+
+    @State private var privateChatViewModel = PrivateChatViewModel()
     @State private var publicChatViewModel =  PublicChatViewModel()
     @State private var chatAudioViewModel = ChatAudioViewModel()
     @State private var chatFileViewModel = ChatFileViewModel()
     @State private var bubbleShareViewModel = BubbleShareViewModel()
+    @State private var forwardViewModel = ForwardViewModel()
     
     @State private var isEmojiPickerVisible = false
     @State private var showCopiedToast = false
@@ -24,12 +27,16 @@ struct PublicMessageBubbleView: View {
     @State private var isPreviewPresented = false
     @State private var unsupportedExtension: String? = nil
     
+    // Para renviar mensages
+    @State private var isSelecting = false
     
     @Binding var messageText: String
     @Binding var isEditing: Bool
     @Binding var editingMessageID: String?
     @Binding var replyingToMessageID: String?
     @Binding var replyingToNickname: String?
+    
+    
     
     var message: MessageModel
     var user: UserModel?
@@ -71,6 +78,9 @@ struct PublicMessageBubbleView: View {
                 .padding(.horizontal)
             }
             .transition(.opacity)
+        }
+        if message.isForwarded == true{
+            Text("Reenviado").font(.caption2).italic().foregroundStyle(.orange)
         }
         if message.content == "Mensaje eliminado"{
             HStack {
@@ -234,7 +244,20 @@ struct PublicMessageBubbleView: View {
                         },
                         alignment: .top
                     )
+                    .onLongPressGesture{
+                        withAnimation {
+                            forwardViewModel.selecting = true
+                            forwardViewModel.toggle(message)
+                        }
+                    }
+                    .onTapGesture {
+                        guard isSelecting else { return }
+                        withAnimation {
+                            forwardViewModel.toggle(message)   // helper que añada/quite
+                        }
+                    }
                     .contextMenu {
+                        
                         // Boton de compartir
                         if let item = bubbleShareViewModel.shareItem(for: message){
                             if let url = item as? URL{
@@ -256,15 +279,19 @@ struct PublicMessageBubbleView: View {
                             if message.type == .file || message.type == .audio {
                                 Label("Preparando…", systemImage: "arrow.down").disabled(true)
                             }
+                            
+                            
                         }
                         
-                        Button(action: {
-                            
-                            // logica reenviar a mi lista de contactos ...
-                            
-                        }, label: {
+                        // Boton de reeviar
+                        Button(action:{
+                            withAnimation {
+                                forwardViewModel.selecting = true
+                                forwardViewModel.toggle(message)
+                            }
+                        }, label:{
                             Text("Reenviar")
-                            Image(systemName: "arrowshape.turn.up.right")
+                            Image(systemName: "arrowshape.turn.up.forward")
                         })
                         
                         Button(action: {
@@ -335,6 +362,12 @@ struct PublicMessageBubbleView: View {
                     }
                 }
                 .frame(maxWidth: 260, alignment: isCurrentUser ? .trailing : .leading)
+                .sheet(isPresented: $forwardViewModel.selecting) {
+                    ForwardSheetView()
+                        .environment(privateChatViewModel)
+                        .environment(forwardViewModel)
+                        .presentationDetents([.medium, .large])
+                }
                 .padding(.horizontal, isCurrentUser && !showAvatarAndName ? 50 : 0)
                 .padding(.horizontal, !isCurrentUser && !showAvatarAndName ? 50 : 0)
                 .task {

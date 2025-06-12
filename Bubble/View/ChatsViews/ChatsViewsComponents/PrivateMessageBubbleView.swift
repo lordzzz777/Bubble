@@ -14,6 +14,7 @@ struct PrivateMessageBubbleView: View {
     @State private var chatFileViewModel = ChatFileViewModel()
     @State private var chatAudioViewModel = ChatAudioViewModel()
     @State private var bubbleShareViewModel = BubbleShareViewModel()
+    @State private var forwardViewModel = ForwardViewModel()
     
     // Estado ventada modal de los emojis
     @State private var isEmojiPickerVisible: Bool = false
@@ -23,6 +24,9 @@ struct PrivateMessageBubbleView: View {
     @State private var unsupportedExtension: String? = nil
     @State private var isPreviewPresented = false
     @State private var isDownloading = false
+    
+    // Para renviar mensages
+    @State private var isSelecting = false
     
     let chatID: String
     var message: MessageModel
@@ -96,7 +100,9 @@ struct PrivateMessageBubbleView: View {
             }
             .transition(.opacity)
         }
-        
+        if message.isForwarded == true{
+            Text("Reenviado").font(.caption2).italic().foregroundStyle(.orange)
+        }
         if message.content == "Mensaje eliminado" {
             HStack {
                 Spacer()
@@ -246,54 +252,30 @@ struct PrivateMessageBubbleView: View {
                                     .transition(.opacity)
                                     .offset(y: -40)
                             }
+                            
+//                            if forwardViewModel.selected.contains(message){
+//                                Image(systemName: "checkmark.circle.fill")
+//                                    .font(.title)
+//                                    .foregroundColor(.accentColor)
+//                                    .offset(x: 12, y: -12)
+//                            }
                         },
                         alignment: .top
                     )
-                    .contextMenu{
-                        // Boton de compartir
-                        if let item = bubbleShareViewModel.shareItem(for: message){
-                            if let url = item as? URL{
-                                let preview = SharePreview(
-                                    url.lastPathComponent,
-                                    image: bubbleShareViewModel.icon(for: url)
-                                )
-                                ShareLink(item: url, preview: preview){
-                                    Label("Compartir", systemImage: "square.and.arrow.up")
-                                }
-                                
-                            }else if let str = item as? String{
-                                ShareLink(item: str) {
-                                    Label("Compartir", systemImage: "square.and.arrow.up")
-                                }
-                            }
-                        }else{
-                            // Archivo / Audio aún descargando -> boton desactivado
-                            if message.type == .file || message.type == .audio {
-                                Label("Preparando…", systemImage: "arrow.down").disabled(true)
-                            }
+                    .onLongPressGesture{
+                        withAnimation {
+                            forwardViewModel.selecting = true
+                            forwardViewModel.toggle(message)
                         }
-                        
-                        
-                        
-                        // boton de ventana modal emogis
-                        Button(action: {
-                            isEmojiPickerVisible.toggle()
-                        }, label: {
-                            Text("Emojis")
-                            Image(systemName: "face.smiling")
-                                .foregroundColor(.yellow)
-                        })
-                        
-                        // boton de copiar al portapapeles
-                        Button(action: {
-                            Task{
-                                await  privateChatViewModel.privateCopyToClopboard(message.content, $showCopiedToast)
-                            }
-                        }, label: {
-                            Text("Copiar")
-                            Image(systemName: "document.on.document")
-                                .foregroundColor(.yellow)
-                        })
+                    }
+                    .onTapGesture {
+                        guard isSelecting else { return }
+                        withAnimation {
+                            forwardViewModel.toggle(message)   // helper que añada/quite
+                        }
+                    }
+                    .contextMenu{
+                        // Boton de responder
                         if isCurrentUser {
                             Button(action: {
                                 messageText = message.content
@@ -326,8 +308,62 @@ struct PrivateMessageBubbleView: View {
                             })
                         }
                         
+                        // Boton de reeviar
+                        Button(action:{
+                            withAnimation {
+                                forwardViewModel.selecting = true
+                                forwardViewModel.toggle(message)
+                            }
+                        }, label:{
+                            Text("Reenviar")
+                            Image(systemName: "arrowshape.turn.up.forward")
+                        })
+                        
+                        // Boton de compartir
+                        if let item = bubbleShareViewModel.shareItem(for: message){
+                            if let url = item as? URL{
+                                let preview = SharePreview(
+                                    url.lastPathComponent,
+                                    image: bubbleShareViewModel.icon(for: url)
+                                )
+                                ShareLink(item: url, preview: preview){
+                                    Label("Compartir", systemImage: "square.and.arrow.up")
+                                }
+                                
+                            }else if let str = item as? String{
+                                ShareLink(item: str) {
+                                    Label("Compartir", systemImage: "square.and.arrow.up")
+                                }
+                            }
+                        }else{
+                            // Archivo / Audio aún descargando -> boton desactivado
+                            if message.type == .file || message.type == .audio {
+                                Label("Preparando…", systemImage: "arrow.down").disabled(true)
+                            }
+                        }
+                        
+                        // boton de ventana modal emogis
+                        Button(action: {
+                            isEmojiPickerVisible.toggle()
+                        }, label: {
+                            Text("Emojis")
+                            Image(systemName: "face.smiling")
+                                .foregroundColor(.yellow)
+                        })
+                        
+                        // boton de copiar al portapapeles
+                        Button(action: {
+                            Task{
+                                await  privateChatViewModel.privateCopyToClopboard(message.content, $showCopiedToast)
+                            }
+                        }, label: {
+                            Text("Copiar")
+                            Image(systemName: "document.on.document")
+                                .foregroundColor(.yellow)
+                        })
                         
                     }
+
 
                     if showAvatar {
                         // pico de la burbuja ..
@@ -355,7 +391,13 @@ struct PrivateMessageBubbleView: View {
                     
                 }
                 .frame(maxWidth: 260, alignment: privateChatViewModel.checkIfMessageWasSentByCurrentUser(message) ? .trailing : .leading)
-                
+                .sheet(isPresented: $forwardViewModel.selecting) {
+                    ForwardSheetView()
+                        .environment(privateChatViewModel)
+                        .environment(forwardViewModel)
+                        .presentationDetents([.medium, .large])
+                }
+
                 .task {
                     await userProfileView.loadUserData()
                     await bubbleShareViewModel.prepare(for: message)
