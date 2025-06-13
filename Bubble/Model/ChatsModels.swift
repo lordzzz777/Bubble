@@ -63,6 +63,7 @@ struct MessageModel: Identifiable, Codable, Hashable {
     
     var reactions:[String: String]? = nil // UserID : Emoji
     var audioDuration: Double?
+    var isForwarded: Bool? = false
     
     var dictionary: [String: Any] {
         var dict: [String: Any] = [
@@ -70,7 +71,8 @@ struct MessageModel: Identifiable, Codable, Hashable {
             "senderUserID": senderUserID,
             "content": content,
             "timestamp": timestamp,
-            "type": type.rawValue
+            "type": type.rawValue,
+            "isForwarded": isForwarded ?? false
         ]
         if let replyingToMessageID = replyToMessageID {
             dict["replyingToMessageID"] = replyingToMessageID

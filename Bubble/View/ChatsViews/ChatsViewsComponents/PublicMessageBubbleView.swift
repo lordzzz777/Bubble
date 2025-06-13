@@ -12,10 +12,13 @@ import Kingfisher
 
 
 struct PublicMessageBubbleView: View {
+
+    @State private var privateChatViewModel = PrivateChatViewModel()
     @State private var publicChatViewModel =  PublicChatViewModel()
     @State private var chatAudioViewModel = ChatAudioViewModel()
     @State private var chatFileViewModel = ChatFileViewModel()
     @State private var bubbleShareViewModel = BubbleShareViewModel()
+    @State private var forwardViewModel = ForwardViewModel()
     
     @State private var isEmojiPickerVisible = false
     @State private var showCopiedToast = false
@@ -24,12 +27,17 @@ struct PublicMessageBubbleView: View {
     @State private var isPreviewPresented = false
     @State private var unsupportedExtension: String? = nil
     
-    
+    // Para renviar mensages
+    @State private var isSelecting = false
+    @State private var showSentIcon = false
+
     @Binding var messageText: String
     @Binding var isEditing: Bool
     @Binding var editingMessageID: String?
     @Binding var replyingToMessageID: String?
     @Binding var replyingToNickname: String?
+    
+    
     
     var message: MessageModel
     var user: UserModel?
@@ -71,6 +79,9 @@ struct PublicMessageBubbleView: View {
                 .padding(.horizontal)
             }
             .transition(.opacity)
+        }
+        if message.isForwarded == true{
+            Text("Reenviado").font(.caption2).italic().foregroundStyle(.orange)
         }
         if message.content == "Mensaje eliminado"{
             HStack {
@@ -234,7 +245,29 @@ struct PublicMessageBubbleView: View {
                         },
                         alignment: .top
                     )
+                    .overlay(alignment: .center) {
+                        if showSentIcon {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.system(size: 100))
+                                .foregroundStyle(.orange).shadow(color: .white, radius: 10)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+
+                    .onLongPressGesture{
+                        withAnimation {
+                            forwardViewModel.selecting = true
+                            forwardViewModel.toggle(message)
+                        }
+                    }
+                    .onTapGesture {
+                        guard isSelecting else { return }
+                        withAnimation {
+                            forwardViewModel.toggle(message)   // helper que añada/quite
+                        }
+                    }
                     .contextMenu {
+                        
                         // Boton de compartir
                         if let item = bubbleShareViewModel.shareItem(for: message){
                             if let url = item as? URL{
@@ -256,15 +289,19 @@ struct PublicMessageBubbleView: View {
                             if message.type == .file || message.type == .audio {
                                 Label("Preparando…", systemImage: "arrow.down").disabled(true)
                             }
+                            
+                            
                         }
                         
-                        Button(action: {
-                            
-                            // logica reenviar a mi lista de contactos ...
-                            
-                        }, label: {
+                        // Boton de reeviar
+                        Button(action:{
+                            withAnimation {
+                                forwardViewModel.selecting = true
+                                forwardViewModel.toggle(message)
+                            }
+                        }, label:{
                             Text("Reenviar")
-                            Image(systemName: "arrowshape.turn.up.right")
+                            Image(systemName: "arrowshape.turn.up.forward")
                         })
                         
                         Button(action: {
@@ -335,6 +372,27 @@ struct PublicMessageBubbleView: View {
                     }
                 }
                 .frame(maxWidth: 260, alignment: isCurrentUser ? .trailing : .leading)
+                .sheet(isPresented: $forwardViewModel.selecting) {
+                    ForwardSheetView()
+                        .environment(privateChatViewModel)
+                        .environment(forwardViewModel)
+                        .presentationDetents([.medium, .large])
+                }
+                .onChange(of: forwardViewModel.selecting) { _, selecting in
+                    // Cuando la hoja se cierra (= envío terminado) el flag pasa a false
+                    guard !selecting else { return }
+                    
+                    // evita superposiciones
+                    if showSentIcon == false {
+                        showSentIcon = true
+                        Task {
+                            // oculta tras 1 s
+                            try? await Task.sleep(for: .seconds(1))
+                            showSentIcon = false
+                        }
+                    }
+                }
+
                 .padding(.horizontal, isCurrentUser && !showAvatarAndName ? 50 : 0)
                 .padding(.horizontal, !isCurrentUser && !showAvatarAndName ? 50 : 0)
                 .task {
