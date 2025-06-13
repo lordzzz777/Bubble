@@ -15,17 +15,19 @@ enum FriendRequestStatus {
 }
 
 @Observable @MainActor
-class MatchedFriendViewModel {
+final class MatchedFriendViewModel {
     private var addNewFriendService: AddNewFriendService = AddNewFriendService()
+    
+    // UI-state
     var friendRequestStatus: FriendRequestStatus = .none
     var loadingData: Bool = false
-    
     var showError: Bool = false
     var errorTitle: String = ""
     var errorDescription: String = ""
     
-    /// Envía una solicitud de amistad al usuario con el UID especificado
-    /// - Parameter friendUID: UID del amigo al que se desea enviar la solicitud
+    // MARK: - Solicitudes
+    
+    /// Crea doc. **friend_requests/{uid}** y pasa a *pending*.
     func sendFriendRequest(friendUID: String) async {
         Task {
             do {
@@ -42,6 +44,7 @@ class MatchedFriendViewModel {
         }
     }
     
+    /// Borra la petición pendiente y vuelve a *none*.
     func cancelFriendRequest(friendUID: String) async {
         do {
             try await addNewFriendService.cancelFriendRequest(friendUID: friendUID)
@@ -55,6 +58,7 @@ class MatchedFriendViewModel {
         }
     }
     
+    /// Elimina al amigo de la lista mutua y resetea estado.
     func deleteFriend(friendUID: String) async {
         do {
             try await addNewFriendService.deleteFriend(friendUID: friendUID)
@@ -68,6 +72,9 @@ class MatchedFriendViewModel {
         }
     }
     
+    // MARK: - Comprobaciones
+    
+    /// Consulta si hay invitación en curso → *pending*.
     func checkIfFriendRequestPending(friendUID: String) async {
         do {
             let isPending = try await addNewFriendService.checkFriendIfFriendRequestPending(friendUID: friendUID)
@@ -81,6 +88,7 @@ class MatchedFriendViewModel {
         }
     }
     
+    /// Verifica relación de amistad → *accepted* si procede.
     func checkIfFriend(friendUID: String) async {
         do {
             let isFriend = try await addNewFriendService.checkIfFriend(friendUID: friendUID)

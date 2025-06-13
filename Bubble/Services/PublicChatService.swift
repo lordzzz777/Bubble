@@ -151,7 +151,6 @@ actor PublicChatService {
         }
     }
 
-    
     /// Elimina la reaccion del mensaje
     func removeReaction(fromMessageID messageID: String, userID: String) async throws {
         let messageRef = chatsRef.collection("messages").document(messageID)

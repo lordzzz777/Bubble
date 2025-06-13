@@ -8,19 +8,42 @@
 import Foundation
 import SwiftUI
 
-@Observable
-@MainActor
-class CreateCommunityViewModel {
-    private let createCommunityService: CreateCommunityService = CreateCommunityService()
-    var community: CommunityModel = CommunityModel(name: "", imgUrl: "", createdAt: .init(), ownerUID: "", lastMessage: "", messages: [], admins: [], members: [], blockedUsers: [], admissionRequests: [])
+@Observable @MainActor
+final class CreateCommunityViewModel {
     
+    // MARK: - Dependencias y estado
+    
+    private let createCommunityService: CreateCommunityService = CreateCommunityService()
+    
+    /// Modelo en construcción
+    var community: CommunityModel = CommunityModel(
+        name: "",
+        imgUrl: "",
+        createdAt: .init(),
+        ownerUID: "",
+        lastMessage: "",
+        messages: [],
+        admins: [],
+        members: [],
+        blockedUsers: [],
+        admissionRequests: []
+    )
+    
+    /// Amigos elegidos para invitar
     var friendsToInvite: [UserModel] = []
+    
+    /// Flags de UI
     var showCreateNewCommunity: Bool = false
     var isCreatingCommunity: Bool = false
+    
+    /// Gestión de errores
     var showError: Bool = false
     var errorTitle: String = ""
     var errorMessage: String = ""
     
+    // MARK: - Datos
+    
+    /// Descarga la lista de amigos del usuario.
     func fetchFriends() async -> [UserModel] {
         var friends: [UserModel] = []
         do {
@@ -34,6 +57,7 @@ class CreateCommunityViewModel {
         return friends
     }
     
+    /// Sube la imagen de la comunidad y actualiza `community.imgUrl`.
     func uploadImage(image: UIImage) async {
         do {
             let imageURL = try await createCommunityService.uploadImage(image: image, communityID: community.id)
@@ -45,6 +69,7 @@ class CreateCommunityViewModel {
         }
     }
     
+    /// Verifica que el nombre no esté ya registrado.
     func checkIfCommunityNameExists(communityName: String) async -> Bool {
         do {
             return try await createCommunityService.checkIfCommunityNotExistsBy(name: communityName)
@@ -56,12 +81,14 @@ class CreateCommunityViewModel {
         }
     }
     
+    /// Devuelve `true` si el amigo está marcado para invitar
     func checkIfFriendIsSelected(friendID: String) -> Bool {
         withAnimation(.bouncy) {
             return community.members.contains(where: { $0 == friendID })
         }
     }
     
+    /// Borra de Storage la imagen asociada (rollback o cambio).
     func removeImageFromFirebaseStorage(imageURL: String) async {
         do {
             try await createCommunityService.removeImageFromFirebaseStorage(imageURL: imageURL)
@@ -73,6 +100,9 @@ class CreateCommunityViewModel {
         }
     }
     
+    // MARK: - Creación
+    
+    /// Crea la comunidad y envía invitaciones. Devuelve `true` si todo OK.
     func createCommunity(newCommunity: CommunityModel) async -> Bool {
         do {
             isCreatingCommunity = true

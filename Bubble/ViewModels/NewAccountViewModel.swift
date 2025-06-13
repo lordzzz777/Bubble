@@ -12,7 +12,7 @@ import SwiftUI
 
 
 @Observable @MainActor
-class NewAccountViewModel {
+final class NewAccountViewModel {
     private let firestoreService: FirestoreService
     private let publicChatService: PublicChatService = PublicChatService()
     

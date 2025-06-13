@@ -12,7 +12,7 @@ import FirebaseAuth
 import FirebaseFirestore
 
 @Observable @MainActor
-class LoginViewModel {
+final class LoginViewModel {
     private let googleService = GoogleService()
     private let firestoreService = FirestoreService()
     private let uid = Auth.auth().currentUser?.uid ?? ""
@@ -40,7 +40,6 @@ class LoginViewModel {
         }
     }
 
-    
     /// Inicia sesión con Google
     func signInWithGoogle() {        
         Task {

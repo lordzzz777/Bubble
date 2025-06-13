@@ -12,14 +12,15 @@ import PhotosUI
 import Kingfisher
 
 struct PublicChatView: View {
+    
+    //Instancias de ViewModels
     @FocusState private var isTextFieldFocused: Bool
     @Environment(PublicChatViewModel.self) var publicChatViewModel
-    
-    
     @State private var chatMediaViewModel = ChatMediaViewModel()
     @State private var audioViewModel = ChatAudioViewModel()
     @State private var chatFileViewModel = ChatFileViewModel()
     
+    // Paara mostrar y añadir, una imajen del carrete
     @State private var selectedImageItem: PhotosPickerItem?
     @State private var isShowingPhotosPicker = false
     @State private var isShowingCamera = false
@@ -32,6 +33,8 @@ struct PublicChatView: View {
     @State private var editingMessageID: String? = nil
     @State private var isShowingFileImporter = false
     @State private var selectedFileURL: URL? = nil
+    
+    // Variable que guarda el estado del de copia (poerta papeles)
     @State private var showCopiedToast = false
     
     // Para mostrar imagen flotante
@@ -41,6 +44,8 @@ struct PublicChatView: View {
     @State private var isDraggingLeft = false
     @State private var dragOffset: CGSize = .zero
     
+    @State private var draft = ""
+    @FocusState private var isFocused: Bool
     
     var body: some View {
         NavigationStack{
@@ -87,6 +92,22 @@ struct PublicChatView: View {
                 }
                 
                 Spacer()
+                
+                // en PublicChatView  ─ indicador
+                if let first = publicChatViewModel.typingUsers.first {
+                    let nick = publicChatViewModel.userModel(for: first)?.nickname ?? "Alguien"
+                    HStack {
+                        Text("\(nick) está…").font(.caption)
+                        Image(systemName: "ellipsis.message").symbolEffect(.variableColor)
+                        Spacer()
+                    }
+                    .foregroundStyle(.secondary)
+                    .shimmerPulse()
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.easeInOut(duration: 0.25), value: publicChatViewModel.typingUsers)
+                    .offset(x: 20)
+                }
+
                 
                 if let nickname = replyingToNickname {
                     HStack {
@@ -176,6 +197,13 @@ struct PublicChatView: View {
                             
                         }
                     })
+                    .focused($isFocused)
+                    .onChange(of: messageText) { _, new in          // ⑤
+                        Task { try? await publicChatViewModel.userIsTyping(!new.isEmpty && isFocused) }
+                    }
+                    .onChange(of: isFocused) { _, focus in
+                        Task { try? await publicChatViewModel.userIsTyping(focus && !messageText.isEmpty) }
+                    }
                     
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .frame(minHeight: textFieldHeight)
@@ -232,6 +260,10 @@ struct PublicChatView: View {
             .onAppear {
                 publicChatViewModel.isPublicChatVisible = true
                 Task {
+                    try? await publicChatViewModel.listenTyping()
+                    try? await publicChatViewModel.userIsTyping(false)
+                }
+                Task {
                     await publicChatViewModel.fetchVisibleUsers()
                     await publicChatViewModel.resetReplyNotificationsIfNeeded()
                     publicChatViewModel.fetchPublicChatMessages()
@@ -252,6 +284,7 @@ struct PublicChatView: View {
                 }
             }
             .onDisappear {
+                Task { try? await publicChatViewModel.userIsTyping(false) }
                 publicChatViewModel.isPublicChatVisible = false
             }
             .overlay {
