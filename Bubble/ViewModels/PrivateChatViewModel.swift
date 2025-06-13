@@ -22,6 +22,9 @@ enum ChatParticipantRiole {
 class PrivateChatViewModel {
     
     private let privateChatService: PrivateChatService = PrivateChatService()
+    private let typingService: TypingService = TypingService()
+    
+    var typingUsers: [String] = []
     
     var user: UserModel?
     var me: UserModel?
@@ -56,6 +59,38 @@ class PrivateChatViewModel {
         Task{
            await laadCurrentUser()
         }
+    }
+    
+    /// Llamar cada vez que cambia el TextField
+    func userIsTyping(in chatID: String, _ isTyping: Bool) async throws{
+            do{
+                try await typingService.setTyping(chatID: chatID, isTyping: isTyping)
+            }catch{
+                //Registra en consola para depuración
+                print("TypingService.setTyping error:", error.localizedDescription)
+                
+                //Notifica en la UI sin bloquear el chat
+                errorTitle   = "Sin conexión"
+                errorMessage = "No se pudo enviar el estado de escritura."
+                showError    = true
+            }
+    }
+    
+    /// Escuchar quién escribe
+    func listenTyping(chatID: String) async throws {
+            do{
+                for try await ids in await typingService.typingPublisher(chatID: chatID){
+                    typingUsers = ids
+                }
+            }catch{
+                print("TypingService.publisher error:", error.localizedDescription)
+                
+                await MainActor.run {
+                    errorTitle   = "Error de red"
+                    errorMessage = "No se puede mostrar quién escribe."
+                    showError    = true
+                }
+            }
     }
     
     ///Cargar mi usuario al iniciar la app

@@ -8,15 +8,19 @@
 import Foundation
 
 @Observable @MainActor
-class UserViewModel {
+final class UserViewModel {
     
     private let firestoreService = FirestoreService()
     private let networkMonitor = NetworkMonitor()
     private var cancellabeTask: Task<Void,Never>?
     
+    
     var user: UserModel?
     var isConnected: Bool = false
     
+    // MARK: - Conexión / presencia
+    
+    /// Escucha cambios de red y sincroniza `isOnline` en Firestore.
     func startMonitoringUserStatus() {
         cancellabeTask?.cancel()
         
@@ -33,6 +37,7 @@ class UserViewModel {
         }
     }
     
+    /// Sube el flag de presencia `isOnline` al documento del usuario.
     func updateUserStatus(online: Bool) async {
         do{
            try await firestoreService.updateUserStatus(isOnline: online)
@@ -43,6 +48,7 @@ class UserViewModel {
         }
     }
         
+    /// Registra `lastConnectionTimestamp` cuando se pierde conexión.
     func storeLastSeen() async {
         do {
             try await firestoreService.storeLastSeen()
@@ -51,6 +57,7 @@ class UserViewModel {
         }
     }
     
+    /// Descarga los datos del usuario autenticado y los guarda en `user`.
     func loadUser() async {
         do {
             self.user = try await firestoreService.getUserData()

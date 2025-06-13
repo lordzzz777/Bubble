@@ -9,21 +9,23 @@ import Foundation
 
 
 @Observable @MainActor
-class AddNewFriendViewModel {
+final class AddNewFriendViewModel {
+    
+    // MARK: - Dependencias
     private let addNewFriendService: AddNewFriendService = AddNewFriendService()
     
+    // MARK: - Estado UI
     var matchedUsers: [UserModel] = []
   
     var showError: Bool = false
     var isSuccess = false
-    
     var friendNickname: String = ""
     var successMessage: String = ""
     var errorTitle: String = ""
     var errorDescription: String = ""
     
-    /// Busca amigos por su nickname y actualiza la lista `matchedUsers`
-    /// - Parameter nickname: Nickname que se desea buscar
+    // MARK: - Búsqueda
+    /// Busca usuarios cuyo `nickname` coincida y actualiza `matchedUsers`.
     func searchFriendByNickname(_ nickname: String) async {
         do {
             matchedUsers = try await addNewFriendService.searchFriendByNickname(nickname)
@@ -34,7 +36,8 @@ class AddNewFriendViewModel {
         }
     }
 
-    /// Función para aceptar solicitud de amistad
+    // MARK: - Aceptar solicitud
+    /// Acepta una solicitud (chat existente) y añade ambos usuarios como amigos.
     func acceptFriendRequest(chatID: String, senderUID: String) async{
         do{
             try await addNewFriendService.acceptFriendRequest(chatID: chatID, senderUID: senderUID)

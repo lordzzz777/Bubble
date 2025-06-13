@@ -28,7 +28,8 @@ final class ChatMediaViewModel{
     var errorTitle: String = ""
     var errorMessage: String = ""
     
-    /// Envía un mensaje con imagen seleccionada desde el picker.
+    // MARK: - Imagen desde el Photo Picker
+    /// Saca la imagen del picker, la comprime, la sube y crea el mensaje.
     func sendImageFromPicker(_ pickerItem: PhotosPickerItem?, scope: ChatScope) async {
         do {
             // 1. Obtener imagen seleccionada
@@ -53,7 +54,11 @@ final class ChatMediaViewModel{
         }
     }
     
-    // 2. Igual que con audio: decide colección según el scope
+    // MARK: - Imagen desde la cámara / Uso genérico
+    /// Crea y guarda un `MessageModel` de tipo `.image` en la colección adecuada.
+    /// - Parameters:
+    ///   - url: URL pública devuelta por Firebase Storage.
+    ///   - scope: Chat destino (`.public` o `.privateChat(id)`).
     private func sendImageMessage(with url: String, scope: ChatScope) async throws {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         
@@ -82,7 +87,8 @@ final class ChatMediaViewModel{
         try await ref.document(message.id).setData(message.dictionary)
     }
     
-    /// Crea y envía un mensaje con URL de imagen.
+    // MARK: - Imagen desde URL (llamado por el chat público)
+    /// Enlaza una URL de imagen ya subida al mensaje y lo envía al chat público.
     func sendImageMessage(with imageURL: String) async throws {
         guard let userID = Auth.auth().currentUser?.uid else {
             throw NSError(domain: "No hay usuario autenticado", code: 401)
@@ -97,7 +103,8 @@ final class ChatMediaViewModel{
         try await chatPublicService.sendPublicMessage(message) // o privado
     }
     
-    /// Guarda una imagen en el carrete del usuario a partir de una URL
+    // MARK: - Guardar en carrete
+    /// Descarga la imagen y la guarda en la fototeca del usuario.
     func saveToLibrary(imageURL: String) async {
         do {
             let localURL = try await chatMediaService.downloadAndStoreImageLocally(from: imageURL)
@@ -118,8 +125,8 @@ final class ChatMediaViewModel{
         }
     }
     
-    
-    /// Elimina imagen local y de Firebase Storage
+    // MARK: - Borrar imagen
+    /// Elimina la imagen tanto localmente como en Storage.
     func deleteImage(message: MessageModel) async {
         do {
             let localURL = try await chatMediaService.downloadAndStoreImageLocally(from: message.content)
@@ -134,10 +141,8 @@ final class ChatMediaViewModel{
         }
     }
     
-    /// Envía un nuevo mensaje de nota de voz al chat público.
-    /// - Parameters:
-    ///   - url: URL del audio ya subido a Firebase Storage.
-    ///   - duration: Duración en segundos de la nota de voz.
+    // MARK: - Nota de voz
+    /// Crea y envía un mensaje `.audio` con su duración.
     func sendVoiceMessage(scope: ChatScope, url: String, duration: Double) async throws{
         do{
             guard let currentUserID = Auth.auth().currentUser?.uid else {
@@ -182,10 +187,13 @@ final class ChatMediaViewModel{
         }
     }
     
+    // MARK: - Helpers
+    /// Persistencia genérica de mensajes.
     private func saveMessage(to ref: CollectionReference, message: MessageModel) async throws {
         try await ref.document(message.id).setData(message.dictionary)
     }
     
+    /// Comprime, sube y envía una foto tomada con la cámara.
     func sendCameraImage(_ image: UIImage, scope: ChatScope) async throws {
         guard let data = await chatMediaService.compressImage(image) else { return }
         let url = try await chatMediaService.uploadImage(data)

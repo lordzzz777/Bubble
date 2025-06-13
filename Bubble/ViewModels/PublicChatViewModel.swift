@@ -17,6 +17,11 @@ class PublicChatViewModel {
     private let publicChatService = PublicChatService()
     private let audioService = ChatAudioService()
     private let chatMediaService = ChatMediaService()
+    private let typingService: TypingService = TypingService()
+    
+    private let publicChatID = "global_chat"
+    
+    var typingUsers: [String] = []
     
     var messages: [MessageModel] = []
     var visibleUsers: [UserModel] = []
@@ -27,6 +32,43 @@ class PublicChatViewModel {
     var showError: Bool = false
     var isPublicChatVisible: Bool = false
     
+    /// Llamar cada vez que cambia el TextField
+    func userIsTyping(_ isTyping: Bool) async throws{
+        do{
+            try await typingService.setTyping(chatID: publicChatID, isTyping: isTyping, isPublic: true)
+        }catch{
+            //Registra en consola para depuración
+            print("TypingService.setTyping error:", error.localizedDescription)
+            
+            //Notifica en la UI sin bloquear el chat
+            errorTitle   = "Sin conexión"
+            errorMessage = "No se pudo enviar el estado de escritura."
+            showError    = true
+        }
+    }
+    
+    /// Escuchar quién escribe
+    func listenTyping() async throws {
+        do{
+            for try await ids in await typingService.typingPublisher(chatID: publicChatID, isPublic: true){
+                typingUsers = ids
+            }
+        }catch{
+            print("TypingService.publisher error:", error.localizedDescription)
+            
+            await MainActor.run {
+                errorTitle   = "Error de red"
+                errorMessage = "No se puede mostrar quién escribe."
+                showError    = true
+            }
+        }
+    }
+    
+    // PublicChatViewModel.swift (añade al final)
+    func userModel(for id: String) -> UserModel? {
+        visibleUsers.first { $0.id == id }
+    }
+
     /// Obtiene los mensajes del chat público en tiempo real.
     func fetchPublicChatMessages() {
         Task {

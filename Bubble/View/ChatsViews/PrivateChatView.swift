@@ -13,8 +13,9 @@ import Kingfisher
 
 struct PrivateChatView: View {
     
-    // ViewModels
+    //Instancias de ViewModels
     @Environment(PrivateChatViewModel.self) private var chatsViewModel
+    @State private var privateChatViewModel = PrivateChatViewModel()
     @State private var audioViewMode = ChatAudioViewModel()
     @State private var chatMediaViewModel = ChatMediaViewModel()
     @State private var chatFileViewModel = ChatFileViewModel()
@@ -36,7 +37,6 @@ struct PrivateChatView: View {
     @State private var selectedFileURL: URL? = nil
     
     // UI State
-    @State private var privateChatViewModel = PrivateChatViewModel()
     @State private var messageText: String = ""
     @State private var checkingFriendStatus: Bool = false
     @State private var isEditing: Bool = false
@@ -44,6 +44,9 @@ struct PrivateChatView: View {
     @State private var replyingToMessageID: String? = nil
     @State private var replyingToNickname: String? = nil
     @State private var textFieldHeight: CGFloat = 40
+    
+    @State private var draft = ""
+    @FocusState private var isFocused: Bool
     
     
     // Datos del contexto
@@ -141,6 +144,22 @@ struct PrivateChatView: View {
                 
                 Spacer()
                 
+                if let first = chatsViewModel.typingUsers.first,
+                   let user  = chatsViewModel.userModel(for: first) {
+                    HStack{
+                        Text("\(user.nickname) está…").font(.caption)
+
+                        Image(systemName: "ellipsis.message").symbolEffect(.variableColor)
+                        Spacer()
+                    }
+                        .foregroundStyle(.secondary)
+                        .shimmerPulse()
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .animation(.easeInOut(duration: 0.25), value: chatsViewModel.typingUsers)
+                        .offset(x: 20)
+                    
+                }
+                
                 if let nickname = replyingToNickname {
                     HStack {
                         Text("Respondiendo a \(nickname)")
@@ -218,7 +237,6 @@ struct PrivateChatView: View {
                                 matching: .images
                             )
 
-                            
                             TextField(
                                 isEditing ? "Edita tu mensaje..." : "Escribe tu mensaje...",
                                 text: $messageText,
@@ -228,6 +246,17 @@ struct PrivateChatView: View {
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .frame(minHeight: textFieldHeight)
                             .padding(.trailing, 20)
+                            .focused($isFocused)
+                            .onChange(of: messageText) { _, newVal in
+                                Task{
+                                   try? await chatsViewModel.userIsTyping(in: chat.id, !newVal.isEmpty && isFocused)
+                                }
+                            }
+                            .onChange(of: isFocused) { _, focus in
+                                Task {
+                                  try? await chatsViewModel.userIsTyping(in: chat.id, focus && !messageText.isEmpty)
+                                }
+                            }
                             
                             if !messageText.isEmpty && isEditing == true{
                                 Button {
@@ -271,6 +300,7 @@ struct PrivateChatView: View {
                     .padding(.bottom, 8)
                     .padding(.horizontal, 4)
                 }
+                
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -286,11 +316,21 @@ struct PrivateChatView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(false)
             .onAppear {
+            
                 Task {
                     checkingFriendStatus = true
                     await privateChatViewModel.checkIfUserIsFriend(userID: user.id)
                     checkingFriendStatus = false
+                }
+                
+                Task{
+                    // escucha typing en paralelo
+                    try? await chatsViewModel.listenTyping(chatID: chat.id)
                     
+                }
+                
+                Task {
+                    // tu bucle de limpieza
                     while true {
                         await privateChatViewModel.cleanUpDeletedMessages(
                             chatID: chat.id,
@@ -300,6 +340,11 @@ struct PrivateChatView: View {
                     }
                 }
                 
+            }
+            .onDisappear{
+                Task{
+                    try await chatsViewModel.userIsTyping(in: chat.id, false)
+                }
             }
             .onChange(of: selectedImageItem) { _, newItem in
                 Task {

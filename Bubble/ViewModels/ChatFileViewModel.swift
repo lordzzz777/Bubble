@@ -15,15 +15,19 @@ import SwiftUI
 @Observable @MainActor
 final class ChatFileViewModel {
     
+    // MARK: - Servicios
     private let fileService = ChatFileService()
     private let publicChatService = PublicChatService()
     
+    // MARK: - Estado UI
     var isUploading: Bool = false
     var isShowError: Bool = false
     var errorTitleMessage: String?
     var errorMessage: String?
     
-    /// Subida de archivo desde URL local y retorno del mensaje para guardar en Firestore.
+    // MARK: - Subida de archivos
+    /// Sube un archivo local a Storage y devuelve metadatos mínimos
+    /// para montar el `MessageModel`.
     func uploadAndPrepareMessage(from fileURL: URL) async throws -> (name: String, type: String, url: String)? {
         isUploading = true
         
@@ -44,7 +48,8 @@ final class ChatFileViewModel {
         }
     }
     
-    /// Descarga el archivo y lo retorna como URL local.
+    // MARK: - Descarga rápida
+    /// Descarga un archivo desde una URL remota y lo guarda en tmp.
     func dowloadFile (from urlString: String) async -> URL? {
         do{
             return try await fileService.downloadFile(from: urlString)
@@ -56,9 +61,8 @@ final class ChatFileViewModel {
         }
     }
     
-    /// Descarga el archivo desde Firebase y lo guarda en el almacenamiento local del dispositivo.
-    /// - Parameter remoteURL: La URL del archivo en Firebase Storage.
-    /// - Returns: URL local del archivo guardado.
+    // MARK: - Descarga + Persistencia local
+    /// Descarga el archivo, le asigna extensión correcta y lo mueve a Documents
     func downloadAndSaveFile(from remoteURL: String) async throws -> URL {
         do {
             // 1. Descargar a ubicación temporal
@@ -87,13 +91,8 @@ final class ChatFileViewModel {
         }
     }
     
-    /// Sube un archivo y envía un mensaje de tipo `.file`.
-    ///
-    /// - Parameters:
-    ///   - fileURL: URL local del archivo seleccionado.
-    ///   - scope:  Ámbito del chat donde se enviará el mensaje
-    ///             (`.public` o `.privateChat(chatID)`).
-    ///   - messageID: (Opcional) ID del mensaje al que se responde, si aplica.
+    // MARK: - Envío a Firestore
+    /// Sube (si es necesario) y envía un mensaje de tipo `.file`
     func sendFileMessage(_ fileURL: URL,scope: ChatScope, replyingTo messageID: String? = nil) async {
         do {
             // Subida a Firebase Storage + metadata
@@ -134,9 +133,8 @@ final class ChatFileViewModel {
     }
     
     
-    /// Valida que el archivo no supere el tamaño permitido.
-    /// - Parameter fileURL: Ruta local del archivo a validar.
-    /// - Throws: Error si el archivo supera el tamaño permitido.
+    // MARK: - Validación
+    /// Verifica que el archivo no exceda 25 MB.
     func validateFileSize(_ fileURL: URL) async throws {
         do {
             try await fileService.validateFileSize(fileURL)
@@ -149,9 +147,8 @@ final class ChatFileViewModel {
         }
     }
 
-    /// Elimina un archivo del almacenamiento en la nube (Firebase Storage).
-    /// - Parameter storageURL: URL completa del archivo en Firebase Storage.
-    /// - Throws: Error si no se puede eliminar.
+    // MARK: - Borrado
+    /// Elimina un archivo de Firebase Storage dado su URL completo.
     func deleteFileFromStorage(_ storageURL: String) async throws {
         do {
             try await fileService.deleteFileFromStorage(storageURL)
@@ -164,26 +161,23 @@ final class ChatFileViewModel {
             throw error
         }
     }
-    
-
-
 }
 
-
+// MARK: - Helpers UI / QuickLook
 extension ChatFileViewModel {
     
-    /// Retorna el nombre del archivo desde la URL
+    /// Devuelve solo el nombre (último pathComponent).
     func extractFileName(from urlString: String) -> String {
         URL(string: urlString)?.lastPathComponent ?? "Archivo"
     }
     
-    /// Determina si el archivo es compatible con QuickLook (vista previa)
+    /// Comprueba si QuickLook soporta la extensión.
     func isPreviewable(_ fileURL: URL) -> Bool {
         let previewableExtensions: [String] = ["pdf", "doc", "docx", "txt", "rtf", "png", "jpg", "jpeg", "heic", "xlsx", "csv"]
         return previewableExtensions.contains(fileURL.pathExtension.lowercased())
     }
     
-    /// Devuelve un ícono según el tipo de archivo
+    /// Selecciona un SF-Symbol apropiado según la extensión.
     func iconForFileType(_ path: String) -> String {
         let ext = URL(string: path)?.pathExtension.lowercased() ?? ""
         
@@ -198,7 +192,7 @@ extension ChatFileViewModel {
         }
     }
     
-    /// Descarga y abre un archivo si su extensión es compatible, o muestra un aviso si no lo es.
+    /// Descarga y muestra el archivo si es compatible; si no, informa de la extensión.
     func previewsFile(_ message: String,isPreviewPresented: Binding<Bool>, previewedFileURL: Binding< URL?>, unsupportedExtension: Binding <String?>) async throws{
         do{
             let localURL = try await downloadAndSaveFile(from: message)
@@ -219,6 +213,7 @@ extension ChatFileViewModel {
         }
     }
     
+    /// Abre el archivo con la app externa asociada (Compartir).
     func openFileExternally(_ url: URL) {
         UIApplication.shared.open(url)
     }
