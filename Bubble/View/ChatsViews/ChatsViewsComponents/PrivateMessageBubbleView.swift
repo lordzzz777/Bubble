@@ -18,6 +18,8 @@ struct PrivateMessageBubbleView: View {
     
     // Estado ventada modal de los emojis
     @State private var isEmojiPickerVisible: Bool = false
+    @State private var showSentIcon = false
+
     
     // Para Ver Archivos PDF
     @State private var previewedFileURL: URL? = nil
@@ -252,16 +254,18 @@ struct PrivateMessageBubbleView: View {
                                     .transition(.opacity)
                                     .offset(y: -40)
                             }
-                            
-//                            if forwardViewModel.selected.contains(message){
-//                                Image(systemName: "checkmark.circle.fill")
-//                                    .font(.title)
-//                                    .foregroundColor(.accentColor)
-//                                    .offset(x: 12, y: -12)
-//                            }
                         },
                         alignment: .top
                     )
+                    .overlay(alignment: .center) {
+                        if showSentIcon {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.system(size: 100))
+                                .foregroundStyle(.orange).shadow(color: .white, radius: 10)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+
                     .onLongPressGesture{
                         withAnimation {
                             forwardViewModel.selecting = true
@@ -397,6 +401,21 @@ struct PrivateMessageBubbleView: View {
                         .environment(forwardViewModel)
                         .presentationDetents([.medium, .large])
                 }
+                .onChange(of: forwardViewModel.selecting) { _, selecting in
+                    // Cuando la hoja se cierra (= envío terminado) el flag pasa a false
+                    guard !selecting else { return }
+                    
+                    // evita superposiciones
+                    if showSentIcon == false {
+                        showSentIcon = true
+                        Task {
+                            // oculta tras 1 s
+                            try? await Task.sleep(for: .seconds(1))
+                            showSentIcon = false
+                        }
+                    }
+                }
+
 
                 .task {
                     await userProfileView.loadUserData()

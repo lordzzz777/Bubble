@@ -29,7 +29,8 @@ struct PublicMessageBubbleView: View {
     
     // Para renviar mensages
     @State private var isSelecting = false
-    
+    @State private var showSentIcon = false
+
     @Binding var messageText: String
     @Binding var isEditing: Bool
     @Binding var editingMessageID: String?
@@ -244,6 +245,15 @@ struct PublicMessageBubbleView: View {
                         },
                         alignment: .top
                     )
+                    .overlay(alignment: .center) {
+                        if showSentIcon {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.system(size: 100))
+                                .foregroundStyle(.orange).shadow(color: .white, radius: 10)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+
                     .onLongPressGesture{
                         withAnimation {
                             forwardViewModel.selecting = true
@@ -368,6 +378,21 @@ struct PublicMessageBubbleView: View {
                         .environment(forwardViewModel)
                         .presentationDetents([.medium, .large])
                 }
+                .onChange(of: forwardViewModel.selecting) { _, selecting in
+                    // Cuando la hoja se cierra (= envío terminado) el flag pasa a false
+                    guard !selecting else { return }
+                    
+                    // evita superposiciones
+                    if showSentIcon == false {
+                        showSentIcon = true
+                        Task {
+                            // oculta tras 1 s
+                            try? await Task.sleep(for: .seconds(1))
+                            showSentIcon = false
+                        }
+                    }
+                }
+
                 .padding(.horizontal, isCurrentUser && !showAvatarAndName ? 50 : 0)
                 .padding(.horizontal, !isCurrentUser && !showAvatarAndName ? 50 : 0)
                 .task {
