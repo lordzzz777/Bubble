@@ -12,7 +12,7 @@ import FirebaseCore
 struct CreateCommunityView: View {
     @State var createCommunityViewModel: CreateCommunityViewModel
     @State private var selectedItem: PhotosPickerItem? = nil
-    @State private var selectedImage: Image? = nil
+    @State private var selectedUIImage: UIImage? = nil
     @State private var communityName: String = ""
     @State private var showFinishButton: Bool = false
     @State private var showCheckingNameLoading: Bool = false
@@ -119,14 +119,19 @@ struct CreateCommunityView: View {
                             Button {
                                 Task {
                                     createCommunityViewModel.community.name = communityName
-                                    wasCommunityCreatedSuccessfully = await createCommunityViewModel.createCommunity(newCommunity: createCommunityViewModel.community)
+                                    wasCommunityCreatedSuccessfully = await createCommunityViewModel.createCommunity(
+                                        newCommunity: createCommunityViewModel.community,
+                                        image: selectedUIImage
+                                    )
                                     
                                     withAnimation(.bouncy(duration: 0.3).delay(0.2)) {
                                         showCreateCommunityFeedback = wasCommunityCreatedSuccessfully
                                     }
                                     
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                                        dismiss()
+                                    if wasCommunityCreatedSuccessfully {
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                            dismiss()
+                                        }
                                     }
                                 }
                             } label: {
@@ -146,13 +151,20 @@ struct CreateCommunityView: View {
     @ViewBuilder
     func SelectAvatarView() -> some View {
         VStack {
-            if let selectedImage = selectedImage {
-                PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
-                    selectedImage
-                        .resizable()
-                        .scaledToFill()
-                        .clipShape(Circle())
-                        .frame(width: 170, height: 170)
+            if let selectedUIImage {
+                ZStack {
+                    PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
+                        Image(uiImage: selectedUIImage)
+                            .resizable()
+                            .scaledToFill()
+                            .clipShape(Circle())
+                            .frame(width: 170, height: 170)
+                    }
+                    if createCommunityViewModel.isUploadingImage {
+                        ProgressView()
+                            .padding()
+                            .background(.ultraThinMaterial, in: Circle())
+                    }
                 }
             } else {
                 PhotosPicker(selection: $selectedItem, matching: .images, photoLibrary: .shared()) {
@@ -169,12 +181,7 @@ struct CreateCommunityView: View {
             Task {
                 if let data = try? await newItem?.loadTransferable(type: Data.self),
                    let uiImage = UIImage(data: data) {
-                    selectedImage = Image(uiImage: uiImage)
-                    await createCommunityViewModel.uploadImage(image: uiImage)
-
-                    if createCommunityViewModel.showError {
-                        selectedImage = nil
-                    }
+                    selectedUIImage = uiImage
                 }
             }
         }

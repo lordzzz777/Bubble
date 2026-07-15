@@ -7,7 +7,9 @@ service firebase.storage {
     }
 
     function isAdmin() {
-      return signedIn() && request.auth.token.admin == true;
+      return signedIn()
+        && "admin" in request.auth.token
+        && request.auth.token.admin == true;
     }
 
     function isImage() {
@@ -19,44 +21,77 @@ service firebase.storage {
         || request.resource.contentType == 'application/octet-stream';
     }
 
-    match /avatars/{userID}.jpg {
+    function ownsExistingFile() {
+      return signedIn()
+        && resource != null
+        && "ownerUID" in resource.metadata
+        && resource.metadata.ownerUID == request.auth.uid;
+    }
+
+    function createsOwnedFile() {
+      return signedIn()
+        && request.resource != null
+        && "ownerUID" in request.resource.metadata
+        && request.resource.metadata.ownerUID == request.auth.uid;
+    }
+
+    match /avatars/{fileName} {
       allow read: if signedIn();
-      allow write: if signedIn()
-        && request.auth.uid == userID
-        && request.resource.size < 5 * 1024 * 1024
-        && isImage();
-      allow delete: if signedIn() && (request.auth.uid == userID || isAdmin());
+      allow write: if signedIn() && (
+        (request.resource == null
+          && (fileName == request.auth.uid + '.jpg' || isAdmin()))
+        || (request.resource != null
+          && fileName == request.auth.uid + '.jpg'
+          && request.resource.size < 5 * 1024 * 1024
+          && isImage())
+      );
     }
 
     match /chat_images/{fileName} {
       allow read: if signedIn();
-      allow write: if signedIn()
-        && request.resource.size < 25 * 1024 * 1024
-        && (isImage() || request.resource.contentType == 'application/octet-stream');
-      allow delete: if signedIn();
+      allow write: if
+        (request.resource == null && (ownsExistingFile() || isAdmin()))
+        || (request.resource != null
+          && createsOwnedFile()
+          && (resource == null || ownsExistingFile())
+          && request.resource.size < 25 * 1024 * 1024
+          && (isImage() || request.resource.contentType == 'application/octet-stream'));
     }
 
     match /voice_notes/{fileName} {
       allow read: if signedIn();
-      allow write: if signedIn()
-        && request.resource.size < 25 * 1024 * 1024
-        && isAudio();
-      allow delete: if signedIn();
+      allow write: if
+        (request.resource == null && (ownsExistingFile() || isAdmin()))
+        || (request.resource != null
+          && createsOwnedFile()
+          && (resource == null || ownsExistingFile())
+          && request.resource.size < 25 * 1024 * 1024
+          && isAudio());
     }
 
     match /shared_files/{fileName} {
       allow read: if signedIn();
-      allow write: if signedIn()
-        && request.resource.size < 50 * 1024 * 1024;
-      allow delete: if signedIn();
+      allow write: if
+        (request.resource == null && (ownsExistingFile() || isAdmin()))
+        || (request.resource != null
+          && createsOwnedFile()
+          && (resource == null || ownsExistingFile())
+          && request.resource.size < 50 * 1024 * 1024);
     }
 
-    match /communities/{communityID}.jpg {
+    match /communities/{fileName} {
       allow read: if signedIn();
-      allow write: if signedIn()
-        && request.resource.size < 5 * 1024 * 1024
-        && isImage();
-      allow delete: if signedIn();
+      allow write: if
+        (request.resource == null && (ownsExistingFile() || isAdmin()))
+        || (request.resource != null
+          && signedIn()
+          && (
+            resource == null
+            || (ownsExistingFile() && createsOwnedFile())
+          )
+          && fileName.matches('.*\\.jpg')
+          && request.resource.size < 5 * 1024 * 1024
+          && isImage());
     }
 
     match /{allPaths=**} {

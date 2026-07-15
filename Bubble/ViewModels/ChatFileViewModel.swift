@@ -20,6 +20,7 @@ final class ChatFileViewModel {
     private let publicChatService = PublicChatService()
     private let messageEncryptionService = MessageEncryptionService()
     private let moderationService = ModerationService()
+    private let readStateService = ReadStateService()
     
     // MARK: - Estado UI
     var isUploading: Bool = false
@@ -193,6 +194,7 @@ final class ChatFileViewModel {
             "lastMessage": "Adjunto cifrado",
             "lastMessageType": message.type.rawValue
         ])
+        try await readStateService.incrementPrivateChat(chatID: chatID, senderID: message.senderUserID)
     }
     
     

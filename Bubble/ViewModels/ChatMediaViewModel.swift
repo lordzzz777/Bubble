@@ -24,6 +24,7 @@ final class ChatMediaViewModel{
     private let chatPublicService = PublicChatService()
     private let messageEncryptionService = MessageEncryptionService()
     private let moderationService = ModerationService()
+    private let readStateService = ReadStateService()
    
     // MARK: - Estado de errores (Bindable en la UI si lo deseas)
     var messages: [MessageModel] = []
@@ -114,6 +115,7 @@ final class ChatMediaViewModel{
             "lastMessage": "Adjunto cifrado",
             "lastMessageType": message.type.rawValue
         ])
+        try await readStateService.incrementPrivateChat(chatID: chatID, senderID: message.senderUserID)
     }
     
     private func sendPrivateImageMessage(imageData: Data, chatID: String) async throws {

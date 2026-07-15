@@ -11,6 +11,18 @@ import FirebaseAuth
 import FirebaseCore
 import Firebase
 
+private final class PrivateChatListenerBox: @unchecked Sendable {
+    private let listener: ListenerRegistration
+
+    init(_ listener: ListenerRegistration) {
+        self.listener = listener
+    }
+
+    func remove() {
+        listener.remove()
+    }
+}
+
 enum PrivateChatServiceError: Error {
     case fetchingMessagesFailed
     case fetchingDocumentsFailed
@@ -23,7 +35,7 @@ actor PrivateChatService {
     private let uid = Auth.auth().currentUser?.uid ?? ""
     private let messageEncryptionService = MessageEncryptionService()
     private let moderationService = ModerationService()
-    private var listenerRegistration: ListenerRegistration?
+    private let readStateService = ReadStateService()
     
     func prepareMessageEncryptionIdentity() async throws {
         try await messageEncryptionService.ensureCurrentUserPublicKeyIsPublished()
@@ -32,47 +44,7 @@ actor PrivateChatService {
     /// Obtiene los chats en tiempo real en los que el usuario participa.
     /// - Returns: Un `AsyncThrowingStream` que emite un array de `ChatModel` y maneja errores.
     func getChats() -> AsyncThrowingStream<[ChatModel], Error>  {
-        let chatsRef = database.collection("chats")
-            .whereField("participants", arrayContains: uid)
-            .order(by: "lastMessageTimestamp", descending: false)
-        
-        return AsyncThrowingStream {continuation in
-            chatsRef.addSnapshotListener{ query, error in
-                if error != nil {
-                    AppLogger.error("No se pudieron obtener los chats privados.")
-                    continuation.finish()
-                    return
-                }
-                
-                guard let doc = query?.documents.compactMap({$0}) else {
-                    AppLogger.warning("El documento de chat está vacío o no existe.")
-                    continuation.yield(with: .success([]))
-                    return
-                }
-                
-                let chats = doc.map{try? $0.data(as: ChatModel.self)}.compactMap{$0}
-                continuation.yield(with: .success(chats))
-            }
-            
-            // Cancelación segura dentro del actor
-            continuation.onTermination = { _ in
-                Task { await self.removeListener() }
-            }
-        }
-        
-    }
-    
-    /// Detiene la escucha activa en Firestore y libera la referencia del listener.
-    ///
-    /// - Nota: Si no hay un listener activo, imprime un mensaje en la consola.
-    func removeListener() {
-        guard let listener = listenerRegistration else {
-            AppLogger.debug("No hay listener activo.")
-            return
-        }
-        
-        listener.remove()
-        listenerRegistration = nil
+        Self.makeChatsStream(uid: uid)
     }
     
     func checkIfFriend(friendID: String) async throws -> Bool {
@@ -97,33 +69,7 @@ actor PrivateChatService {
                 continuation.finish(throwing: NSError(domain: "FirestoreError", code: 0, userInfo: [NSLocalizedDescriptionKey: "El ID de usuario no puede estar vacío."]))
             }
         }
-        let userRef = database.collection("users").document(id)
-        
-        return AsyncThrowingStream { continuation in
-            listenerRegistration = userRef.addSnapshotListener { documentSnapshot, error in
-                if let error = error {
-                    continuation.yield(with: .failure(error))
-                    return
-                }
-                
-                guard let document = documentSnapshot, document.exists else {
-                    continuation.yield(with: .success(nil))
-                    return
-                }
-                
-                do {
-                    let user = try document.data(as: UserModel.self)
-                    continuation.yield(with: .success(user))
-                } catch {
-                    continuation.yield(with: .failure(error))
-                }
-            }
-            
-            // Cancelación segura dentro del actor
-            continuation.onTermination = { _ in
-                Task { await self.removeListener() }
-            }
-        }
+        return Self.makeUserStream(id: id)
     }
     
     /// Obtiene los mensajes de un chat en tiempo real usando un `SnapshotListener`.
@@ -133,43 +79,121 @@ actor PrivateChatService {
     ///   - completionHandler: Un bloque de finalización que devuelve un `Result<[MessageModel], Error>`,
     ///                        donde se entrega la lista de mensajes o un error en caso de fallo.
     func fetchMessagesFromChat(chatID: String) -> AsyncThrowingStream<[MessageModel], Error> {
-        return AsyncThrowingStream { continuation in
-            let listener = database.collection("chats")
+        Self.makeMessagesStream(
+            chatID: chatID,
+            encryptionService: messageEncryptionService
+        )
+    }
+
+    /// Firestore invoca sus listeners desde una cola propia. Crear el callback
+    /// fuera del aislamiento del actor evita un `swift_task_checkIsolated` en
+    /// Swift 6 y reentra en concurrencia estructurada solo para descifrar.
+    private nonisolated static func makeMessagesStream(
+        chatID: String,
+        encryptionService: MessageEncryptionService
+    ) -> AsyncThrowingStream<[MessageModel], Error> {
+        AsyncThrowingStream { continuation in
+            let query = Firestore.firestore()
+                .collection("chats")
                 .document(chatID)
                 .collection("messages")
                 .order(by: "timestamp", descending: false)
-                .addSnapshotListener { snapshot, error in
-                    if let error = error {
-                        continuation.finish(throwing: error)
-                        return
-                    }
-                    
-                    guard let documents = snapshot?.documents else {
-                        continuation.yield([])
-                        return
-                    }
-                    
-                    Task {
-                        var messages: [MessageModel] = []
-                        for doc in documents {
-                            guard var msg = try? doc.data(as: MessageModel.self) else { continue }
-                            msg.id = doc.documentID
-                            
-                            if msg.encryptionVersion != nil, msg.type == .text {
-                                do {
-                                    msg = try await self.messageEncryptionService.decrypt(msg, chatID: chatID)
-                                } catch {
-                                    msg.content = "No se pudo descifrar este mensaje"
-                                }
-                            }
-                            messages.append(msg)
-                        }
-                        continuation.yield(messages)
-                    }
+
+            let listener = query.addSnapshotListener { snapshot, error in
+                if let error {
+                    continuation.finish(throwing: error)
+                    return
                 }
-            
-            // Asegurar que el listener se elimine cuando ya no se use
-            continuation.onTermination = { _ in listener.remove() }
+
+                let documents = snapshot?.documents ?? []
+
+                Task {
+                    var messages: [MessageModel] = []
+                    for document in documents {
+                        guard var message = try? document.data(as: MessageModel.self) else {
+                            continue
+                        }
+                        message.id = document.documentID
+
+                        if message.encryptionVersion != nil, message.type == .text {
+                            do {
+                                message = try await encryptionService.decrypt(
+                                    message,
+                                    chatID: chatID
+                                )
+                            } catch {
+                                message.content = "No se pudo descifrar este mensaje"
+                            }
+                        }
+                        messages.append(message)
+                    }
+                    continuation.yield(messages)
+                }
+            }
+
+            let listenerBox = PrivateChatListenerBox(listener)
+            continuation.onTermination = { _ in
+                listenerBox.remove()
+            }
+        }
+    }
+
+    private nonisolated static func makeChatsStream(
+        uid: String
+    ) -> AsyncThrowingStream<[ChatModel], Error> {
+        AsyncThrowingStream { continuation in
+            let query = Firestore.firestore()
+                .collection("chats")
+                .whereField("participants", arrayContains: uid)
+                .order(by: "lastMessageTimestamp", descending: false)
+
+            let listener = query.addSnapshotListener { snapshot, error in
+                if let error {
+                    AppLogger.error("No se pudieron obtener los chats privados.")
+                    continuation.finish(throwing: error)
+                    return
+                }
+
+                let chats = snapshot?.documents.compactMap {
+                    try? $0.data(as: ChatModel.self)
+                } ?? []
+                continuation.yield(chats)
+            }
+
+            let listenerBox = PrivateChatListenerBox(listener)
+            continuation.onTermination = { _ in
+                listenerBox.remove()
+            }
+        }
+    }
+
+    private nonisolated static func makeUserStream(
+        id: String
+    ) -> AsyncThrowingStream<UserModel?, Error> {
+        AsyncThrowingStream { continuation in
+            let reference = Firestore.firestore().collection("users").document(id)
+            let listener = reference.addSnapshotListener { snapshot, error in
+                if let error {
+                    continuation.finish(throwing: error)
+                    return
+                }
+
+                guard let snapshot, snapshot.exists else {
+                    continuation.yield(nil)
+                    return
+                }
+
+                do {
+                    continuation.yield(try snapshot.data(as: UserModel.self))
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+
+            let listenerBox = PrivateChatListenerBox(listener)
+            continuation.onTermination = { _ in
+                listenerBox.remove()
+            }
         }
     }
 
@@ -263,6 +287,7 @@ actor PrivateChatService {
                 "lastMessageType": encryptedMessage.type.rawValue
             ]
             try await database.collection("chats").document(chatID).updateData(updateChatInfo)
+            try await readStateService.incrementPrivateChat(chatID: chatID, senderID: uid)
         } catch {
             throw PrivateChatServiceError.sendMessageFailed
         }
@@ -294,9 +319,14 @@ actor PrivateChatService {
             ]
 
             try await database.collection("chats").document(chatID).updateData(updataChatInfo)
+            try await readStateService.incrementPrivateChat(chatID: chatID, senderID: uid)
         }catch{
             throw PrivateChatServiceError.sendMessageFailed
         }
+    }
+
+    func markChatRead(chatID: String) async throws {
+        try await readStateService.markPrivateChatRead(chatID: chatID)
     }
     
     /// Lee una sola vez el documento `users/{id}` y devuelve el `UserModel`.

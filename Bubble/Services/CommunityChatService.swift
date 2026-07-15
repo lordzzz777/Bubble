@@ -1,6 +1,7 @@
 import Foundation
 import FirebaseAuth
 import FirebaseFirestore
+import FirebaseStorage
 
 private final class CommunityListenerBox: @unchecked Sendable {
     private let listener: ListenerRegistration
@@ -17,12 +18,14 @@ private final class CommunityListenerBox: @unchecked Sendable {
 actor CommunityChatService {
     private let database = Firestore.firestore()
     private let messageEncryptionService = MessageEncryptionService()
+    private let readStateService = ReadStateService()
 
     enum CommunityChatError: LocalizedError {
         case notAuthenticated
         case communityNotFound
         case notMember
         case blocked
+        case notOwner
 
         var errorDescription: String? {
             switch self {
@@ -34,6 +37,8 @@ actor CommunityChatService {
                 return "No tienes acceso a este chat."
             case .blocked:
                 return "No tienes acceso a este chat."
+            case .notOwner:
+                return "Solo el propietario puede eliminar la comunidad."
             }
         }
     }
@@ -75,8 +80,18 @@ actor CommunityChatService {
     }
 
     func listenMessages(communityID: String) -> AsyncThrowingStream<[MessageModel], Error> {
+        Self.makeMessagesStream(
+            communityID: communityID,
+            encryptionService: messageEncryptionService
+        )
+    }
+
+    private nonisolated static func makeMessagesStream(
+        communityID: String,
+        encryptionService: MessageEncryptionService
+    ) -> AsyncThrowingStream<[MessageModel], Error> {
         AsyncThrowingStream { continuation in
-            let listener = database.collection("communities")
+            let listener = Firestore.firestore().collection("communities")
                 .document(communityID)
                 .collection("messages")
                 .order(by: "timestamp", descending: false)
@@ -95,7 +110,7 @@ actor CommunityChatService {
                                 
                                 if message.encryptionVersion != nil, message.type == .text {
                                     do {
-                                        message = try await self.messageEncryptionService.decrypt(message, chatID: communityID)
+                                        message = try await encryptionService.decrypt(message, chatID: communityID)
                                     } catch {
                                         message.content = "No se pudo descifrar este mensaje"
                                     }
@@ -157,6 +172,48 @@ actor CommunityChatService {
             "lastMessageTimestamp": encryptedMessage.timestamp,
             "lastMessageSenderUserID": uid
         ])
+        try await readStateService.incrementCommunity(
+            communityID: communityID,
+            senderID: uid,
+            participantIDs: participantIDs
+        )
+    }
+
+    func markCommunityRead(communityID: String) async throws {
+        try await readStateService.markCommunityRead(communityID: communityID)
+    }
+
+    func deleteCommunity(communityID: String, imageURL: String) async throws {
+        let uid = try currentUserID()
+        let communityRef = database.collection("communities").document(communityID)
+        let document = try await communityRef.getDocument()
+        guard let community = try? document.data(as: CommunityModel.self) else {
+            throw CommunityChatError.communityNotFound
+        }
+        guard community.ownerUID == uid else {
+            throw CommunityChatError.notOwner
+        }
+
+        // Firestore no elimina subcolecciones junto con el documento padre.
+        // Borramos los mensajes en lotes antes de eliminar la comunidad.
+        while true {
+            let messages = try await communityRef.collection("messages").limit(to: 400).getDocuments()
+            guard !messages.documents.isEmpty else { break }
+            let batch = database.batch()
+            messages.documents.forEach { batch.deleteDocument($0.reference) }
+            try await batch.commit()
+        }
+
+        try await communityRef.delete()
+
+        guard !imageURL.isEmpty else { return }
+        do {
+            try await Storage.storage().reference(forURL: imageURL).delete()
+        } catch {
+            // Una imagen heredada puede no tener ownerUID. La comunidad ya se
+            // eliminó correctamente; el archivo podrá limpiarlo un administrador.
+            AppLogger.warning("La comunidad se eliminó, pero no se pudo limpiar su imagen.")
+        }
     }
 
     func assertCurrentUserCanAccessCommunity(communityID: String) async throws {

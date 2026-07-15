@@ -17,9 +17,11 @@ struct ChatModel: Codable, Hashable {
     var lastMessageType: MessageType
     var lastMessageTimestamp: Timestamp
     var lastMessageSenderUserID: String
+    var unreadCounts: [String: Int]? = nil
+    var lastReadAt: [String: Timestamp]? = nil
     
     var dictionary: [String: Any] {
-        return [
+        var data: [String: Any] = [
             "id": id,
             "participants": participants,
             "lastMessage": lastMessage,
@@ -27,6 +29,9 @@ struct ChatModel: Codable, Hashable {
             "lastMessageTimestamp": lastMessageTimestamp,
             "lastMessageSenderUserID": lastMessageSenderUserID
         ]
+        if let unreadCounts { data["unreadCounts"] = unreadCounts }
+        if let lastReadAt { data["lastReadAt"] = lastReadAt }
+        return data
     }
 }
 

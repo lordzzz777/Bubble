@@ -17,6 +17,7 @@ actor ForwardService{
     private let database = Firestore.firestore()
     private let messageEncryptionService = MessageEncryptionService()
     private let moderationService = ModerationService()
+    private let readStateService = ReadStateService()
     
     /// Devuelve (o crea) el ID de un chat 1-a-1 entre `currentUID` y `contactUID`
     func ensurePrivateChat(with contactUID: String, currentUID: String) async throws -> String {
@@ -111,7 +112,11 @@ actor ForwardService{
         }
         
         let storageRef = Storage.storage().reference().child("\(folder)/\(message.id).bin")
-        _ = try await storageRef.putDataAsync(data)
+        guard let uid = Auth.auth().currentUser?.uid else { throw URLError(.userAuthenticationRequired) }
+        let metadata = StorageMetadata()
+        metadata.contentType = "application/octet-stream"
+        metadata.customMetadata = ["ownerUID": uid]
+        _ = try await storageRef.putDataAsync(data, metadata: metadata)
         return try await storageRef.downloadURL().absoluteString
     }
     
@@ -141,6 +146,10 @@ actor ForwardService{
                     "lastMessage": forwardedMessage.encryptionVersion == nil ? forwardedMessage.content : "Mensaje cifrado",
                     "lastMessageType": forwardedMessage.type.rawValue
                 ])
+                try await readStateService.incrementPrivateChat(
+                    chatID: chatID,
+                    senderID: forwardedMessage.senderUserID
+                )
             }
         }
     }

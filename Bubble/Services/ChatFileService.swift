@@ -8,6 +8,7 @@
 import Foundation
 import FirebaseStorage
 import UniformTypeIdentifiers
+import FirebaseAuth
 
 actor ChatFileService {
     
@@ -23,9 +24,13 @@ actor ChatFileService {
     
     func uploadFileData(_ data: Data, path: String = UUID().uuidString, fileExtension: String) async throws -> String {
         let storageRef = Storage.storage().reference().child("shared_files/\(path).\(fileExtension)")
+        guard let uid = Auth.auth().currentUser?.uid else { throw URLError(.userAuthenticationRequired) }
+        let metadata = StorageMetadata()
+        metadata.contentType = UTType(filenameExtension: fileExtension)?.preferredMIMEType ?? "application/octet-stream"
+        metadata.customMetadata = ["ownerUID": uid]
         
         return try await Task.detached(priority: .userInitiated){
-            _ = try await storageRef.putDataAsync(data)
+            _ = try await storageRef.putDataAsync(data, metadata: metadata)
             let url = try await storageRef.downloadURL()
             return url.absoluteString
         }.value

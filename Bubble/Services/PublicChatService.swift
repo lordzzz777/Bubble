@@ -9,6 +9,18 @@ import Foundation
 import FirebaseFirestore
 import FirebaseAuth
 
+private final class PublicChatListenerBox: @unchecked Sendable {
+    private let listener: ListenerRegistration
+
+    init(_ listener: ListenerRegistration) {
+        self.listener = listener
+    }
+
+    func remove() {
+        listener.remove()
+    }
+}
+
 actor PublicChatService {
     private let database = Firestore.firestore()
     private let chatsRef = Firestore.firestore().collection("public_chats").document("global_chat")
@@ -19,48 +31,59 @@ actor PublicChatService {
     /// - Returns: Un flujo asíncrono (`AsyncThrowingStream`) que emite listas de `MessageModel` actualizadas en tiempo real.
     /// - Throws: Si ocurre un error en la suscripción a Firestore, el flujo finaliza con una excepción.
     func fetchPublicChatMessages() -> AsyncThrowingStream<[MessageModel], Error> {
-        return AsyncThrowingStream { continuation in
-            chatsRef.collection("messages")
+        Self.makePublicMessagesStream(encryptionService: messageEncryptionService)
+    }
+
+    private nonisolated static func makePublicMessagesStream(
+        encryptionService: MessageEncryptionService
+    ) -> AsyncThrowingStream<[MessageModel], Error> {
+        AsyncThrowingStream { continuation in
+            let query = Firestore.firestore()
+                .collection("public_chats")
+                .document("global_chat")
+                .collection("messages")
                 .order(by: "timestamp", descending: false)
-                .addSnapshotListener { snapshot, error in
-                    if let error = error {
-                        continuation.finish(throwing: error)
-                        return
-                    }
-                    
-                    guard let documents = snapshot?.documents else {
-                        continuation.yield(with: .success([]))
-                        return
-                    }
-                    
-                    Task {
-                        var messages: [MessageModel] = []
-                        for doc in documents {
-                            do {
-                                var message = try doc.data(as: MessageModel.self)
-                                message.id = doc.documentID
-                                
-                                if let reactions = doc.data()["reactions"] as? [String: String] {
-                                    message.reactions = reactions
-                                }
-                                
-                                if message.encryptionVersion != nil, message.type == .text {
-                                    do {
-                                        message = try await self.messageEncryptionService.decrypt(message, chatID: self.chatsRef.documentID)
-                                    } catch {
-                                        message.content = "No se pudo descifrar este mensaje"
-                                    }
-                                }
-                                
-                                messages.append(message)
-                            } catch {
-                                AppLogger.error("Error al parsear mensaje público.")
-                            }
-                        }
-                        
-                        continuation.yield(with: .success(messages))
-                    }
+
+            let listener = query.addSnapshotListener { snapshot, error in
+                if let error {
+                    continuation.finish(throwing: error)
+                    return
                 }
+
+                let documents = snapshot?.documents ?? []
+                Task {
+                    var messages: [MessageModel] = []
+                    for document in documents {
+                        do {
+                            var message = try document.data(as: MessageModel.self)
+                            message.id = document.documentID
+                            if let reactions = document.data()["reactions"] as? [String: String] {
+                                message.reactions = reactions
+                            }
+
+                            if message.encryptionVersion != nil, message.type == .text {
+                                do {
+                                    message = try await encryptionService.decrypt(
+                                        message,
+                                        chatID: "global_chat"
+                                    )
+                                } catch {
+                                    message.content = "No se pudo descifrar este mensaje"
+                                }
+                            }
+                            messages.append(message)
+                        } catch {
+                            AppLogger.error("Error al parsear mensaje público.")
+                        }
+                    }
+                    continuation.yield(messages)
+                }
+            }
+
+            let listenerBox = PublicChatListenerBox(listener)
+            continuation.onTermination = { _ in
+                listenerBox.remove()
+            }
         }
     }
     

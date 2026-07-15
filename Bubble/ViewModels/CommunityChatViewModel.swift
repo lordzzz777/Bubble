@@ -18,6 +18,7 @@ final class CommunityChatViewModel {
     var showError = false
     var errorTitle = ""
     var errorMessage = ""
+    var isDeletingCommunity = false
 
     func stopListening() {
         messagesTask?.cancel()
@@ -47,6 +48,7 @@ final class CommunityChatViewModel {
             try await communityChatService.assertCurrentUserCanAccessCommunity(communityID: community.id)
             members = try await communityChatService.fetchMembers(for: community)
             assignColorsToMembers()
+            try await communityChatService.markCommunityRead(communityID: community.id)
             listenMessages(communityID: community.id)
         } catch CommunityChatService.CommunityChatError.notMember,
                 CommunityChatService.CommunityChatError.blocked {
@@ -57,6 +59,13 @@ final class CommunityChatViewModel {
             isLoadingMessages = false
             showError(title: "Mensajes no disponibles", message: "No se pudo cargar los mensajes. Verifica tu conexión a internet.")
         }
+    }
+
+    func unreadCount(for community: CommunityModel) -> Int {
+        guard let uid = Auth.auth().currentUser?.uid else { return 0 }
+        if let count = community.unreadCounts?[uid] { return max(0, count) }
+        let senderID = community.lastMessageSenderUserID
+        return senderID == nil || senderID == uid ? 0 : 1
     }
 
     func sendMessage(_ text: String) async -> Bool {
@@ -73,6 +82,27 @@ final class CommunityChatViewModel {
             return false
         } catch {
             showError(title: "Error al enviar", message: "Error al enviar el mensaje. Inténtalo más tarde.")
+            return false
+        }
+    }
+
+    func deleteCommunity(_ community: CommunityModel) async -> Bool {
+        isDeletingCommunity = true
+        defer { isDeletingCommunity = false }
+
+        do {
+            stopListening()
+            try await communityChatService.deleteCommunity(
+                communityID: community.id,
+                imageURL: community.imgUrl
+            )
+            communities.removeAll { $0.id == community.id }
+            return true
+        } catch {
+            showError(
+                title: "No se pudo eliminar",
+                message: error.localizedDescription
+            )
             return false
         }
     }

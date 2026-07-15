@@ -8,6 +8,7 @@
 import Foundation
 import AVFoundation
 import FirebaseStorage
+import FirebaseAuth
 
 /// Servicio exclusivo para gestionar grabación, almacenamiento, descarga y reproducción de notas de voz.
 actor ChatAudioService {
@@ -83,9 +84,13 @@ actor ChatAudioService {
     
     func uploadVoiceNoteData(_ data: Data, path: String = UUID().uuidString, fileExtension: String = "m4a") async throws -> String {
         let storageRef = Storage.storage().reference().child("voice_notes/\(path).\(fileExtension)")
+        guard let uid = Auth.auth().currentUser?.uid else { throw URLError(.userAuthenticationRequired) }
+        let metadata = StorageMetadata()
+        metadata.contentType = "audio/mp4"
+        metadata.customMetadata = ["ownerUID": uid]
         
         return try await Task.detached(priority: .userInitiated) {
-            _ = try await storageRef.putDataAsync(data)
+            _ = try await storageRef.putDataAsync(data, metadata: metadata)
             let url = try await storageRef.downloadURL()
             return url.absoluteString
         }.value

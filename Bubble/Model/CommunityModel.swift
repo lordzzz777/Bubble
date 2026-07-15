@@ -20,9 +20,13 @@ struct CommunityModel: Codable, Identifiable {
     var members: [String]
     var blockedUsers: [String]
     var admissionRequests: [String]
+    var unreadCounts: [String: Int]? = nil
+    var lastReadAt: [String: Timestamp]? = nil
+    var lastMessageTimestamp: Timestamp? = nil
+    var lastMessageSenderUserID: String? = nil
     
     var dictionary: [String: Any] {
-        return [
+        var data: [String: Any] = [
             "id": id,
             "name": name,
             "imgUrl": imgUrl,
@@ -35,6 +39,11 @@ struct CommunityModel: Codable, Identifiable {
             "blockedUsers": blockedUsers,
             "admissionRequests": admissionRequests
         ]
+        if let unreadCounts { data["unreadCounts"] = unreadCounts }
+        if let lastReadAt { data["lastReadAt"] = lastReadAt }
+        if let lastMessageTimestamp { data["lastMessageTimestamp"] = lastMessageTimestamp }
+        if let lastMessageSenderUserID { data["lastMessageSenderUserID"] = lastMessageSenderUserID }
+        return data
     }
 }
 

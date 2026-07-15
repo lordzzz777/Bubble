@@ -10,6 +10,7 @@ import FirebaseStorage
 import PhotosUI
 import SwiftUI
 import Photos
+import FirebaseAuth
 
 
 enum MediaPickerError: Error {
@@ -50,9 +51,13 @@ actor ChatMediaService{
     /// Sube una imagen comprimida a Firebase Storage y retorna la URL.
     func uploadImage(_ data: Data, path: String = UUID().uuidString, fileExtension: String = "png") async throws -> String {
         let storageRef = Storage.storage().reference().child("chat_images/\(path).\(fileExtension)")
+        guard let uid = Auth.auth().currentUser?.uid else { throw URLError(.userAuthenticationRequired) }
+        let metadata = StorageMetadata()
+        metadata.contentType = fileExtension.lowercased() == "png" ? "image/png" : "image/jpeg"
+        metadata.customMetadata = ["ownerUID": uid]
         
         return try await Task.detached(priority: .userInitiated) {
-            _ = try await storageRef.putDataAsync(data)
+            _ = try await storageRef.putDataAsync(data, metadata: metadata)
             let url = try await storageRef.downloadURL()
             return url.absoluteString
         }.value

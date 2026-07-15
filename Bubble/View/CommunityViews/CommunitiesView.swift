@@ -1,8 +1,10 @@
 import SwiftUI
 import Kingfisher
+import FirebaseAuth
 
 struct CommunitiesView: View {
     @State private var viewModel = CommunityChatViewModel()
+    @State private var communityToDelete: CommunityModel?
 
     var body: some View {
         NavigationStack {
@@ -20,7 +22,17 @@ struct CommunitiesView: View {
                         NavigationLink {
                             CommunityChatView(community: community)
                         } label: {
-                            CommunityRowView(community: community)
+                            CommunityRowView(
+                                community: community,
+                                unreadCount: viewModel.unreadCount(for: community)
+                            )
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if community.ownerUID == Auth.auth().currentUser?.uid {
+                                Button("Eliminar", role: .destructive) {
+                                    communityToDelete = community
+                                }
+                            }
                         }
                     }
                     .listStyle(.plain)
@@ -33,10 +45,30 @@ struct CommunitiesView: View {
             .task {
                 await viewModel.loadCommunities()
             }
+            .onAppear {
+                Task { await viewModel.loadCommunities() }
+            }
             .alert(viewModel.errorTitle, isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(viewModel.errorMessage)
+            }
+            .confirmationDialog(
+                "¿Eliminar \(communityToDelete?.name ?? "esta comunidad")?",
+                isPresented: Binding(
+                    get: { communityToDelete != nil },
+                    set: { if !$0 { communityToDelete = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Eliminar comunidad", role: .destructive) {
+                    guard let community = communityToDelete else { return }
+                    communityToDelete = nil
+                    Task { _ = await viewModel.deleteCommunity(community) }
+                }
+                Button("Cancelar", role: .cancel) { communityToDelete = nil }
+            } message: {
+                Text("Se eliminarán permanentemente la comunidad y todos sus mensajes.")
             }
         }
     }
@@ -44,6 +76,8 @@ struct CommunitiesView: View {
 
 private struct CommunityRowView: View {
     let community: CommunityModel
+    let unreadCount: Int
+    @State private var imageFailed = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -64,6 +98,16 @@ private struct CommunityRowView: View {
 
             Spacer()
 
+            if unreadCount > 0 {
+                Text(unreadCount > 99 ? "99+" : "\(unreadCount)")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, unreadCount > 9 ? 6 : 0)
+                    .frame(minWidth: 22, minHeight: 22)
+                    .background(.red, in: Capsule())
+                    .accessibilityLabel("\(unreadCount) mensajes sin leer")
+            }
+
             Text("\(Set(community.members + [community.ownerUID]).count)")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
@@ -76,9 +120,10 @@ private struct CommunityRowView: View {
 
     @ViewBuilder
     private var communityImage: some View {
-        if let url = URL(string: community.imgUrl), !community.imgUrl.isEmpty {
+        if let url = URL(string: community.imgUrl), !community.imgUrl.isEmpty, !imageFailed {
             KFImage(url)
                 .placeholder { ProgressView() }
+                .onFailure { _ in imageFailed = true }
                 .resizable()
                 .scaledToFill()
         } else {

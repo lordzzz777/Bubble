@@ -35,6 +35,7 @@ final class CreateCommunityViewModel {
     /// Flags de UI
     var showCreateNewCommunity: Bool = false
     var isCreatingCommunity: Bool = false
+    var isUploadingImage: Bool = false
     
     /// Gestión de errores
     var showError: Bool = false
@@ -59,12 +60,14 @@ final class CreateCommunityViewModel {
     
     /// Sube la imagen de la comunidad y actualiza `community.imgUrl`.
     func uploadImage(image: UIImage) async {
+        isUploadingImage = true
+        defer { isUploadingImage = false }
         do {
             let imageURL = try await createCommunityService.uploadImage(image: image, communityID: community.id)
             community.imgUrl = imageURL
         } catch {
             errorTitle = "Hubo un error al subir la imagen"
-            errorMessage = "Lo sentimos. Hubo un error al intentar subir la imagen al servidor. Por favor, intenta más tarde."
+            errorMessage = error.localizedDescription
             showError = true
         }
     }
@@ -109,18 +112,32 @@ final class CreateCommunityViewModel {
     // MARK: - Creación
     
     /// Crea la comunidad y envía invitaciones. Devuelve `true` si todo OK.
-    func createCommunity(newCommunity: CommunityModel) async -> Bool {
+    func createCommunity(newCommunity: CommunityModel, image: UIImage?) async -> Bool {
         do {
             isCreatingCommunity = true
-            let friendsToInviteIDs = newCommunity.members
-            try await createCommunityService.createCommunity(community: newCommunity, friendToInviteIDs: friendsToInviteIDs)
-            isCreatingCommunity = false
+            defer { isCreatingCommunity = false }
+
+            var communityToCreate = newCommunity
+            if let image {
+                isUploadingImage = true
+                defer { isUploadingImage = false }
+                communityToCreate.imgUrl = try await createCommunityService.uploadImage(
+                    image: image,
+                    communityID: communityToCreate.id
+                )
+            }
+
+            let friendsToInviteIDs = communityToCreate.members
+            try await createCommunityService.createCommunity(
+                community: communityToCreate,
+                friendToInviteIDs: friendsToInviteIDs
+            )
+            community = communityToCreate
             return true
         } catch {
             errorTitle = "Error al crear la comunidad"
-            errorMessage = "Hubo un error al intentar crear la comunidad. Por favor, intenta más tarde."
+            errorMessage = error.localizedDescription
             showError = true
-            isCreatingCommunity = false
         }
         
         return false

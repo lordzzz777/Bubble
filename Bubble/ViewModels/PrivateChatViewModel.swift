@@ -168,6 +168,7 @@ class PrivateChatViewModel {
     /// - Parameter chatID: El identificador del chat del cual se desean obtener los mensajes.
     func fetchMessages(chatID: String) async {
         do {
+            try await privateChatService.markChatRead(chatID: chatID)
             for try await newMessages in await privateChatService.fetchMessagesFromChat(chatID: chatID) {
                 messages = newMessages.sorted(by: { $0.timestamp.seconds < $1.timestamp.seconds })
                 if let last = messages.last {
@@ -176,10 +177,16 @@ class PrivateChatViewModel {
             }
         } catch {
             errorTitle = "Error al obtener mensajes"
-            errorMessage = "Hubo un error al intentar obtener los mensajes. Por favor, inténtalo más tarde."
+            errorMessage = "No se pudieron obtener los mensajes: \(error.localizedDescription)"
             AppLogger.error("Error en operación de chat privado.")
             showError = true
         }
+    }
+
+    func unreadCount(for chat: ChatModel) -> Int {
+        guard let uid = Auth.auth().currentUser?.uid else { return 0 }
+        if let count = chat.unreadCounts?[uid] { return max(0, count) }
+        return chat.lastMessageSenderUserID == uid ? 0 : 1
     }
     
     /// Envía un mensaje en un chat privado.

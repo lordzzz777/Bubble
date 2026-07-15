@@ -120,6 +120,16 @@ struct ListChatRowView: View {
                         }
                         
                         Spacer()
+                        let unreadCount = chatsPrivateViewModel.unreadCount(for: chat)
+                        if unreadCount > 0 {
+                            Text(unreadCount > 99 ? "99+" : "\(unreadCount)")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, unreadCount > 9 ? 6 : 0)
+                                .frame(minWidth: 22, minHeight: 22)
+                                .background(.red, in: Capsule())
+                                .accessibilityLabel("\(unreadCount) pendientes")
+                        }
                         if chat.lastMessageType == .friendRequest {
                             Button {
                                 Task {

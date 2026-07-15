@@ -23,6 +23,7 @@ enum CreateCommunityError: Error {
 final class CreateCommunityService {
     private let database = Firestore.firestore()
     private let uid = Auth.auth().currentUser?.uid ?? ""
+    private let readStateService = ReadStateService()
     
     func fetchFriends() async throws -> [UserModel] {
         do {
@@ -47,6 +48,7 @@ final class CreateCommunityService {
     
     func uploadImage(image: UIImage, communityID: String) async throws -> String {
         let storage = Storage.storage()
+        storage.maxUploadRetryTime = 15
         let storageRef = storage.reference().child("communities/\(communityID).jpg")
         
         guard let resizedImage = image.jpegData(compressionQuality: 0.1) else {
@@ -55,15 +57,17 @@ final class CreateCommunityService {
         }
         
         let metadata = StorageMetadata()
-        metadata.contentType = "image/jpg" //Setting metadata allows you to see console image in the web browser. This seteting will work for png as well as jpeg
+        metadata.contentType = "image/jpeg"
+        guard let uid = Auth.auth().currentUser?.uid else { throw URLError(.userAuthenticationRequired) }
+        metadata.customMetadata = ["ownerUID": uid]
     
         do {
             let _ = try await storageRef.putDataAsync(resizedImage, metadata: metadata)
             let imageURL = try await storageRef.downloadURL()
             return "\(imageURL)"
         } catch {
-            AppLogger.error("Error al guardar imagen de comunidad.")
-            throw CreateCommunityError.uploadImageError
+            AppLogger.error("Error al guardar imagen de comunidad: \(error.localizedDescription)")
+            throw error
         }
     }
     
@@ -146,6 +150,7 @@ final class CreateCommunityService {
                 "lastMessageType": message.type.rawValue
             ]
             try await database.collection("chats").document(chatID).updateData(updateChatInfo)
+            try await readStateService.incrementPrivateChat(chatID: chatID, senderID: uid)
         } catch {
             throw CreateCommunityError.invitationError
         }

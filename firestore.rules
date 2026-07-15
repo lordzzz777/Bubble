@@ -10,6 +10,11 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userID;
     }
 
+    function isActiveUser() {
+      return !("isDeleted" in resource.data)
+        || resource.data.isDeleted == false;
+    }
+
     function isAdmin() {
       return signedIn() && request.auth.token.admin == true;
     }
@@ -47,7 +52,11 @@ service cloud.firestore {
         && (
           request.auth.uid in request.resource.data.participants
           || request.resource.data.diff(resource.data).affectedKeys().hasOnly(["participants", "lastMessageSenderUserID"])
-        );
+        )
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "participants", "lastMessage", "lastMessageType", "lastMessageTimestamp",
+          "lastMessageSenderUserID", "unreadCounts", "lastReadAt"
+        ]);
     }
 
     function createsOwnMessage() {
@@ -88,10 +97,21 @@ service cloud.firestore {
         && !(request.auth.uid in community.blockedUsers);
     }
 
+    function isCommunityOwner(communityID) {
+      return signedIn()
+        && get(/databases/$(database)/documents/communities/$(communityID)).data.ownerUID
+          == request.auth.uid;
+    }
+
     match /users/{userID} {
-      allow read: if signedIn() && resource.data.isDeleted != true;
+      // El propietario debe poder consultar su ruta antes de que exista el
+      // documento; createUser() hace primero getDocument() y después setData().
+      allow get: if isSelf(userID)
+        || (signedIn() && isActiveUser());
+      allow list: if signedIn() && isActiveUser();
       allow create: if isSelf(userID) && request.resource.data.id == userID;
-      allow update: if isSelf(userID);
+      allow update: if isSelf(userID)
+        && request.resource.data.id == userID;
       allow delete: if isSelf(userID) || isAdmin();
     }
 
@@ -112,7 +132,10 @@ service cloud.firestore {
           && userIsNotBlockedByParticipants(chatID)
           && protectsSensitiveMessageContent();
         allow update: if isChatParticipant(chatID)
-          && ownsMessage()
+          && (
+            ownsMessage()
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(["reactions"])
+          )
           && protectsSensitiveMessageContent();
         allow delete: if isChatParticipant(chatID) && ownsMessage();
       }
@@ -131,7 +154,11 @@ service cloud.firestore {
         && request.auth.uid in request.resource.data.participants;
       allow update: if signedIn()
         && chatID == "global_chat"
-        && request.auth.uid in request.resource.data.participants;
+        && request.auth.uid in resource.data.participants
+        && request.auth.uid in request.resource.data.participants
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "participants", "lastMessage", "lastMessageTimestamp"
+        ]);
       allow delete: if isAdmin();
 
       match /messages/{messageID} {
@@ -168,7 +195,9 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           "lastMessage",
           "lastMessageTimestamp",
-          "lastMessageSenderUserID"
+          "lastMessageSenderUserID",
+          "unreadCounts",
+          "lastReadAt"
         ]);
       allow delete: if signedIn()
         && (resource.data.ownerUID == request.auth.uid || isAdmin());
@@ -182,7 +211,8 @@ service cloud.firestore {
         allow update: if isCommunityParticipant(communityID)
           && ownsMessage()
           && protectsSensitiveMessageContent();
-        allow delete: if isCommunityParticipant(communityID) && ownsMessage();
+        allow delete: if isCommunityParticipant(communityID)
+          && (ownsMessage() || isCommunityOwner(communityID));
       }
     }
 

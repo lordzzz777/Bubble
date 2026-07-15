@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var publicChatViewModel = PublicChatViewModel()
     @State private var previousPhase: ScenePhase = .inactive
     @State private var selectedTab: Int = 0
+    @State private var badgeViewModel = NotificationBadgeViewModel()
 
     
     private let networkMonitor = NetworkMonitor()
@@ -21,11 +22,12 @@ struct ContentView: View {
     @State private var isShowAlert = false
     
     var body: some View {
-        TabView{
+        TabView(selection: $selectedTab) {
             ChatsView()
                 .tabItem({
                     Label("Chats", systemImage: "message.fill")
                 }).tag(0)
+                .badge(badgeViewModel.chatCount)
             
             PublicChatView()
                
@@ -38,6 +40,7 @@ struct ContentView: View {
                 .tabItem({
                     Label("Comunidades", systemImage: "person.3.sequence.fill")
                 }).tag(2)
+                .badge(badgeViewModel.communityCount)
             
             SettingView()
                 .tabItem({
@@ -45,6 +48,8 @@ struct ContentView: View {
                 }).tag(3)
         }
         .environment(publicChatViewModel)
+        .task { badgeViewModel.start() }
+        .onDisappear { badgeViewModel.stop() }
         .onChange(of: scenePhase) { newPhase,_ in
             guard newPhase != previousPhase else {return}
             
@@ -95,6 +100,11 @@ struct ContentView: View {
             
             Text("No hay conexion wifi")
         })
+        .alert("No se pudieron actualizar los pendientes", isPresented: $badgeViewModel.showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(badgeViewModel.errorMessage)
+        }
     }
 }
 

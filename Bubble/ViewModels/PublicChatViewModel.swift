@@ -117,7 +117,7 @@ class PublicChatViewModel {
                 }
             } catch {
                 self.errorTitle = "Mensajes no encontrados"
-                self.errorMessage = "Error al obtener mensajes del chat público."
+                self.errorMessage = "Error al obtener mensajes del chat público: \(error.localizedDescription)"
                 self.showError = true
             }
         }

@@ -58,8 +58,8 @@ struct PublicChatView: View {
                                 let nextMessage = index + 1 < publicChatViewModel.messages.count ? publicChatViewModel.messages[index + 1] : nil
                                 let showAvatarAndName = nextMessage?.senderUserID != message.senderUserID
                                 
-                                if let user = publicChatViewModel.visibleUsers.first(where: { $0.id == message.senderUserID }) {
-                                    PublicMessageBubbleView(
+                                let user = publicChatViewModel.visibleUsers.first(where: { $0.id == message.senderUserID })
+                                PublicMessageBubbleView(
                                         messageText: $messageText,
                                         isEditing: $isEditing,
                                         editingMessageID: $editingMessageID,
@@ -76,10 +76,9 @@ struct PublicChatView: View {
                                             }
                                         }
                                         
-                                    )
-                                    .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
-                                    .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
-                                }
+                                )
+                                .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
+                                .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
                             }
                         }
                         .padding(.bottom, 20)

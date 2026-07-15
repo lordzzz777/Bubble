@@ -20,6 +20,7 @@ enum AddNewFriendError: Error {
 actor AddNewFriendService {
     private let database = Firestore.firestore()
     private let uid = Auth.auth().currentUser?.uid ?? ""
+    private let readStateService = ReadStateService()
     
 
     /// Busca amigos por su nickname en la base de datos
@@ -57,11 +58,13 @@ actor AddNewFriendService {
                 
                 let chat = ChatModel(
                     id: UUID().uuidString,
-                    participants: [friendUID],
+                    participants: [currentUserInfo.id, friendUID],
                     lastMessage: newFriendRequestMessage.content,
                     lastMessageType: newFriendRequestMessage.type,
                     lastMessageTimestamp: newFriendRequestMessage.timestamp,
-                    lastMessageSenderUserID: newFriendRequestMessage.senderUserID
+                    lastMessageSenderUserID: newFriendRequestMessage.senderUserID,
+                    unreadCounts: [friendUID: 1, currentUserInfo.id: 0],
+                    lastReadAt: [currentUserInfo.id: Timestamp()]
                 )
                 
                 try await database.collection("chats").document(chat.id).setData(chat.dictionary)
@@ -194,6 +197,7 @@ actor AddNewFriendService {
             // Actualizando el chat
             let updateChatInfo: ChatModel = .init(id: chatID, participants: participants, lastMessage: "", lastMessageType: newAcceptedFriendRequestMessage.type, lastMessageTimestamp: newAcceptedFriendRequestMessage.timestamp, lastMessageSenderUserID: newAcceptedFriendRequestMessage.senderUserID)
             try await chatRef.updateData(updateChatInfo.dictionary)
+            try await readStateService.incrementPrivateChat(chatID: chatID, senderID: uid)
             
             // Agregando los id de los usuarios a los amigos
             try await database.collection("users").document(uid).updateData([
