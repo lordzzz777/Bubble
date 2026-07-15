@@ -16,6 +16,7 @@ struct ContentView: View {
 
     
     private let networkMonitor = NetworkMonitor()
+    private let messageEncryptionService = MessageEncryptionService()
     
     @State private var isShowAlert = false
     
@@ -65,6 +66,7 @@ struct ContentView: View {
         .onAppear{
             publicChatViewModel.isPublicChatVisible = true
             Task{
+                try? await messageEncryptionService.ensureCurrentUserPublicKeyIsPublished()
                 await publicChatViewModel.fetchVisibleUsers()
                 publicChatViewModel.fetchPublicChatMessages()
                 await publicChatViewModel.resetReplyNotificationsIfNeeded()

@@ -383,12 +383,10 @@ struct PublicChatView: View {
             onFinish: {
                 Task {
                     await audioViewModel.stopRecording()
-                    try? await audioViewModel.uploadVoiceNote()
-                    if let url = audioViewModel.uploadedAudioURL{
+                    if let localURL = audioViewModel.localAudioURL {
                         let duration = audioViewModel.audioDuration ?? 0
-                        try? await chatMediaViewModel.sendVoiceMessage(
-                            scope: .public,
-                            url: url,
+                        try? await chatMediaViewModel.sendPublicVoiceMessage(
+                            fileURL: localURL,
                             duration: duration
                         )
                     }

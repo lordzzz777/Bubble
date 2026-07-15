@@ -13,6 +13,11 @@ enum LocalFilePrivacyService {
         try protectFile(at: url, excludeFromBackup: false)
     }
 
+    static func removeProtectedTemporaryFile(at url: URL?) {
+        guard let url, url.isFileURL else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
+
     private static func protectFile(at url: URL, excludeFromBackup: Bool) throws {
         try FileManager.default.setAttributes([
             .protectionKey: FileProtectionType.complete

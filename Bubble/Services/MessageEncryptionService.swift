@@ -110,15 +110,25 @@ actor MessageEncryptionService {
         )
     }
 
-    func encryptAttachmentData(_ data: Data, chatID: String, messageID: String) async throws -> EncryptedAttachmentPayload {
+    func encryptAttachmentData(
+        _ data: Data,
+        chatID: String,
+        messageID: String,
+        participantIDs: [String]? = nil
+    ) async throws -> EncryptedAttachmentPayload {
         guard let senderID = Auth.auth().currentUser?.uid else {
             throw MessageEncryptionError.missingCurrentUser
         }
 
         try await ensureCurrentUserPublicKeyIsPublished()
 
-        let chatSnapshot = try await database.collection("chats").document(chatID).getDocument()
-        let participants = chatSnapshot.data()?["participants"] as? [String] ?? []
+        let participants: [String]
+        if let participantIDs {
+            participants = participantIDs
+        } else {
+            let chatSnapshot = try await database.collection("chats").document(chatID).getDocument()
+            participants = chatSnapshot.data()?["participants"] as? [String] ?? []
+        }
         let recipients = Array(Set(participants + [senderID]))
         let attachmentKey = SymmetricKey(size: .bits256)
         let aad = authenticatedData(kind: "attachment-data", chatID: chatID, messageID: messageID, senderID: senderID)

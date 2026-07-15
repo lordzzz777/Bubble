@@ -202,6 +202,7 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
 
     /// Resetea todos los estados relacionados al audio.
     func reset() {
+        cleanupLocalAudioFile()
         isRecording = false
         isUploading = false
         isPlaying = false
@@ -214,6 +215,12 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
         player = nil
         recordingStartTime = nil
         liveRecordingSamples.removeAll()
+    }
+
+    func cleanupLocalAudioFile() {
+        stopPlayback()
+        LocalFilePrivacyService.removeProtectedTemporaryFile(at: localAudioURL)
+        localAudioURL = nil
     }
     
     // MARK: - Descarga & Reproducción
@@ -447,5 +454,4 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
     }
 
 }
-
 

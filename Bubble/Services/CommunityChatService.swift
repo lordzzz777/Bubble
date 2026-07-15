@@ -16,6 +16,7 @@ private final class CommunityListenerBox: @unchecked Sendable {
 
 actor CommunityChatService {
     private let database = Firestore.firestore()
+    private let messageEncryptionService = MessageEncryptionService()
 
     enum CommunityChatError: LocalizedError {
         case notAuthenticated
@@ -85,18 +86,29 @@ actor CommunityChatService {
                         return
                     }
 
-                    let messages = snapshot?.documents.compactMap { document -> MessageModel? in
-                        do {
-                            var message = try document.data(as: MessageModel.self)
-                            message.id = document.documentID
-                            return message
-                        } catch {
-                            AppLogger.error("Error al parsear mensaje de comunidad.")
-                            return nil
+                    Task {
+                        var messages: [MessageModel] = []
+                        for document in snapshot?.documents ?? [] {
+                            do {
+                                var message = try document.data(as: MessageModel.self)
+                                message.id = document.documentID
+                                
+                                if message.encryptionVersion != nil, message.type == .text {
+                                    do {
+                                        message = try await self.messageEncryptionService.decrypt(message, chatID: communityID)
+                                    } catch {
+                                        message.content = "No se pudo descifrar este mensaje"
+                                    }
+                                }
+                                
+                                messages.append(message)
+                            } catch {
+                                AppLogger.error("Error al parsear mensaje de comunidad.")
+                            }
                         }
-                    } ?? []
 
-                    continuation.yield(messages)
+                        continuation.yield(messages)
+                    }
                 }
 
             let listenerBox = CommunityListenerBox(listener)
@@ -119,10 +131,30 @@ actor CommunityChatService {
         )
 
         let communityRef = database.collection("communities").document(communityID)
-        try await communityRef.collection("messages").document(message.id).setData(message.dictionary)
+        let communityDocument = try await communityRef.getDocument()
+        guard let community = try? communityDocument.data(as: CommunityModel.self) else {
+            throw CommunityChatError.communityNotFound
+        }
+        let participantIDs = Array(Set(community.members + [community.ownerUID]))
+        let payload = try await messageEncryptionService.encryptText(
+            text,
+            chatID: communityID,
+            messageID: message.id,
+            participantIDs: participantIDs
+        )
+        
+        var encryptedMessage = message
+        encryptedMessage.content = "Mensaje cifrado"
+        encryptedMessage.encryptedContent = payload.encryptedContent
+        encryptedMessage.encryptedMessageKeys = payload.encryptedMessageKeys
+        encryptedMessage.senderPublicKey = payload.senderPublicKey
+        encryptedMessage.encryptionVersion = payload.encryptionVersion
+        encryptedMessage.encryptionScheme = payload.encryptionScheme
+        
+        try await communityRef.collection("messages").document(encryptedMessage.id).setData(encryptedMessage.dictionary)
         try await communityRef.updateData([
-            "lastMessage": text,
-            "lastMessageTimestamp": message.timestamp,
+            "lastMessage": "Mensaje cifrado",
+            "lastMessageTimestamp": encryptedMessage.timestamp,
             "lastMessageSenderUserID": uid
         ])
     }

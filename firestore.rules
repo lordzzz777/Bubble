@@ -54,6 +54,33 @@ service cloud.firestore {
       return signedIn() && request.resource.data.senderUserID == request.auth.uid;
     }
 
+    function isDeletedMessageMarker() {
+      return request.resource.data.content == "Mensaje eliminado";
+    }
+
+    function hasEncryptionMetadata() {
+      return request.resource.data.encryptedMessageKeys is map
+        && request.resource.data.senderPublicKey is string
+        && request.resource.data.encryptionVersion is int
+        && request.resource.data.encryptionScheme is string;
+    }
+
+    function protectsSensitiveMessageContent() {
+      return isDeletedMessageMarker()
+        || !("type" in request.resource.data)
+        || !(request.resource.data.type in ["text", "image", "video", "audio", "file"])
+        || (
+          hasEncryptionMetadata()
+          && (
+            request.resource.data.type != "text"
+            || (
+              request.resource.data.content == "Mensaje cifrado"
+              && request.resource.data.encryptedContent is string
+            )
+          )
+        );
+    }
+
     function isCommunityParticipant(communityID) {
       let community = get(/databases/$(database)/documents/communities/$(communityID)).data;
       return signedIn()
@@ -82,8 +109,11 @@ service cloud.firestore {
         allow read: if isChatParticipant(chatID);
         allow create: if isChatParticipant(chatID)
           && createsOwnMessage()
-          && userIsNotBlockedByParticipants(chatID);
-        allow update: if isChatParticipant(chatID) && ownsMessage();
+          && userIsNotBlockedByParticipants(chatID)
+          && protectsSensitiveMessageContent();
+        allow update: if isChatParticipant(chatID)
+          && ownsMessage()
+          && protectsSensitiveMessageContent();
         allow delete: if isChatParticipant(chatID) && ownsMessage();
       }
 
@@ -108,12 +138,14 @@ service cloud.firestore {
         allow read: if signedIn();
         allow create: if signedIn()
           && createsOwnMessage()
-          && request.resource.data.type in ["text", "image", "video", "audio", "file", "communityInvitation"];
+          && request.resource.data.type in ["text", "image", "video", "audio", "file", "communityInvitation"]
+          && protectsSensitiveMessageContent();
         allow update: if signedIn()
           && (
             ownsMessage()
             || request.resource.data.diff(resource.data).affectedKeys().hasOnly(["reactions"])
-          );
+          )
+          && protectsSensitiveMessageContent();
         allow delete: if ownsMessage() || isAdmin();
       }
 
@@ -145,8 +177,12 @@ service cloud.firestore {
         allow read: if isCommunityParticipant(communityID);
         allow create: if isCommunityParticipant(communityID)
           && createsOwnMessage()
-          && request.resource.data.type == "text";
-        allow update, delete: if isCommunityParticipant(communityID) && ownsMessage();
+          && request.resource.data.type == "text"
+          && protectsSensitiveMessageContent();
+        allow update: if isCommunityParticipant(communityID)
+          && ownsMessage()
+          && protectsSensitiveMessageContent();
+        allow delete: if isCommunityParticipant(communityID) && ownsMessage();
       }
     }
 

@@ -50,6 +50,7 @@ struct AudioMessageView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .onDisappear {
             progressTimerTask?.cancel()
+            chatAudioViewModel.cleanupLocalAudioFile()
         }
         .onAppear {
             Task {
@@ -69,7 +70,6 @@ struct AudioMessageView: View {
         }
     }
 }
-
 
 
 

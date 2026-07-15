@@ -35,7 +35,7 @@ final class BubbleShareViewModel {
                 let (encryptedData, _) = try await URLSession.shared.data(from: url)
                 let decryptedData = try await messageEncryptionService.decryptAttachmentData(encryptedData, message: message, chatID: chatID)
                 let localURL = temporaryShareURL(for: message)
-                try decryptedData.write(to: localURL)
+                try decryptedData.write(to: localURL, options: .atomic)
                 try LocalFilePrivacyService.protectTemporaryFile(at: localURL)
                 self.localURL = localURL
             } else if message.type == .file || message.type == .audio {
@@ -60,6 +60,11 @@ final class BubbleShareViewModel {
         default:
             return nil
         }
+    }
+
+    func cleanupTemporaryShareFile() {
+        LocalFilePrivacyService.removeProtectedTemporaryFile(at: localURL)
+        localURL = nil
     }
     
     private func temporaryShareURL(for message: MessageModel) -> URL {

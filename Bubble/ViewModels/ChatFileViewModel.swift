@@ -98,10 +98,18 @@ final class ChatFileViewModel {
         let (encryptedData, _) = try await URLSession.shared.data(from: url)
         let fileData = try await messageEncryptionService.decryptAttachmentData(encryptedData, message: message, chatID: chatID)
         let filename = message.attachmentFileName ?? "\(message.id).bin"
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try fileData.write(to: tempURL)
+        let fileExtension = URL(fileURLWithPath: filename).pathExtension
+        var tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        if !fileExtension.isEmpty {
+            tempURL.appendPathExtension(fileExtension)
+        }
+        try fileData.write(to: tempURL, options: .atomic)
         try LocalFilePrivacyService.protectTemporaryFile(at: tempURL)
-        return try await fileService.saveDownloadedFileLocally(tempURL: tempURL, originalFilename: filename)
+        return tempURL
+    }
+
+    func removeTemporaryPreviewFile(_ url: URL?) {
+        LocalFilePrivacyService.removeProtectedTemporaryFile(at: url)
     }
     
     // MARK: - Envío a Firestore
@@ -110,21 +118,7 @@ final class ChatFileViewModel {
         do {
             switch scope {
             case .public:
-                guard let result = try await uploadAndPrepareMessage(from: fileURL) else { return }
-                let message = MessageModel(
-                    id: UUID().uuidString,
-                    senderUserID: Auth.auth().currentUser?.uid ?? "system",
-                    content: result.url,
-                    timestamp: Timestamp(date: .now),
-                    type: .file,
-                    replyToMessageID: messageID,
-                    attachmentFileName: result.name
-                )
-                let ref = Firestore.firestore()
-                    .collection("public_chats")
-                    .document("global_chat")
-                    .collection("messages")
-                try await ref.document(message.id).setData(message.dictionary)
+                try await sendPublicFileMessage(fileURL, replyingTo: messageID)
                 
             case .privateChat(let chatID):
                 try await sendPrivateFileMessage(fileURL, chatID: chatID, replyingTo: messageID)
@@ -136,6 +130,36 @@ final class ChatFileViewModel {
             errorMessage = error.localizedDescription
         }
     }
+    
+    private func sendPublicFileMessage(_ fileURL: URL, replyingTo messageID: String?) async throws {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let newMessageID = UUID().uuidString
+        let fileData = try Data(contentsOf: fileURL)
+        let participants = try await publicChatService.publicChatParticipantIDs()
+        let encryptedPayload = try await messageEncryptionService.encryptAttachmentData(
+            fileData,
+            chatID: "global_chat",
+            messageID: newMessageID,
+            participantIDs: participants
+        )
+        let encryptedURL = try await fileService.uploadFileData(encryptedPayload.encryptedData, path: newMessageID, fileExtension: "bin")
+        var message = MessageModel(
+            id: newMessageID,
+            senderUserID: uid,
+            content: encryptedURL,
+            timestamp: Timestamp(date: .now),
+            type: .file,
+            replyToMessageID: messageID,
+            attachmentFileName: fileURL.lastPathComponent
+        )
+        message.encryptedMessageKeys = encryptedPayload.encryptedMessageKeys
+        message.senderPublicKey = encryptedPayload.senderPublicKey
+        message.encryptionVersion = encryptedPayload.encryptionVersion
+        message.encryptionScheme = encryptedPayload.encryptionScheme
+        
+        try await publicChatService.sendPublicMessage(message)
+    }
+    
     private func sendPrivateFileMessage(_ fileURL: URL, chatID: String, replyingTo messageID: String?) async throws {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         try await moderationService.assertCanSendPrivateMessage(chatID: chatID)

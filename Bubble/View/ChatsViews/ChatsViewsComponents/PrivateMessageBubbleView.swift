@@ -229,7 +229,10 @@ struct PrivateMessageBubbleView: View {
                                         }
                                     }
                                     
-                                    .sheet(isPresented: $isPreviewPresented) {
+                                    .sheet(isPresented: $isPreviewPresented, onDismiss: {
+                                        chatFileViewModel.removeTemporaryPreviewFile(previewedFileURL)
+                                        previewedFileURL = nil
+                                    }) {
                                         if let url = previewedFileURL {
                                             QuickLookPreview(url: url)
                                         } else {
@@ -482,6 +485,10 @@ struct PrivateMessageBubbleView: View {
                     await bubbleShareViewModel.prepare(for: message, chatID: chatID)
                     
                 }
+                .onDisappear {
+                    bubbleShareViewModel.cleanupTemporaryShareFile()
+                    chatFileViewModel.removeTemporaryPreviewFile(previewedFileURL)
+                }
             }
             .alert("Error",
                    isPresented: .constant(bubbleShareViewModel.errorMessage != nil)) {
@@ -521,4 +528,3 @@ struct PrivateMessageBubbleView: View {
     )
     .environment(PrivateChatViewModel())
 }
-

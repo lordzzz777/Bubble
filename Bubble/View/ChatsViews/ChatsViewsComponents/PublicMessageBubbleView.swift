@@ -26,6 +26,7 @@ struct PublicMessageBubbleView: View {
     @State private var previewedFileURL: URL? = nil
     @State private var isPreviewPresented = false
     @State private var unsupportedExtension: String? = nil
+    @State private var decryptedImage: UIImage? = nil
     
     // Para renviar mensages
     @State private var isSelecting = false
@@ -144,7 +145,13 @@ struct PublicMessageBubbleView: View {
                         }
                         switch message.type {
                         case .image:
-                            if let url = URL(string: message.content) {
+                            if let decryptedImage {
+                                Image(uiImage: decryptedImage)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .cornerRadius(12)
+                                    .frame(maxWidth: 220, maxHeight: 220)
+                            } else if let url = URL(string: message.content) {
                                 KFImage(url)
                                     .resizable()
                                     .scaledToFit()
@@ -159,6 +166,8 @@ struct PublicMessageBubbleView: View {
                             AudioMessageView(
                                 audioURLString: message.content,
                                 duration: message.audioDuration ?? 0,
+                                message: message,
+                                chatID: "global_chat",
                                 chatAudioViewModel: chatAudioViewModel
                             )
                             
@@ -173,7 +182,11 @@ struct PublicMessageBubbleView: View {
                                     Button {
                                         Task {
                                             isDownloading = true
-                                            try await chatFileViewModel.previewsFile(message.content, isPreviewPresented: $isPreviewPresented, previewedFileURL: $previewedFileURL, unsupportedExtension: $unsupportedExtension)
+                                            if message.encryptionVersion != nil {
+                                                try await chatFileViewModel.previewsEncryptedFile(message, chatID: "global_chat", isPreviewPresented: $isPreviewPresented, previewedFileURL: $previewedFileURL, unsupportedExtension: $unsupportedExtension)
+                                            } else {
+                                                try await chatFileViewModel.previewsFile(message.content, isPreviewPresented: $isPreviewPresented, previewedFileURL: $previewedFileURL, unsupportedExtension: $unsupportedExtension)
+                                            }
                                             isDownloading = false
                                         }
                                     } label: {
@@ -187,7 +200,10 @@ struct PublicMessageBubbleView: View {
                                         }
                                     }
                                     
-                                    .sheet(isPresented: $isPreviewPresented) {
+                                    .sheet(isPresented: $isPreviewPresented, onDismiss: {
+                                        chatFileViewModel.removeTemporaryPreviewFile(previewedFileURL)
+                                        previewedFileURL = nil
+                                    }) {
                                         if let url = previewedFileURL {
                                             QuickLookPreview(url: url)
                                         } else {
@@ -411,7 +427,14 @@ struct PublicMessageBubbleView: View {
                 .padding(.horizontal, isCurrentUser && !showAvatarAndName ? 50 : 0)
                 .padding(.horizontal, !isCurrentUser && !showAvatarAndName ? 50 : 0)
                 .task {
-                    await bubbleShareViewModel.prepare(for: message)
+                    await bubbleShareViewModel.prepare(for: message, chatID: "global_chat")
+                    if message.type == .image, message.encryptionVersion != nil {
+                        decryptedImage = try? await ChatMediaViewModel().decryptedImage(for: message, chatID: "global_chat")
+                    }
+                }
+                .onDisappear {
+                    bubbleShareViewModel.cleanupTemporaryShareFile()
+                    chatFileViewModel.removeTemporaryPreviewFile(previewedFileURL)
                 }
                 .alert("Error",
                        isPresented: .constant(bubbleShareViewModel.errorMessage != nil)) {

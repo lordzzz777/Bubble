@@ -45,8 +45,7 @@ final class ChatMediaViewModel{
             
             switch scope {
             case .public:
-                let imageURL = try await chatMediaService.uploadImage(imageData)
-                try await sendImageMessage(with: imageURL, scope: scope)
+                try await sendPublicImageMessage(imageData: imageData)
             case .privateChat(let chatID):
                 try await sendPrivateImageMessage(imageData: imageData, chatID: chatID)
             }
@@ -133,6 +132,27 @@ final class ChatMediaViewModel{
         try await savePrivateAttachmentMessage(applyAttachmentEncryption(encryptedPayload, to: message), chatID: chatID)
     }
     
+    private func sendPublicImageMessage(imageData: Data) async throws {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let messageID = UUID().uuidString
+        let participants = try await chatPublicService.publicChatParticipantIDs()
+        let encryptedPayload = try await messageEncryptionService.encryptAttachmentData(
+            imageData,
+            chatID: "global_chat",
+            messageID: messageID,
+            participantIDs: participants
+        )
+        let imageURL = try await chatMediaService.uploadImage(encryptedPayload.encryptedData, path: messageID, fileExtension: "bin")
+        let message = MessageModel(
+            id: messageID,
+            senderUserID: uid,
+            content: imageURL,
+            timestamp: Timestamp(date: .now),
+            type: .image
+        )
+        try await chatPublicService.sendPublicMessage(applyAttachmentEncryption(encryptedPayload, to: message))
+    }
+    
     func sendPrivateVoiceMessage(chatID: String, fileURL: URL, duration: Double) async throws {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         try await moderationService.assertCanSendPrivateMessage(chatID: chatID)
@@ -149,6 +169,29 @@ final class ChatMediaViewModel{
             audioDuration: duration
         )
         try await savePrivateAttachmentMessage(applyAttachmentEncryption(encryptedPayload, to: message), chatID: chatID)
+    }
+    
+    func sendPublicVoiceMessage(fileURL: URL, duration: Double) async throws {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let messageID = UUID().uuidString
+        let audioData = try Data(contentsOf: fileURL)
+        let participants = try await chatPublicService.publicChatParticipantIDs()
+        let encryptedPayload = try await messageEncryptionService.encryptAttachmentData(
+            audioData,
+            chatID: "global_chat",
+            messageID: messageID,
+            participantIDs: participants
+        )
+        let audioURL = try await chatAudioService.uploadVoiceNoteData(encryptedPayload.encryptedData, path: messageID, fileExtension: "bin")
+        let message = MessageModel(
+            id: messageID,
+            senderUserID: uid,
+            content: audioURL,
+            timestamp: Timestamp(date: .now),
+            type: .audio,
+            audioDuration: duration
+        )
+        try await chatPublicService.sendPublicMessage(applyAttachmentEncryption(encryptedPayload, to: message))
     }
     
     func decryptedImage(for message: MessageModel, chatID: String) async throws -> UIImage {
@@ -273,12 +316,10 @@ final class ChatMediaViewModel{
         guard let data = await chatMediaService.compressImage(image) else { return }
         switch scope {
         case .public:
-            let url = try await chatMediaService.uploadImage(data)
-            try await sendImageMessage(with: url, scope: scope)
+            try await sendPublicImageMessage(imageData: data)
         case .privateChat(let chatID):
             try await sendPrivateImageMessage(imageData: data, chatID: chatID)
         }
     }
     
 }
-
