@@ -43,7 +43,7 @@ struct FileThumbnailView: View {
             let thumbnail = try await QLThumbnailGenerator.shared.generateBestRepresentation(for: request)
             self.thumbnailImage = thumbnail.uiImage
         } catch {
-            print("Error cargando miniatura: \(error.localizedDescription)")
+            AppLogger.debug("Error cargando miniatura.")
         }
     }
 }

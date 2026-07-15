@@ -30,7 +30,7 @@ final class CreateCommunityService {
             let document = try await database.collection("users").document(uid).getDocument()
             let userData = try document.data(as: UserModel.self)
             let friendsUIDS = userData.friends
-            print("friends UIDS: \(friendsUIDS)")
+            AppLogger.debug("Lista de amigos cargada para crear comunidad.")
             // Obteniendo la información de los amigos del usuario
             var friends: [UserModel] = []
             for friendUID in friendsUIDS {
@@ -50,7 +50,7 @@ final class CreateCommunityService {
         let storageRef = storage.reference().child("communities/\(communityID).jpg")
         
         guard let resizedImage = image.jpegData(compressionQuality: 0.1) else {
-            print("Error: Could not resize image")
+            AppLogger.error("No se pudo redimensionar la imagen de comunidad.")
             return ""
         }
         
@@ -62,7 +62,7 @@ final class CreateCommunityService {
             let imageURL = try await storageRef.downloadURL()
             return "\(imageURL)"
         } catch {
-            print("Error: \(error.localizedDescription)")
+            AppLogger.error("Error al guardar imagen de comunidad.")
             throw CreateCommunityError.uploadImageError
         }
     }
@@ -81,7 +81,7 @@ final class CreateCommunityService {
     
     func removeImageFromFirebaseStorage(imageURL: String) async throws {
         guard let url = URL(string: imageURL) else {
-            print("Error: Could not convert string to URL")
+            AppLogger.error("URL de imagen de comunidad no válida.")
             return
         }
         
@@ -97,8 +97,21 @@ final class CreateCommunityService {
         do {
             var newCommunity = community
             newCommunity.ownerUID = uid
+            newCommunity.members = Array(Set(newCommunity.members + [uid]))
+            if !newCommunity.admins.contains(where: { $0.id == uid }) {
+                newCommunity.admins.append(AdminModel(
+                    id: uid,
+                    role: .owner,
+                    canRead: true,
+                    canWrite: true,
+                    canInvite: true,
+                    canKick: true,
+                    canMute: true,
+                    canChangeRole: true
+                ))
+            }
             try await database.collection("communities").document(community.id).setData(newCommunity.dictionary)
-            for friendToInviteID in friendToInviteIDs {
+            for friendToInviteID in Set(friendToInviteIDs).filter({ $0 != uid }) {
                 try await self.sendCommunityInvitationTo(friendID: friendToInviteID)
             }
         } catch {

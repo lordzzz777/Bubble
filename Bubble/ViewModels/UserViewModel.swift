@@ -42,9 +42,9 @@ final class UserViewModel {
         do{
            try await firestoreService.updateUserStatus(isOnline: online)
             user?.isOnline = online
-            print("Estado actualizado a \(online ? "🟢 Conectado" : "⚪️ Desconectado")")
+            AppLogger.debug("Estado de conexión actualizado.")
         }catch{
-            print("No se pudo actualizar el estado: \(error)")
+            AppLogger.error("No se pudo actualizar el estado del usuario.")
         }
     }
         
@@ -53,7 +53,7 @@ final class UserViewModel {
         do {
             try await firestoreService.storeLastSeen()
         } catch {
-            print("No se pudo guardar la última conexión: \(error)")
+            AppLogger.error("No se pudo guardar la última conexión.")
         }
     }
     
@@ -62,7 +62,7 @@ final class UserViewModel {
         do {
             self.user = try await firestoreService.getUserData()
         } catch {
-            print("Error cargando usuario")
+            AppLogger.error("Error cargando usuario.")
         }
     }
 }

@@ -83,8 +83,14 @@ final class CreateCommunityViewModel {
     
     /// Devuelve `true` si el amigo está marcado para invitar
     func checkIfFriendIsSelected(friendID: String) -> Bool {
-        withAnimation(.bouncy) {
-            return community.members.contains(where: { $0 == friendID })
+        community.members.contains(where: { $0 == friendID })
+    }
+    
+    func toggleMemberSelection(friendID: String) {
+        if community.members.contains(friendID) {
+            community.members.removeAll(where: { $0 == friendID })
+        } else {
+            community.members.append(friendID)
         }
     }
     
@@ -92,11 +98,11 @@ final class CreateCommunityViewModel {
     func removeImageFromFirebaseStorage(imageURL: String) async {
         do {
             try await createCommunityService.removeImageFromFirebaseStorage(imageURL: imageURL)
-            print("Imagen de comunidad eliminada con éxito")
+            AppLogger.debug("Imagen de comunidad eliminada.")
         } catch {
             errorTitle = "Error al eliminar imagen de la communidad"
             errorMessage = "Hubo un error al intentar validar el nombre de la comunidad. Por favor, intenta más tarde."
-            print("Error al eliminar imagen de la communidad: \(error.localizedDescription)")
+            AppLogger.error("Error al eliminar imagen de la comunidad.")
         }
     }
     
@@ -106,7 +112,7 @@ final class CreateCommunityViewModel {
     func createCommunity(newCommunity: CommunityModel) async -> Bool {
         do {
             isCreatingCommunity = true
-            let friendsToInviteIDs: [String] = friendsToInvite.map({$0.id})
+            let friendsToInviteIDs = newCommunity.members
             try await createCommunityService.createCommunity(community: newCommunity, friendToInviteIDs: friendsToInviteIDs)
             isCreatingCommunity = false
             return true

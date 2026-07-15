@@ -22,6 +22,7 @@ actor FileCacheActor {
         
             let (data, _) = try await URLSession.shared.data(from: url)
             try data.write(to: dest, options: .atomic)
+            try LocalFilePrivacyService.protectCacheFile(at: dest)
            
         }catch{
             throw error

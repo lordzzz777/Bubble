@@ -18,5 +18,13 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Bubble usa la cámara para tomar fotos y enviarlas en tus chats.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Bubble usa el micrófono para grabar notas de voz en tus chats.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Bubble guarda imágenes en tu fototeca cuando tú lo solicitas.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Bubble accede a tus fotos para que puedas enviar imágenes en tus chats.</string>
 </dict>
 </plist>

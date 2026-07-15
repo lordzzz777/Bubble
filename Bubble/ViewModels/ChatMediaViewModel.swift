@@ -20,7 +20,10 @@ final class ChatMediaViewModel{
     
     // MARK: - Servicios auxiliares
     private let chatMediaService = ChatMediaService()
+    private let chatAudioService = ChatAudioService()
     private let chatPublicService = PublicChatService()
+    private let messageEncryptionService = MessageEncryptionService()
+    private let moderationService = ModerationService()
    
     // MARK: - Estado de errores (Bindable en la UI si lo deseas)
     var messages: [MessageModel] = []
@@ -40,13 +43,13 @@ final class ChatMediaViewModel{
                 throw NSError(domain: "Error al comprimir la imagen", code: 0)
             }
             
-            // 3. Subir imagen a Firebase y obtener URL
-            let imageURL = try await chatMediaService.uploadImage(imageData)
-            
-            // 4. Crear y enviar mensaje
-            try await sendImageMessage(with: imageURL)
-            
-            try await sendImageMessage(with: imageURL, scope: scope)
+            switch scope {
+            case .public:
+                let imageURL = try await chatMediaService.uploadImage(imageData)
+                try await sendImageMessage(with: imageURL, scope: scope)
+            case .privateChat(let chatID):
+                try await sendPrivateImageMessage(imageData: imageData, chatID: chatID)
+            }
         } catch {
             errorTitle   = "Error al enviar imagen"
             errorMessage = error.localizedDescription
@@ -78,6 +81,7 @@ final class ChatMediaViewModel{
                 .document("global_chat")
                 .collection("messages")
         case .privateChat(let chatID):
+            try await moderationService.assertCanSendPrivateMessage(chatID: chatID)
             ref = Firestore.firestore()
                 .collection("chats")
                 .document(chatID)
@@ -85,6 +89,76 @@ final class ChatMediaViewModel{
         }
         
         try await ref.document(message.id).setData(message.dictionary)
+    }
+    
+    private func applyAttachmentEncryption(_ payload: EncryptedAttachmentPayload, to message: MessageModel) -> MessageModel {
+        var encryptedMessage = message
+        encryptedMessage.encryptedMessageKeys = payload.encryptedMessageKeys
+        encryptedMessage.senderPublicKey = payload.senderPublicKey
+        encryptedMessage.encryptionVersion = payload.encryptionVersion
+        encryptedMessage.encryptionScheme = payload.encryptionScheme
+        return encryptedMessage
+    }
+    
+    private func savePrivateAttachmentMessage(_ message: MessageModel, chatID: String) async throws {
+        try await moderationService.assertCanSendPrivateMessage(chatID: chatID)
+        let database = Firestore.firestore()
+        try await database.collection("chats")
+            .document(chatID)
+            .collection("messages")
+            .document(message.id)
+            .setData(message.dictionary)
+        
+        try await database.collection("chats").document(chatID).updateData([
+            "lastMessageTimestamp": message.timestamp,
+            "lastMessageSenderUserID": message.senderUserID,
+            "lastMessage": "Adjunto cifrado",
+            "lastMessageType": message.type.rawValue
+        ])
+    }
+    
+    private func sendPrivateImageMessage(imageData: Data, chatID: String) async throws {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        try await moderationService.assertCanSendPrivateMessage(chatID: chatID)
+        let messageID = UUID().uuidString
+        let encryptedPayload = try await messageEncryptionService.encryptAttachmentData(imageData, chatID: chatID, messageID: messageID)
+        let imageURL = try await chatMediaService.uploadImage(encryptedPayload.encryptedData, path: messageID, fileExtension: "bin")
+        let message = MessageModel(
+            id: messageID,
+            senderUserID: uid,
+            content: imageURL,
+            timestamp: Timestamp(date: .now),
+            type: .image
+        )
+        try await savePrivateAttachmentMessage(applyAttachmentEncryption(encryptedPayload, to: message), chatID: chatID)
+    }
+    
+    func sendPrivateVoiceMessage(chatID: String, fileURL: URL, duration: Double) async throws {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        try await moderationService.assertCanSendPrivateMessage(chatID: chatID)
+        let messageID = UUID().uuidString
+        let audioData = try Data(contentsOf: fileURL)
+        let encryptedPayload = try await messageEncryptionService.encryptAttachmentData(audioData, chatID: chatID, messageID: messageID)
+        let audioURL = try await chatAudioService.uploadVoiceNoteData(encryptedPayload.encryptedData, path: messageID, fileExtension: "bin")
+        let message = MessageModel(
+            id: messageID,
+            senderUserID: uid,
+            content: audioURL,
+            timestamp: Timestamp(date: .now),
+            type: .audio,
+            audioDuration: duration
+        )
+        try await savePrivateAttachmentMessage(applyAttachmentEncryption(encryptedPayload, to: message), chatID: chatID)
+    }
+    
+    func decryptedImage(for message: MessageModel, chatID: String) async throws -> UIImage {
+        guard let url = URL(string: message.content) else { throw URLError(.badURL) }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let imageData = try await messageEncryptionService.decryptAttachmentData(data, message: message, chatID: chatID)
+        guard let image = UIImage(data: imageData) else {
+            throw NSError(domain: "Imagen cifrada inválida", code: 0)
+        }
+        return image
     }
     
     // MARK: - Imagen desde URL (llamado por el chat público)
@@ -115,13 +189,13 @@ final class ChatMediaViewModel{
             }
             
             try await chatMediaService.saveImageToPhotoLibrary(image)
-            print("Imagen guardada en el carrete con éxito.")
+            AppLogger.debug("Imagen guardada en el carrete.")
             
         } catch {
             showError = true
             errorTitle = "Error al guardar"
             errorMessage = "No se pudo guardar la imagen en el carrete."
-            print("Error al guardar imagen: \(error.localizedDescription)")
+            AppLogger.error("Error al guardar imagen.")
         }
     }
     
@@ -131,13 +205,13 @@ final class ChatMediaViewModel{
         do {
             let localURL = try await chatMediaService.downloadAndStoreImageLocally(from: message.content)
             try await chatMediaService.deleteImage(localURL: localURL, storageURL: message.content)
-            print("Imagen eliminada con éxito.")
+            AppLogger.debug("Imagen eliminada.")
             
         } catch {
             showError = true
             errorTitle = "Error al eliminar"
             errorMessage = "No se pudo eliminar la imagen del dispositivo o de Firebase."
-            print("Error al eliminar imagen: \(error.localizedDescription)")
+            AppLogger.error("Error al eliminar imagen.")
         }
     }
     
@@ -146,7 +220,7 @@ final class ChatMediaViewModel{
     func sendVoiceMessage(scope: ChatScope, url: String, duration: Double) async throws{
         do{
             guard let currentUserID = Auth.auth().currentUser?.uid else {
-                print("Usuario no encontrado")
+                AppLogger.warning("Usuario no encontrado.")
                 return
             }
             let ref = Firestore.firestore()
@@ -171,6 +245,7 @@ final class ChatMediaViewModel{
                     , message: message)
                 
             case .privateChat(let chatID):
+                try await moderationService.assertCanSendPrivateMessage(chatID: chatID)
                 
                 try await saveMessage(
                     to: Firestore.firestore()
@@ -196,8 +271,13 @@ final class ChatMediaViewModel{
     /// Comprime, sube y envía una foto tomada con la cámara.
     func sendCameraImage(_ image: UIImage, scope: ChatScope) async throws {
         guard let data = await chatMediaService.compressImage(image) else { return }
-        let url = try await chatMediaService.uploadImage(data)
-        try await sendImageMessage(with: url, scope: scope)
+        switch scope {
+        case .public:
+            let url = try await chatMediaService.uploadImage(data)
+            try await sendImageMessage(with: url, scope: scope)
+        case .privateChat(let chatID):
+            try await sendPrivateImageMessage(imageData: data, chatID: chatID)
+        }
     }
     
 }

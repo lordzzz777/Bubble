@@ -102,16 +102,17 @@ struct UserProfileView: View {
                     
                     Button("Cancelar", role: .cancel) { }
                     Button("Eliminar", role: .destructive) {
-                        // Logica para eliminar cuenta
                         Task{
-                            await userProfileView.deleteUserAccount()
-                            trashUserDefault.logoutUser()
-                            loginFlowState = .loggedOut
+                            let deleted = await userProfileView.deleteUserAccount()
+                            if deleted {
+                                trashUserDefault.logout()
+                                loginFlowState = .loggedOut
+                            }
                         }
                     }
                     
                 } message: {
-                    Text("Si eliminas tu cuenta, ya no aparecerás en los chats ni en la lista de amigos. Tus datos se ocultarán, pero podrás recuperar tu cuenta iniciando sesión de nuevo.")
+                    Text("Esta acción eliminará tu cuenta de autenticación, tu perfil, avatar y relaciones de amistad. Tus mensajes anteriores se conservarán sin asociarse a tu usuario.")
                 }
             
                 /// Zona de barra de navegación

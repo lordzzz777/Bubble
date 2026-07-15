@@ -15,6 +15,7 @@ import Observation
 @Observable @MainActor
 final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate {
     private let audioService: ChatAudioService = ChatAudioService()
+    private let messageEncryptionService = MessageEncryptionService()
     
     // MARK: - Estados públicos observables
     var isRecording = false
@@ -79,7 +80,7 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
             let fileSize = fileAtributes[.size] as? UInt64 ?? 0
             
             guard fileSize > 0 else {
-                print("Archivo vacío, cancelando grabación")
+                AppLogger.warning("Archivo vacío, cancelando grabación.")
                 errorTitleMessage = "Error: Archivo inválido"
                 errorMessage = "La grabación está vacía o fue demasiado corta."
                 isShowError = true
@@ -102,7 +103,7 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
             if duration < 0.3 {
                 errorTitleMessage = "Error: tiempo de grabacion"
                 errorMessage = "grabacion demasiado corta, sera descartada ..."
-                print("Grabación demasiado corta, descartada")
+                AppLogger.debug("Grabación demasiado corta, descartada.")
                 
                 audioDuration = 0
                 
@@ -150,7 +151,7 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
     func deleteVoiceNote(from storageURL: String) async throws {
         do{
             try await audioService.deleteVoiceNote(from: storageURL)
-            print("✅ Nota de voz eliminada correctamente.")
+            AppLogger.debug("Nota de voz eliminada correctamente.")
             
             uploadedAudioURL = nil
             localAudioURL = nil
@@ -169,7 +170,7 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
     private func calcularDuracionAudio(url: URL) -> Double {
         // 1. Validar existencia del archivo
         guard FileManager.default.fileExists(atPath: url.path) else {
-            print("Archivo no existe: \(url.path)")
+            AppLogger.warning("El archivo de audio no existe.")
             return 0
         }
         
@@ -178,11 +179,11 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
             let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
             let fileSize = attributes[.size] as? UInt64 ?? 0
             guard fileSize > 0 else {
-                print("Archivo vacío: \(url.lastPathComponent)")
+                AppLogger.warning("Archivo de audio vacío.")
                 return 0
             }
         } catch {
-            print("Error leyendo atributos del archivo: \(error.localizedDescription)")
+            AppLogger.error("Error leyendo atributos del archivo de audio.")
             return 0
         }
         
@@ -194,7 +195,7 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
             let duration = Double(frameCount) / format.sampleRate
             return duration
         } catch {
-            print("Error al calcular duración del audio: \(error.localizedDescription)")
+            AppLogger.error("Error al calcular duración del audio.")
             return 0
         }
     }
@@ -229,6 +230,24 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
         }
     }
     
+    func downloadAndCacheEncryptedAudio(message: MessageModel, chatID: String) async throws -> URL? {
+        do {
+            guard let url = URL(string: message.content) else { throw URLError(.badURL) }
+            let (encryptedData, _) = try await URLSession.shared.data(from: url)
+            let audioData = try await messageEncryptionService.decryptAttachmentData(encryptedData, message: message, chatID: chatID)
+            let cachesDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+            let localURL = cachesDir.appendingPathComponent("\(message.id).m4a")
+            try audioData.write(to: localURL)
+            try LocalFilePrivacyService.protectCacheFile(at: localURL)
+            return localURL
+        } catch {
+            errorTitleMessage = "Error: descarga de audio"
+            errorMessage = error.localizedDescription
+            isShowError = true
+            return nil
+        }
+    }
+    
     /// Reproduce un archivo de audio desde una URL local.
     func playAudio(from url: URL) {
         do {
@@ -238,7 +257,7 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
             // Extrae duración desde el player si no está establecida
             if audioDuration == nil || audioDuration == 0 {
                 audioDuration = player?.duration
-                print("Duración cargada desde player: \(audioDuration ?? 0)")
+                AppLogger.debug("Duración de audio cargada desde el reproductor.")
             }
             
             Task{
@@ -246,7 +265,7 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
             }
             player?.play()
             isPlaying = true
-            print("🎧 Iniciando reproducción")
+            AppLogger.debug("Iniciando reproducción de audio.")
             startProgressUpdater()
             
         } catch {
@@ -259,13 +278,13 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
     /// Actualiza continuamente el tiempo de reproducción mientras el audio está en curso.
     func startProgressUpdater() {
         Task {
-            print("⏱️ Iniciando actualización de progreso...")
+            AppLogger.debug("Iniciando actualización de progreso de audio.")
             while isPlaying {
                 try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 segundos
                 await MainActor.run {
                     if let player = player {
                         currentPlaybackTime = player.currentTime
-                       // print("🕐 Tiempo actual: \(currentPlaybackTime)")
+                       // AppLogger.debug("Tiempo de reproducción actualizado.")
                     }
                 }
             }
@@ -339,12 +358,12 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
             }
             
         } catch {
-            print("Error extrayendo forma de onda: \(error)")
+            AppLogger.error("Error extrayendo forma de onda.")
         }
     }
     
     /// Alterna entre reproducción y pausa, y actualiza el progreso visual en la UI.
-    func togglePlayback(from urlString: String, progressBinding: Binding<CGFloat>) {
+    func togglePlayback(from urlString: String, message: MessageModel? = nil, chatID: String? = nil, progressBinding: Binding<CGFloat>) {
         Task {
             if isPlaying {
                 pausePlayback()
@@ -354,11 +373,15 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
             
             // Descargar si es necesario
             if localAudioURL == nil {
-                localAudioURL = try? await downloadAndCacheAudio(from: urlString)
+                if let message, let chatID, message.encryptionVersion != nil {
+                    localAudioURL = try? await downloadAndCacheEncryptedAudio(message: message, chatID: chatID)
+                } else {
+                    localAudioURL = try? await downloadAndCacheAudio(from: urlString)
+                }
             }
             
             guard let url = localAudioURL else {
-                print("URL local no disponible para reproducción")
+                AppLogger.warning("URL local no disponible para reproducción.")
                 return
             }
             
@@ -418,7 +441,7 @@ final class ChatAudioViewModel:  NSObject, @preconcurrency AVAudioPlayerDelegate
                     }
                 }
             } catch {
-                print("Error al actualizar la onda de grabación: \(error.localizedDescription)")
+                AppLogger.error("Error al actualizar la onda de grabación.")
             }
         }
     }

@@ -18,6 +18,7 @@ class PublicChatViewModel {
     private let audioService = ChatAudioService()
     private let chatMediaService = ChatMediaService()
     private let typingService: TypingService = TypingService()
+    private let moderationService = ModerationService()
     
     private let publicChatID = "global_chat"
     
@@ -25,6 +26,7 @@ class PublicChatViewModel {
     
     var messages: [MessageModel] = []
     var visibleUsers: [UserModel] = []
+    var blockedUserIDs: Set<String> = []
     var userColors: [String: Color] = [:]
     var errorTitle: String = ""
     var errorMessage: String = ""
@@ -38,7 +40,7 @@ class PublicChatViewModel {
             try await typingService.setTyping(chatID: publicChatID, isTyping: isTyping, isPublic: true)
         }catch{
             //Registra en consola para depuración
-            print("TypingService.setTyping error:", error.localizedDescription)
+            AppLogger.error("Error actualizando estado de escritura público.")
             
             //Notifica en la UI sin bloquear el chat
             errorTitle   = "Sin conexión"
@@ -51,10 +53,10 @@ class PublicChatViewModel {
     func listenTyping() async throws {
         do{
             for try await ids in await typingService.typingPublisher(chatID: publicChatID, isPublic: true){
-                typingUsers = ids
+                typingUsers = ids.filter { !blockedUserIDs.contains($0) }
             }
         }catch{
-            print("TypingService.publisher error:", error.localizedDescription)
+            AppLogger.error("Error recibiendo estado de escritura público.")
             
             await MainActor.run {
                 errorTitle   = "Error de red"
@@ -68,21 +70,38 @@ class PublicChatViewModel {
     func userModel(for id: String) -> UserModel? {
         visibleUsers.first { $0.id == id }
     }
+    
+    private func filteredMessages(_ messages: [MessageModel]) -> [MessageModel] {
+        messages.filter { !blockedUserIDs.contains($0.senderUserID) }
+    }
+    
+    func refreshBlockedUsers() async {
+        do {
+            blockedUserIDs = try await moderationService.blockedUserIDs()
+            messages = filteredMessages(messages)
+            typingUsers = typingUsers.filter { !blockedUserIDs.contains($0) }
+        } catch {
+            errorTitle = "Error de privacidad"
+            errorMessage = "No se pudo cargar la lista de usuarios bloqueados."
+            showError = true
+        }
+    }
 
     /// Obtiene los mensajes del chat público en tiempo real.
     func fetchPublicChatMessages() {
         Task {
             do {
                 for try await messages in await publicChatService.fetchPublicChatMessages() {
-                    self.messages = messages
+                    let visibleMessages = filteredMessages(messages)
+                    self.messages = visibleMessages
                     
                     guard let currentUserID = Auth.auth().currentUser?.uid,
                           let currentUser = visibleUsers.first(where: { $0.id == currentUserID }) else { return }
                     
                     let lastSeenID = UserDefaults.standard.string(forKey: "lastSeenReplyID")
                     
-                    // Filtrar respuestas que no son del propio usuario
-                    let repliesToMe = messages.filter {
+                    // Filtrar respuestas que no son del propio usuario ni de usuarios bloqueados.
+                    let repliesToMe = visibleMessages.filter {
                         $0.replyingToNickname == currentUser.nickname &&
                         $0.senderUserID != currentUserID
                     }
@@ -179,7 +198,9 @@ class PublicChatViewModel {
     /// Obtiene todos los usuarios visibles en Firestore.
     func fetchVisibleUsers() async {
         do{
+            await refreshBlockedUsers()
             visibleUsers = try await publicChatService.fetchVisibleUsers()
+                .filter { !blockedUserIDs.contains($0.id) }
             assignColorsToUsers()
         }catch{
             errorTitle = "Error, no hay usuario"
@@ -320,7 +341,7 @@ class PublicChatViewModel {
             }
             
             guard message.content.hasPrefix("https://") || message.content.hasPrefix("gs://") else {
-                print("URL inválida, se omite: \(message.content)")
+                AppLogger.warning("URL de mensaje público inválida; se omite.")
                 await permanentlyDeleteMessage(messageID: message.id)
                 continue
             }
@@ -331,17 +352,17 @@ class PublicChatViewModel {
                 do {
                     let localURL = try await chatMediaService.downloadAndStoreImageLocally(from: message.content)
                     try await chatMediaService.deleteImage(localURL: localURL, storageURL: message.content)
-                    print("Imagen eliminada: \(message.id)")
+                    AppLogger.debug("Imagen de mensaje público eliminada.")
                 } catch {
-                    print("No se pudo eliminar imagen \(message.id): \(error.localizedDescription)")
+                    AppLogger.error("No se pudo eliminar imagen de mensaje público.")
                 }
                 
             case .audio:
                 do {
                     try await audioService.deleteVoiceNote(from: message.content)
-                    print("Audio eliminado: \(message.id)")
+                    AppLogger.debug("Audio de mensaje público eliminado.")
                 } catch {
-                    print("No se pudo eliminar audio \(message.id): \(error.localizedDescription)")
+                    AppLogger.error("No se pudo eliminar audio de mensaje público.")
                 }
                 
             default:
@@ -428,7 +449,7 @@ class PublicChatViewModel {
             }
             
         default:
-            print("Error archivo no soportado")
+            AppLogger.warning("Archivo no soportado.")
             return
         }
         
@@ -437,7 +458,7 @@ class PublicChatViewModel {
             try await Task.sleep(nanoseconds: 2_000_000_000)
             showCopiedToast.wrappedValue = false
         }catch{
-            print("Error en la espera del toast")
+            AppLogger.debug("Error en la espera del toast.")
         }
     }
     

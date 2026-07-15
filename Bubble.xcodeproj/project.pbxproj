@@ -32,12 +32,14 @@
 		6E352D9E2D4683EF0096AC3E /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 6E352D9D2D4683EF0096AC3E /* FirebaseStorage */; };
 		6E352DA02D4683EF0096AC3E /* FirebaseStorageCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 6E352D9F2D4683EF0096AC3E /* FirebaseStorageCombine-Community */; };
 		6E352DA22D4683EF0096AC3E /* FirebaseVertexAI in Frameworks */ = {isa = PBXBuildFile; productRef = 6E352DA12D4683EF0096AC3E /* FirebaseVertexAI */; };
+		6EDE67FE300644CD00600ECB /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6EDE67FD300644CD00600ECB /* PrivacyInfo.xcprivacy */; };
 		6EFF52172D484DCE00BFE462 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 6EFF52162D484DCE00BFE462 /* GoogleSignIn */; };
 		6EFF52192D484DCE00BFE462 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 6EFF52182D484DCE00BFE462 /* GoogleSignInSwift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		6E352CA32D4442640096AC3E /* Bubble.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bubble.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6EDE67FD300644CD00600ECB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -105,6 +107,7 @@
 				6E352CA52D4442640096AC3E /* Bubble */,
 				6EFF52142D484ACC00BFE462 /* Frameworks */,
 				6E352CA42D4442640096AC3E /* Products */,
+				6EDE67FD300644CD00600ECB /* PrivacyInfo.xcprivacy */,
 			);
 			sourceTree = "<group>";
 		};
@@ -183,7 +186,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1620;
-				LastUpgradeCheck = 1620;
+				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					6E352CA22D4442640096AC3E = {
 						CreatedOnToolsVersion = 16.2;
@@ -219,6 +222,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6EDE67FE300644CD00600ECB /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -270,6 +274,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = W5HZTU6SV8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -293,6 +298,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -333,6 +339,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = W5HZTU6SV8;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -349,6 +356,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -363,7 +371,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Bubble/Preview Content\"";
-				DEVELOPMENT_TEAM = W5HZTU6SV8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Bubble/Info.plist;
@@ -398,7 +405,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Bubble/Preview Content\"";
-				DEVELOPMENT_TEAM = W5HZTU6SV8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Bubble/Info.plist;

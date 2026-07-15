@@ -33,7 +33,7 @@ struct ContentView: View {
                 }).tag(1)
                 .badge(publicChatViewModel.replyNotificationsCount)
             
-            Text("Pantalla 2")
+            CommunitiesView()
                 .tabItem({
                     Label("Comunidades", systemImage: "person.3.sequence.fill")
                 }).tag(2)

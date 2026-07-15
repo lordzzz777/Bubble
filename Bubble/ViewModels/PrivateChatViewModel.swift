@@ -67,7 +67,7 @@ class PrivateChatViewModel {
                 try await typingService.setTyping(chatID: chatID, isTyping: isTyping)
             }catch{
                 //Registra en consola para depuración
-                print("TypingService.setTyping error:", error.localizedDescription)
+                AppLogger.error("Error actualizando estado de escritura privado.")
                 
                 //Notifica en la UI sin bloquear el chat
                 errorTitle   = "Sin conexión"
@@ -83,7 +83,7 @@ class PrivateChatViewModel {
                     typingUsers = ids
                 }
             }catch{
-                print("TypingService.publisher error:", error.localizedDescription)
+                AppLogger.error("Error recibiendo estado de escritura privado.")
                 
                 await MainActor.run {
                     errorTitle   = "Error de red"
@@ -98,9 +98,10 @@ class PrivateChatViewModel {
         guard let uid = Auth.auth().currentUser?.uid else {return}
         
         do{
+            try await privateChatService.prepareMessageEncryptionIdentity()
             self.me = try await privateChatService.getUserOnce(by: uid)
         }catch{
-            print("Error: no puedo cargar mi proìo usuario")
+            AppLogger.error("No se pudo cargar el usuario actual.")
         }
     }
     
@@ -151,7 +152,7 @@ class PrivateChatViewModel {
     func checkIfUserIsFriend(userID: String) async  {
         do {
             let areUserFriends = try await privateChatService.checkIfFriend(friendID: userID)
-            print("areUserFriends: \(areUserFriends)")
+            AppLogger.debug("Comprobación de amistad en chat privado completada.")
             if areUserFriends {
                 friendStatus = .accepted
             }
@@ -176,7 +177,7 @@ class PrivateChatViewModel {
         } catch {
             errorTitle = "Error al obtener mensajes"
             errorMessage = "Hubo un error al intentar obtener los mensajes. Por favor, inténtalo más tarde."
-            print(error.localizedDescription)
+            AppLogger.error("Error en operación de chat privado.")
             showError = true
         }
     }
@@ -193,7 +194,7 @@ class PrivateChatViewModel {
             errorTitle = "No se pudo enviar mensaje"
             errorMessage = "Hubo un error al intentar enviar el mensaje. Por favor, inténtalo más tarde."
             showError = true
-            print(error.localizedDescription)
+            AppLogger.error("Error en operación de chat privado.")
         }
     }
     
@@ -356,7 +357,7 @@ class PrivateChatViewModel {
                                             }
                                         }
                                     } catch {
-                                        print(" !No se pudo precargar usuario \(id): \(error)")
+                                        AppLogger.error("No se pudo precargar un usuario del chat privado.")
                                     }
                                 }
                             }
@@ -426,7 +427,7 @@ class PrivateChatViewModel {
             errorMessage = "No se pudo marcar como eliminado."
             showError = true
             
-            print("Error desde el ViewModel -> no se ha podido editart: ")
+            AppLogger.error("No se pudo editar el mensaje privado.")
             throw error
         }
     }
@@ -442,7 +443,7 @@ class PrivateChatViewModel {
             errorMessage = "No se pudo marcar como eliminado."
             showError = true
             
-            print("Error desde el ViewModel -> no se ha podido marcar como eliminado: ")
+            AppLogger.error("No se pudo marcar el mensaje privado como eliminado.")
             throw error
         }
     }
@@ -456,7 +457,7 @@ class PrivateChatViewModel {
             errorMessage = "No se pudo eliminado el mensaje."
             showError = true
             
-            print("Error desde el ViewModel -> no se ha podido eliminado el mensaje: ")
+            AppLogger.error("No se pudo eliminar el mensaje privado.")
             throw error
         }
     }
@@ -591,7 +592,7 @@ class PrivateChatViewModel {
             do{
                try await editMessage(chatsID: chatID, messageID: id, newCountent: trimmed)
             }catch{
-                print("Error des de ViewModel: error al editar mensaje")
+                AppLogger.error("Error al editar mensaje privado.")
             }
         }else{
             let original = messages.first { $0.id == replyingToMessageID}?.content
@@ -643,7 +644,7 @@ class PrivateChatViewModel {
             }
             
         default:
-            print("Error archivo no soportado")
+            AppLogger.warning("Archivo no soportado.")
             return
         }
         
@@ -653,7 +654,7 @@ class PrivateChatViewModel {
             try await Task.sleep(nanoseconds: 2_000_000_000)
             isCopiedToast.wrappedValue = false
         }catch{
-            print("Error en la espera del toast")
+            AppLogger.debug("Error en la espera del toast.")
         }
     }
 }

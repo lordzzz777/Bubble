@@ -19,6 +19,7 @@ struct PrivateChatView: View {
     @State private var audioViewMode = ChatAudioViewModel()
     @State private var chatMediaViewModel = ChatMediaViewModel()
     @State private var chatFileViewModel = ChatFileViewModel()
+    @State private var moderationViewModel = ModerationViewModel()
     
     // Paara mostrar y añadir, una imajen del carrete
     @State private var selectedImageItem: PhotosPickerItem?
@@ -194,7 +195,16 @@ struct PrivateChatView: View {
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
                 
-                if privateChatViewModel.friendStatus == .accepted {
+                if privateChatViewModel.friendStatus == .accepted && moderationViewModel.isBlocked {
+                    HStack {
+                        Image(systemName: "hand.raised.fill")
+                            .foregroundStyle(.secondary)
+                        Text("Has bloqueado a este usuario. Desbloquéalo para enviar mensajes.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding()
+                } else if privateChatViewModel.friendStatus == .accepted {
                     ZStack(alignment: .bottomTrailing) {
                         HStack(spacing: 6){
                             Menu(content:{
@@ -304,12 +314,24 @@ struct PrivateChatView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        
+                    Menu {
+                        Button(role: moderationViewModel.isBlocked ? nil : .destructive) {
+                            Task {
+                                if moderationViewModel.isBlocked {
+                                    await moderationViewModel.unblock(userID: user.id)
+                                } else {
+                                    await moderationViewModel.block(userID: user.id)
+                                }
+                            }
+                        } label: {
+                            Label(
+                                moderationViewModel.isBlocked ? "Desbloquear usuario" : "Bloquear usuario",
+                                systemImage: moderationViewModel.isBlocked ? "hand.raised.slash" : "hand.raised"
+                            )
+                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
-                    
                 }
             }
             .navigationTitle(user.nickname)
@@ -320,6 +342,7 @@ struct PrivateChatView: View {
                 Task {
                     checkingFriendStatus = true
                     await privateChatViewModel.checkIfUserIsFriend(userID: user.id)
+                    await moderationViewModel.loadBlockStatus(userID: user.id)
                     checkingFriendStatus = false
                 }
                 
@@ -402,7 +425,7 @@ struct PrivateChatView: View {
             .task {
                 await privateChatViewModel.fetchMessages(chatID: chat.id)
                 if privateChatViewModel.showError {
-                    print(privateChatViewModel.errorMessage)
+                    AppLogger.error("Error mostrado por chat privado.")
                 }
             }
             
@@ -433,12 +456,12 @@ struct PrivateChatView: View {
                                     await chatFileViewModel.sendFileMessage(selectedURL, scope:.privateChat(chat.id), replyingTo: replyingToMessageID)
                                     replyingToMessageID = nil
                                 }catch{
-                                    print("Error al validad archivo")
+                                    AppLogger.error("Error al validar archivo.")
                                 }
                             }
                         }
-                    case .failure(let error):
-                        print("Error al seleccionar archivo: \(error.localizedDescription)")
+                    case .failure:
+                        AppLogger.error("Error al seleccionar archivo.")
                     }
                 }
             
@@ -449,6 +472,11 @@ struct PrivateChatView: View {
                     message: Text(privateChatViewModel.errorMessage),
                     dismissButton: .default(Text("OK"))
                 )
+            }
+            .alert("Error", isPresented: $moderationViewModel.showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(moderationViewModel.errorMessage)
             }
             
         }
@@ -495,13 +523,11 @@ struct PrivateChatView: View {
                 Task{
                     
                     await audioViewMode.stopRecording()
-                    try? await audioViewMode.uploadVoiceNote()
-                    if let url = audioViewMode.uploadedAudioURL{
+                    if let localURL = audioViewMode.localAudioURL {
                         let duration = audioViewMode.audioDuration ?? 0
-                        // try await chatMediaViewModel.sendVoiceMessage(with: url, duration: duration)
-                        try? await chatMediaViewModel.sendVoiceMessage(
-                            scope: .privateChat(chat.id),
-                            url: url,
+                        try? await chatMediaViewModel.sendPrivateVoiceMessage(
+                            chatID: chat.id,
+                            fileURL: localURL,
                             duration: duration
                         )
                     }

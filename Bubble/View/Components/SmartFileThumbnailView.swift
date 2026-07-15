@@ -46,7 +46,7 @@ struct SmartFileThumbnailView: View {
             let thumbnail = try await QLThumbnailGenerator.shared.generateBestRepresentation(for: request)
             self.thumbnailImage = thumbnail.uiImage
         } catch {
-            print("⚠️ Miniatura no soportada para: \(fileURL.lastPathComponent)")
+            AppLogger.debug("Miniatura no soportada para este archivo.")
             self.failedToGenerate = true
         }
     }

@@ -48,8 +48,8 @@ actor ChatMediaService{
     }
     
     /// Sube una imagen comprimida a Firebase Storage y retorna la URL.
-    func uploadImage(_ data: Data, path: String = UUID().uuidString) async throws -> String {
-        let storageRef = Storage.storage().reference().child("chat_images/\(path).png")
+    func uploadImage(_ data: Data, path: String = UUID().uuidString, fileExtension: String = "png") async throws -> String {
+        let storageRef = Storage.storage().reference().child("chat_images/\(path).\(fileExtension)")
         
         return try await Task.detached(priority: .userInitiated) {
             _ = try await storageRef.putDataAsync(data)
@@ -74,6 +74,7 @@ actor ChatMediaService{
         
         // Guarda la imagen en disco
         try data.write(to: localURL)
+        try LocalFilePrivacyService.protectCacheFile(at: localURL)
         
         return localURL
     }
@@ -87,9 +88,9 @@ actor ChatMediaService{
         if fileMannager.fileExists(atPath: localURL.path){
             do{
                 try fileMannager.removeItem(at: localURL)
-                print("Imagen eliminada localmente.")
+                AppLogger.debug("Imagen eliminada localmente.")
             }catch{
-                print("Error no se ha podido eliminar: \(error.localizedDescription)")
+                AppLogger.error("No se pudo eliminar la imagen local.")
                 throw error
             }
         }
@@ -99,9 +100,9 @@ actor ChatMediaService{
         
         do{
             try await ref.delete()
-            print("Imagen eliminada de Firebase Storage.")
+            AppLogger.debug("Imagen eliminada de Firebase Storage.")
         }catch{
-            print("Error al eliminar de Firebase Storage: \(error.localizedDescription)")
+            AppLogger.error("Error al eliminar imagen de Firebase Storage.")
             throw error
         }
     }
@@ -137,12 +138,13 @@ actor ChatMediaService{
     /// Finaliza la grabación y devuelve la URL local del archivo de audio.
     func stopRecording() -> URL? {
         guard let recorder = audioRecorder else {
-            print("Error: No hay grabadora activa.")
+            AppLogger.warning("No hay grabadora activa.")
             return nil
         }
         
         recorder.stop()
         let url = recorder.url
+        try? LocalFilePrivacyService.protectTemporaryFile(at: url)
         audioRecorder = nil // Limpieza de la instancia
         return url
     }

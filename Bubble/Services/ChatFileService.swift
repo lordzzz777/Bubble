@@ -18,10 +18,14 @@ actor ChatFileService {
     func upploadFile(_ fileURL: URL, path: String = UUID().uuidString) async throws -> String {
         let fileeData = try Data(contentsOf: fileURL)
         let fileExtension = fileURL.pathExtension
+        return try await uploadFileData(fileeData, path: path, fileExtension: fileExtension)
+    }
+    
+    func uploadFileData(_ data: Data, path: String = UUID().uuidString, fileExtension: String) async throws -> String {
         let storageRef = Storage.storage().reference().child("shared_files/\(path).\(fileExtension)")
         
         return try await Task.detached(priority: .userInitiated){
-            _ = try await storageRef.putDataAsync(fileeData)
+            _ = try await storageRef.putDataAsync(data)
             let url = try await storageRef.downloadURL()
             return url.absoluteString
         }.value
@@ -37,6 +41,7 @@ actor ChatFileService {
         let filename = UUID().uuidString
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         try data.write(to: tempURL)
+        try LocalFilePrivacyService.protectTemporaryFile(at: tempURL)
         return tempURL
     }
     
@@ -64,6 +69,7 @@ actor ChatFileService {
         }
         
         try fileManager.copyItem(at: tempURL, to: destinationURL)
+        try LocalFilePrivacyService.protectUserFile(at: destinationURL)
         return destinationURL
     }
     
@@ -93,10 +99,10 @@ actor ChatFileService {
         do{
             let ref = Storage.storage().reference(forURL: storageURL)
             try await ref.delete()
-            print("Archivo eliminado correctamente de Firebase Storage.")
+            AppLogger.debug("Archivo eliminado de Firebase Storage.")
             
         }catch{
-            print("Info Service: Error al eliminar archivo de Firebase Storage: \(error.localizedDescription)")
+            AppLogger.error("Error al eliminar archivo de Firebase Storage.")
             throw error
         }
     }

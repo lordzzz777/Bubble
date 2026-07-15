@@ -56,11 +56,11 @@ final class LoginViewModel {
                     }
                     
                 }else {
-                    print("Estoy dentro del else de la funcion signInWithGoogle()")
+                    AppLogger.debug("Continuando flujo de inicio con Google.")
                 }
                 
             } catch {
-                print(error.localizedDescription)
+                AppLogger.error("Error en inicio de sesión con Google.")
                 errorTitle = "Error al iniciar con Google"
                 errorMessage = "Ocurrio un error intentelo mas tarde"
                 showError = true
@@ -83,16 +83,16 @@ final class LoginViewModel {
                 //Detener todos los listeners de Firestore antes de cerrar sesión
                 try await Firestore.firestore().terminate()
                 try await Firestore.firestore().clearPersistence()
-                print("Listeners de Firestore detenidos")
+                AppLogger.debug("Listeners de Firestore detenidos.")
                 
                 await MainActor.run {
                     UserDefaults.standard.removeObject(forKey: "LoginFlowState")
                     loginFlowState = .loggedOut
                 }
                 
-                print("Sesión cerrada y Google Sign-In revocado")
-            } catch let error as NSError {
-                print("Error al cerrar sesión: \(error), \(error.userInfo)")
+                AppLogger.info("Sesión cerrada y Google Sign-In revocado.")
+            } catch {
+                AppLogger.error("Error al cerrar sesión.")
                 errorTitle = "Error al cerrar sesión"
                 errorMessage = "Ocurrio un error intentelo mas tarde"
                 showError = true

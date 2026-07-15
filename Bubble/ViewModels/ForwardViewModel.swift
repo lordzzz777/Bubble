@@ -19,6 +19,7 @@ final class ForwardViewModel{
     // Selección
     var selecting = false
     var selected  = [MessageModel]()
+    var sourceChatID: String?
     
     var targets: [String : String] = [:]
     var chosenIDs = Set<String>()
@@ -35,7 +36,7 @@ final class ForwardViewModel{
     //MARK: - Acción principal
     func forward() async {
         guard let myUID = Auth.auth().currentUser?.uid, !selected.isEmpty, !chosenIDs.isEmpty else {
-            print("Nothing to forward  | selected: \(selected.count)  chosenIDs: \(chosenIDs)")
+            AppLogger.debug("No hay contenido válido para reenviar.")
             return
         }
         
@@ -49,20 +50,20 @@ final class ForwardViewModel{
                                                              currentUID: myUID)
                 chatIDs.append(id)     
             } catch {
-                print("no se pudo preparar chat con \(uid):", error.localizedDescription)
+                AppLogger.error("No se pudo preparar el chat de reenvío.")
                 failures.append(uid)
                 continue
             }
         }
         
         // 2 ▸ Copiar mensajes
-        do    { try await service.forward(selected, to: chatIDs) }
+        do    { try await service.forward(selected, to: chatIDs, sourceChatID: sourceChatID) }
         catch {
             showError("Fallo al reenviar", error.localizedDescription)
         }
         
         // 3 ▸ Reset
-        selected.removeAll(); chosenIDs.removeAll(); selecting = false
+        selected.removeAll(); chosenIDs.removeAll(); sourceChatID = nil; selecting = false
         
     }
     

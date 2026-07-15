@@ -30,6 +30,7 @@ struct PublicMessageBubbleView: View {
     // Para renviar mensages
     @State private var isSelecting = false
     @State private var showSentIcon = false
+    @State private var showReportSheet = false
 
     @Binding var messageText: String
     @Binding var isEditing: Bool
@@ -339,7 +340,7 @@ struct PublicMessageBubbleView: View {
                                         try FileManager.default.removeItem(at: fileURL)
                                         
                                     } catch {
-                                        print("Error al eliminar archivo: \(error.localizedDescription)")
+                                        AppLogger.error("Error al eliminar archivo del mensaje público.")
                                     }
                                     
                                 }
@@ -354,6 +355,12 @@ struct PublicMessageBubbleView: View {
                             }, label: {
                                 Label("Responder", systemImage: "arrowshape.turn.up.left")
                             })
+                            
+                            Button(role: .destructive) {
+                                showReportSheet = true
+                            } label: {
+                                Label("Reportar", systemImage: "flag")
+                            }
                             
                         }
                         
@@ -377,6 +384,14 @@ struct PublicMessageBubbleView: View {
                         .environment(privateChatViewModel)
                         .environment(forwardViewModel)
                         .presentationDetents([.medium, .large])
+                }
+                .sheet(isPresented: $showReportSheet) {
+                    ReportView(
+                        reportedUserID: message.senderUserID,
+                        messageID: message.id,
+                        chatID: "public_chat",
+                        isPublicChat: true
+                    )
                 }
                 .onChange(of: forwardViewModel.selecting) { _, selecting in
                     // Cuando la hoja se cierra (= envío terminado) el flag pasa a false

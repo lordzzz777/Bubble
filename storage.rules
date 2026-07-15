@@ -1,0 +1,66 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function isAudio() {
+      return request.resource.contentType.matches('audio/.*')
+        || request.resource.contentType == 'application/octet-stream';
+    }
+
+    match /avatars/{userID}.jpg {
+      allow read: if signedIn();
+      allow write: if signedIn()
+        && request.auth.uid == userID
+        && request.resource.size < 5 * 1024 * 1024
+        && isImage();
+      allow delete: if signedIn() && (request.auth.uid == userID || isAdmin());
+    }
+
+    match /chat_images/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn()
+        && request.resource.size < 25 * 1024 * 1024
+        && (isImage() || request.resource.contentType == 'application/octet-stream');
+      allow delete: if signedIn();
+    }
+
+    match /voice_notes/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn()
+        && request.resource.size < 25 * 1024 * 1024
+        && isAudio();
+      allow delete: if signedIn();
+    }
+
+    match /shared_files/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn()
+        && request.resource.size < 50 * 1024 * 1024;
+      allow delete: if signedIn();
+    }
+
+    match /communities/{communityID}.jpg {
+      allow read: if signedIn();
+      allow write: if signedIn()
+        && request.resource.size < 5 * 1024 * 1024
+        && isImage();
+      allow delete: if signedIn();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

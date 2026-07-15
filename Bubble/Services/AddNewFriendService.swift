@@ -67,7 +67,7 @@ actor AddNewFriendService {
                 try await database.collection("chats").document(chat.id).setData(chat.dictionary)
                 try await database.collection("chats").document(chat.id).collection("messages").addDocument(data: newFriendRequestMessage.dictionary)
             } catch {
-                print("Error al enviar la solicitud: \(error.localizedDescription)")
+                AppLogger.error("Error al enviar solicitud de amistad.")
                 throw error
             }
         }
@@ -172,7 +172,7 @@ actor AddNewFriendService {
                 "chats": FieldValue.arrayUnion([chatID]) // Añade el nuevo chat al array de chats
             ])
         } catch {
-            print("Error al actualizar la lista de chats: \(error.localizedDescription)")
+            AppLogger.error("Error al actualizar la lista de chats.")
             throw error
         }
     }
@@ -203,7 +203,7 @@ actor AddNewFriendService {
                 "friends": FieldValue.arrayUnion([uid])
             ])
         } catch {
-            print("Error al aceptar la solicitud: \(error.localizedDescription)")
+            AppLogger.error("Error al aceptar solicitud de amistad.")
             throw error
         }
     }

@@ -10,6 +10,8 @@ import SwiftUI
 struct AudioMessageView: View {
     var audioURLString: String
     var duration: Double
+    var message: MessageModel? = nil
+    var chatID: String? = nil
     
     @Bindable var chatAudioViewModel: ChatAudioViewModel
     @State private var localURL: URL? = nil
@@ -21,7 +23,7 @@ struct AudioMessageView: View {
             HStack {
                 // Botón de reproducción
                 Button(action: {
-                    chatAudioViewModel.togglePlayback(from: audioURLString, progressBinding: $progress)
+                    chatAudioViewModel.togglePlayback(from: audioURLString, message: message, chatID: chatID, progressBinding: $progress)
 
                 }) {
                     Image(systemName: chatAudioViewModel.isPlaying ? "pause.circle.fill" : "play.circle.fill")
@@ -53,7 +55,11 @@ struct AudioMessageView: View {
             Task {
                 if chatAudioViewModel.waveformSamples.isEmpty {
                     if localURL == nil {
-                        localURL = try? await chatAudioViewModel.downloadAndCacheAudio(from: audioURLString)
+                        if let message, let chatID, message.encryptionVersion != nil {
+                            localURL = try? await chatAudioViewModel.downloadAndCacheEncryptedAudio(message: message, chatID: chatID)
+                        } else {
+                            localURL = try? await chatAudioViewModel.downloadAndCacheAudio(from: audioURLString)
+                        }
                     }
                     if let url = localURL {
                         await chatAudioViewModel.extractWaveformSamples(from: url)

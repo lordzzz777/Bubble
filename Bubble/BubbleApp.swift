@@ -16,14 +16,14 @@ struct BubbleApp: App {
     @AppStorage("LoginFlowState") private var loginFlowState = UserLoginState.loggedOut
     
     init() {
+#if DEBUG
+        AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
+#else
+        AppCheck.setAppCheckProviderFactory(BubbleAppCheckProviderFactory())
+#endif
         FirebaseApp.configure()
         FirebaseConfiguration.shared.setLoggerLevel(.min)
         disableGRPCLogging()
-#if DEBUG
-        let providerFactory = AppCheckDebugProviderFactory()
-        AppCheck.setAppCheckProviderFactory(providerFactory)
-#endif
-        
     }
     
     var body: some Scene {

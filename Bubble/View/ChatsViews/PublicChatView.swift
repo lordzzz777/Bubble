@@ -359,8 +359,8 @@ struct PublicChatView: View {
                             replyingToMessageID = nil
                         }
                     }
-                case .failure(let error):
-                    print("Error al seleccionar archivo: \(error.localizedDescription)")
+                case .failure:
+                    AppLogger.error("Error al seleccionar archivo.")
                 }
             }
             

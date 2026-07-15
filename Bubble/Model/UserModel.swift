@@ -17,17 +17,24 @@ struct UserModel: Codable, Identifiable, Hashable {
     var chats: [String]
     var friends: [String]
     var isDeleted: Bool
+    var encryptionPublicKey: String? = nil
+    var blockedUsers: [String] = []
     
     var dictionary: [String: Any] {
-        return ["id": id,
-                "nickname": nickname,
-                "imgUrl": imgUrl,
-                "lastConnectionTimeStamp": lastConnectionTimeStamp,
-                "isOnline": isOnline,
-                "chats": chats,
-                "friends": friends,
-                "isDeleted": isDeleted
+        var dict: [String: Any] = ["id": id,
+                                  "nickname": nickname,
+                                  "imgUrl": imgUrl,
+                                  "lastConnectionTimeStamp": lastConnectionTimeStamp,
+                                  "isOnline": isOnline,
+                                  "chats": chats,
+                                  "friends": friends,
+                                  "isDeleted": isDeleted,
+                                  "blockedUsers": blockedUsers
         ]
+        if let encryptionPublicKey = encryptionPublicKey {
+            dict["encryptionPublicKey"] = encryptionPublicKey
+        }
+        return dict
     }
 }
 

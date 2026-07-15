@@ -21,7 +21,13 @@ actor PrivateChatService {
     
     private let database = Firestore.firestore()
     private let uid = Auth.auth().currentUser?.uid ?? ""
+    private let messageEncryptionService = MessageEncryptionService()
+    private let moderationService = ModerationService()
     private var listenerRegistration: ListenerRegistration?
+    
+    func prepareMessageEncryptionIdentity() async throws {
+        try await messageEncryptionService.ensureCurrentUserPublicKeyIsPublished()
+    }
     
     /// Obtiene los chats en tiempo real en los que el usuario participa.
     /// - Returns: Un `AsyncThrowingStream` que emite un array de `ChatModel` y maneja errores.
@@ -32,14 +38,14 @@ actor PrivateChatService {
         
         return AsyncThrowingStream {continuation in
             chatsRef.addSnapshotListener{ query, error in
-                if let error = error {
-                    print("No se pudo obtener los chat: \(error.localizedDescription)")
+                if error != nil {
+                    AppLogger.error("No se pudieron obtener los chats privados.")
                     continuation.finish()
                     return
                 }
                 
                 guard let doc = query?.documents.compactMap({$0}) else {
-                    print("El documento chat esta vacio o no existe")
+                    AppLogger.warning("El documento de chat está vacío o no existe.")
                     continuation.yield(with: .success([]))
                     return
                 }
@@ -61,7 +67,7 @@ actor PrivateChatService {
     /// - Nota: Si no hay un listener activo, imprime un mensaje en la consola.
     func removeListener() {
         guard let listener = listenerRegistration else {
-            print("No hay listener activo")
+            AppLogger.debug("No hay listener activo.")
             return
         }
         
@@ -75,7 +81,7 @@ actor PrivateChatService {
             guard let userData = try? document.data(as: UserModel.self) else {
                 fatalError("No se pudo obtener el usuario")
             }
-            print("Are users friends \(userData.friends.contains(friendID))")
+            AppLogger.debug("Comprobación de amistad completada.")
             return userData.friends.contains(friendID)
         } catch {
             throw error
@@ -143,16 +149,23 @@ actor PrivateChatService {
                         return
                     }
                     
-                    let messages = documents.compactMap { doc -> MessageModel? in
-                        // Intenta decodificar el documento a MessageModel
-                        guard var msg = try? doc.data(as: MessageModel.self) else { return nil }
-                        // Sobrescribe el id con el verdadero documentID
-                        msg.id = doc.documentID
-                        return msg
+                    Task {
+                        var messages: [MessageModel] = []
+                        for doc in documents {
+                            guard var msg = try? doc.data(as: MessageModel.self) else { continue }
+                            msg.id = doc.documentID
+                            
+                            if msg.encryptionVersion != nil, msg.type == .text {
+                                do {
+                                    msg = try await self.messageEncryptionService.decrypt(msg, chatID: chatID)
+                                } catch {
+                                    msg.content = "No se pudo descifrar este mensaje"
+                                }
+                            }
+                            messages.append(msg)
+                        }
+                        continuation.yield(messages)
                     }
-
-//                    let messages = documents.compactMap { try? $0.data(as: MessageModel.self) }
-                    continuation.yield(messages)
                 }
             
             // Asegurar que el listener se elimine cuando ya no se use
@@ -168,9 +181,9 @@ actor PrivateChatService {
         
         do{
             try await chatRef.delete()
-            print("El chat se ha eliminado con exito")
+            AppLogger.info("Chat privado eliminado.")
         }catch {
-            print("Error no se a podido eliminar \(error.localizedDescription)")
+            AppLogger.error("No se pudo eliminar el chat privado.")
             throw error
         }
         
@@ -191,12 +204,41 @@ actor PrivateChatService {
             }
             
             try await batch.commit()
-            print("Todos los chats del usuario \(uid) han sido eliminados correctamente.")
+            AppLogger.info("Chats del usuario eliminados correctamente.")
         }catch{
-            print("Error al eliminar los chats del usuario: \(error.localizedDescription)")
+            AppLogger.error("Error al eliminar chats del usuario.")
             throw error
             
         }
+    }
+    
+    private func encryptedMessageIfNeeded(_ message: MessageModel, chatID: String) async throws -> MessageModel {
+        guard message.type == .text, !message.content.isEmpty, message.encryptedContent == nil else {
+            return message
+        }
+        
+        let chatSnapshot = try await database.collection("chats").document(chatID).getDocument()
+        let participants = chatSnapshot.data()?["participants"] as? [String] ?? []
+        let payload = try await messageEncryptionService.encryptText(
+            message.content,
+            replyingToText: message.replyingToText,
+            chatID: chatID,
+            messageID: message.id,
+            participantIDs: participants
+        )
+        
+        var encryptedMessage = message
+        encryptedMessage.content = "Mensaje cifrado"
+        if payload.encryptedReplyingToText != nil {
+            encryptedMessage.replyingToText = "Mensaje cifrado"
+        }
+        encryptedMessage.encryptedContent = payload.encryptedContent
+        encryptedMessage.encryptedReplyingToText = payload.encryptedReplyingToText
+        encryptedMessage.encryptedMessageKeys = payload.encryptedMessageKeys
+        encryptedMessage.senderPublicKey = payload.senderPublicKey
+        encryptedMessage.encryptionVersion = payload.encryptionVersion
+        encryptedMessage.encryptionScheme = payload.encryptionScheme
+        return encryptedMessage
     }
     
     /// Envía un mensaje en un chat y actualiza la información del chat en Firestore.
@@ -207,16 +249,18 @@ actor PrivateChatService {
     /// - Throws: Lanza un error `PrivateChatServiceError.sendMessageFailed` si ocurre un problema al enviar el mensaje o actualizar el chat.
     func sendMessage(chatID: String, messageText: String) async throws {
         do {
+            try await moderationService.assertCanSendPrivateMessage(chatID: chatID)
             // Enviando mensaje en el chat
-            let message = MessageModel(senderUserID: uid, content: messageText, timestamp: .init(), type: MessageType.text)
-            try await database.collection("chats").document(chatID).collection("messages").addDocument(data: message.dictionary)
+            let message = MessageModel(id: UUID().uuidString, senderUserID: uid, content: messageText, timestamp: .init(), type: MessageType.text)
+            let encryptedMessage = try await encryptedMessageIfNeeded(message, chatID: chatID)
+            try await database.collection("chats").document(chatID).collection("messages").document(encryptedMessage.id).setData(encryptedMessage.dictionary)
             
             // Actualizando información del chat
             let updateChatInfo: [String: Any] = [
-                "lastMessageTimestamp": message.timestamp,
+                "lastMessageTimestamp": encryptedMessage.timestamp,
                 "lastMessageSenderUserID": uid,
-                "lastMessage": message.content,
-                "lastMessageType": message.type.rawValue
+                "lastMessage": encryptedMessage.encryptionVersion == nil ? encryptedMessage.content : "Mensaje cifrado",
+                "lastMessageType": encryptedMessage.type.rawValue
             ]
             try await database.collection("chats").document(chatID).updateData(updateChatInfo)
         } catch {
@@ -235,16 +279,18 @@ actor PrivateChatService {
     /// - Throws: `PrivateChatServiceError.sendMessageFailed` si ocurre un error al escribir en Firestore.
     func sendAdvancedMessage(chatID: String, message: MessageModel) async throws{
         do{
+            try await moderationService.assertCanSendPrivateMessage(chatID: chatID)
+            let encryptedMessage = try await encryptedMessageIfNeeded(message, chatID: chatID)
             try await database.collection("chats")
                 .document(chatID).collection("messages")
-                .document(message.id)
-                .setData(message.dictionary)
+                .document(encryptedMessage.id)
+                .setData(encryptedMessage.dictionary)
             
             let updataChatInfo: [String: Any] = [
-                "lastMessageTimestamp": message.timestamp,
+                "lastMessageTimestamp": encryptedMessage.timestamp,
                 "lastMessageSenderUserID": uid,
-                "lastMessage": message.content,
-                "lastMessageType": message.type.rawValue
+                "lastMessage": encryptedMessage.encryptionVersion == nil ? encryptedMessage.content : "Mensaje cifrado",
+                "lastMessageType": encryptedMessage.type.rawValue
             ]
 
             try await database.collection("chats").document(chatID).updateData(updataChatInfo)
@@ -274,10 +320,18 @@ actor PrivateChatService {
         let messageRef = chatRef.collection("messages").document(messageID)
 
         do{
-            try await messageRef.updateData(["content": newContent])
-            print("Editando mensaje con ID: \(messageID)")
+            let message = MessageModel(id: messageID, senderUserID: uid, content: newContent, timestamp: .init(), type: .text)
+            let encryptedMessage = try await encryptedMessageIfNeeded(message, chatID: chatsID)
+            var updateData: [String: Any] = ["content": encryptedMessage.content]
+            updateData["encryptedContent"] = encryptedMessage.encryptedContent ?? FieldValue.delete()
+            updateData["encryptedMessageKeys"] = encryptedMessage.encryptedMessageKeys ?? FieldValue.delete()
+            updateData["senderPublicKey"] = encryptedMessage.senderPublicKey ?? FieldValue.delete()
+            updateData["encryptionVersion"] = encryptedMessage.encryptionVersion ?? FieldValue.delete()
+            updateData["encryptionScheme"] = encryptedMessage.encryptionScheme ?? FieldValue.delete()
+            try await messageRef.updateData(updateData)
+            AppLogger.debug("Editando mensaje privado.")
         }catch{
-            print("Error desde server: No se pudo editar: ")
+            AppLogger.error("No se pudo editar el mensaje privado.")
             throw error
         }
     }
@@ -292,9 +346,18 @@ actor PrivateChatService {
         let messageRef = chatRef.collection("messages").document(messageID)
         
         do{
-            try await messageRef.updateData(["content": "Mensaje eliminado"])
+            try await messageRef.updateData([
+                "content": "Mensaje eliminado",
+                "encryptedContent": FieldValue.delete(),
+                "encryptedReplyingToText": FieldValue.delete(),
+                "encryptedMessageKeys": FieldValue.delete(),
+                "attachmentFileName": FieldValue.delete(),
+                "senderPublicKey": FieldValue.delete(),
+                "encryptionVersion": FieldValue.delete(),
+                "encryptionScheme": FieldValue.delete()
+            ])
         }catch{
-            print("Mensaje del server -> Error, el mensaje no se ha actualizado")
+            AppLogger.error("El mensaje privado no se ha actualizado.")
             throw error
         }
     }
@@ -310,9 +373,9 @@ actor PrivateChatService {
         
         do{
             try await messageRef.delete()
-            print("Mensaje eliminado con exito")
+            AppLogger.info("Mensaje privado eliminado.")
         }catch{
-            print("Mensaje del server -> Error Al eliminar mensaje: ")
+            AppLogger.error("Error al eliminar mensaje privado.")
             throw error
         }
     }
@@ -325,7 +388,7 @@ actor PrivateChatService {
         do {
             try await messageRef.updateData(["reactions.\(userID)": emoji])
         } catch {
-            print("Error Server: no se guardó la reacción")
+            AppLogger.error("No se guardó la reacción privada.")
             throw error
         }
     }
@@ -339,7 +402,7 @@ actor PrivateChatService {
         do {
             try await messageRef.updateData(["reactions.\(userID)": FieldValue.delete()])
         }catch{
-            print("Error Server: no se elimino la reacción")
+            AppLogger.error("No se eliminó la reacción privada.")
             throw error
         }
     }

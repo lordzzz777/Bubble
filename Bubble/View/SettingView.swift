@@ -15,14 +15,14 @@ struct SettingView: View {
     var general: [SettingModel]{
         return[
         .init(titleSetting: "Cuenta", selectedView: AnyView(UserProfileView())),
-        .init(titleSetting: "Privacidad", selectedView: AnyView(Text("Mi privacidad"))),
+        .init(titleSetting: "Privacidad", selectedView: AnyView(PrivacyView())),
         .init(titleSetting: "Chats", selectedView: AnyView(Text("Mis chats"))),
         .init(titleSetting: "Favoritos", selectedView: AnyView(Text("Mis favoritos")))
      ]
     }
     
     let informationSupport: [SettingModel] = [
-        .init(titleSetting: "Terminos de privacidad", selectedView: AnyView(Text("Terminos y condiciones"))),
+        .init(titleSetting: "Política de privacidad", selectedView: AnyView(PrivacyView())),
         .init(titleSetting: "Ayuda", selectedView: AnyView(Text("Te ayudamos"))),
         .init(titleSetting: "Información", selectedView: AnyView(Text("Esto es un quienes somos ...")))
     ]

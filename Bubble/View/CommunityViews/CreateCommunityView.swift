@@ -76,7 +76,13 @@ struct CreateCommunityView: View {
                 
                 Section {
                     ForEach(createCommunityViewModel.friendsToInvite, id: \.nickname) { friend in
-                        FriendToInviteView(friend: friend)
+                        FriendToInviteView(
+                            friend: friend,
+                            isSelected: createCommunityViewModel.checkIfFriendIsSelected(friendID: friend.id),
+                            onToggleSelection: {
+                                createCommunityViewModel.toggleMemberSelection(friendID: friend.id)
+                            }
+                        )
                     }
                 } header: {
                     Text("Selecciona a quien quieres invitar")

@@ -16,6 +16,7 @@ import AuthenticationServices
 @Observable
 class AppleServices {
 
+    private let firestoreService = FirestoreService()
     var nonce = ""
     var errorMessage: LocalizedStringKey = ""
     var showError = false
@@ -44,21 +45,19 @@ class AppleServices {
         case .success(let user):
             // Obtener las credenciales de Apple
             guard let credential = user.credential as? ASAuthorizationAppleIDCredential else {
-                print("Error: No se pudo obtener el credential")
+                AppLogger.error("No se pudo obtener la credencial de Apple.")
                 return
             }
             
-            print("Nombre del usuario: \(credential.fullName?.description ?? "No disponible")")
-            
             // Obtener el token de identidad de Apple
             guard let token = credential.identityToken else {
-                print("Error: No se pudo obtener el token de identidad")
+                AppLogger.error("No se pudo obtener el token de identidad de Apple.")
                 return
             }
             
             // Convertir el token a una cadena de texto
             guard let tokenString = String(data: token, encoding: .utf8) else {
-                print("Error: No se pudo convertir el token a String")
+                AppLogger.error("No se pudo procesar el token de identidad de Apple.")
                 return
             }
             
@@ -75,18 +74,21 @@ class AppleServices {
             // Autenticar al usuario en Firebase con las credenciales generadas
             Task {
                 do {
-                    try await Auth.auth().signIn(with: firebaseCredential)
-                    print("Inicio de sesión con Apple exitoso")
+                    let result = try await Auth.auth().signIn(with: firebaseCredential)
+                    let hasUserProfile = try await firestoreService.checkIfUserExistsByID(userID: result.user.uid)
+                    UserDefaults.standard.set(
+                        hasUserProfile ? UserLoginState.loggedIn.rawValue : UserLoginState.hasNickname.rawValue,
+                        forKey: "LoginFlowState"
+                    )
                 } catch {
-                    print("Error al iniciar sesión con Apple: \(error.localizedDescription)")
-                    errorMessage = "login-apple-error"
+                    errorMessage = "No se pudo iniciar sesión con Apple. Inténtelo más tarde."
                     showError = true
                 }
             }
             
-        case .failure(let failure):
+        case .failure:
             // Manejar el caso en que la autenticación con Apple falle
-            print("Error al procesar la autenticación con Apple: \(failure.localizedDescription)")
+            AppLogger.error("Error al procesar la autenticación con Apple.")
         }
     }
 
@@ -99,10 +101,10 @@ class AppleServices {
         do {
             // Intenta cerrar sesión en Firebase.
             try firebaseAuth.signOut()
-            print("Sesión cerrada exitosamente.")
-        } catch let signOutError as NSError {
+            AppLogger.info("Sesión cerrada.")
+        } catch {
             // Manejo de errores en caso de fallo al cerrar sesión.
-            print("Error al cerrar sesión: \(signOutError.localizedDescription)")
+            AppLogger.error("Error al cerrar sesión.")
         }
     }
 

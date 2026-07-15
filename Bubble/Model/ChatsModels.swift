@@ -63,7 +63,14 @@ struct MessageModel: Identifiable, Codable, Hashable {
     
     var reactions:[String: String]? = nil // UserID : Emoji
     var audioDuration: Double?
+    var attachmentFileName: String?
     var isForwarded: Bool? = false
+    var encryptedContent: String?
+    var encryptedReplyingToText: String?
+    var encryptedMessageKeys: [String: String]?
+    var senderPublicKey: String?
+    var encryptionVersion: Int?
+    var encryptionScheme: String?
     
     var dictionary: [String: Any] {
         var dict: [String: Any] = [
@@ -82,6 +89,27 @@ struct MessageModel: Identifiable, Codable, Hashable {
         }
         if let replyingToNickname = replyingToNickname {
             dict["replyingToNickname"] = replyingToNickname
+        }
+        if let attachmentFileName = attachmentFileName {
+            dict["attachmentFileName"] = attachmentFileName
+        }
+        if let encryptedContent = encryptedContent {
+            dict["encryptedContent"] = encryptedContent
+        }
+        if let encryptedReplyingToText = encryptedReplyingToText {
+            dict["encryptedReplyingToText"] = encryptedReplyingToText
+        }
+        if let encryptedMessageKeys = encryptedMessageKeys {
+            dict["encryptedMessageKeys"] = encryptedMessageKeys
+        }
+        if let senderPublicKey = senderPublicKey {
+            dict["senderPublicKey"] = senderPublicKey
+        }
+        if let encryptionVersion = encryptionVersion {
+            dict["encryptionVersion"] = encryptionVersion
+        }
+        if let encryptionScheme = encryptionScheme {
+            dict["encryptionScheme"] = encryptionScheme
         }
         
         return dict

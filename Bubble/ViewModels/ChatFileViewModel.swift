@@ -18,6 +18,8 @@ final class ChatFileViewModel {
     // MARK: - Servicios
     private let fileService = ChatFileService()
     private let publicChatService = PublicChatService()
+    private let messageEncryptionService = MessageEncryptionService()
+    private let moderationService = ModerationService()
     
     // MARK: - Estado UI
     var isUploading: Bool = false
@@ -82,54 +84,91 @@ final class ChatFileViewModel {
                 originalFilename: filename
             )
             
-            print("Archivo guardado localmente en: \(localURL)")
+            AppLogger.debug("Archivo guardado localmente.")
             return localURL
             
         } catch {
-            print("Error al descargar y guardar archivo: \(error.localizedDescription)")
+            AppLogger.error("Error al descargar y guardar archivo.")
             throw error
         }
+    }
+    
+    func downloadAndSaveEncryptedFile(message: MessageModel, chatID: String) async throws -> URL {
+        guard let url = URL(string: message.content) else { throw URLError(.badURL) }
+        let (encryptedData, _) = try await URLSession.shared.data(from: url)
+        let fileData = try await messageEncryptionService.decryptAttachmentData(encryptedData, message: message, chatID: chatID)
+        let filename = message.attachmentFileName ?? "\(message.id).bin"
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try fileData.write(to: tempURL)
+        try LocalFilePrivacyService.protectTemporaryFile(at: tempURL)
+        return try await fileService.saveDownloadedFileLocally(tempURL: tempURL, originalFilename: filename)
     }
     
     // MARK: - Envío a Firestore
     /// Sube (si es necesario) y envía un mensaje de tipo `.file`
     func sendFileMessage(_ fileURL: URL,scope: ChatScope, replyingTo messageID: String? = nil) async {
         do {
-            // Subida a Firebase Storage + metadata
-            guard let result = try await uploadAndPrepareMessage(from: fileURL) else {return}
-            
-            // Crear mensaje Firestore
+            switch scope {
+            case .public:
+                guard let result = try await uploadAndPrepareMessage(from: fileURL) else { return }
                 let message = MessageModel(
                     id: UUID().uuidString,
                     senderUserID: Auth.auth().currentUser?.uid ?? "system",
                     content: result.url,
                     timestamp: Timestamp(date: .now),
                     type: .file,
-                    replyToMessageID: messageID
+                    replyToMessageID: messageID,
+                    attachmentFileName: result.name
                 )
-            
-            // Seleccionar colección según el ámbito
-            let ref: CollectionReference
-            switch scope {
-            case .public:
-                ref = Firestore.firestore()
+                let ref = Firestore.firestore()
                     .collection("public_chats")
                     .document("global_chat")
                     .collection("messages")
+                try await ref.document(message.id).setData(message.dictionary)
+                
             case .privateChat(let chatID):
-                ref = Firestore.firestore()
-                    .collection("chats")
-                    .document(chatID)
-                    .collection("messages")
+                try await sendPrivateFileMessage(fileURL, chatID: chatID, replyingTo: messageID)
             }
-            
-            try await ref.document(message.id).setData(message.dictionary)
             
         } catch {
             isShowError = true
             errorTitleMessage = "Error al enviar archivo"
             errorMessage = error.localizedDescription
         }
+    }
+    private func sendPrivateFileMessage(_ fileURL: URL, chatID: String, replyingTo messageID: String?) async throws {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        try await moderationService.assertCanSendPrivateMessage(chatID: chatID)
+        let newMessageID = UUID().uuidString
+        let fileData = try Data(contentsOf: fileURL)
+        let encryptedPayload = try await messageEncryptionService.encryptAttachmentData(fileData, chatID: chatID, messageID: newMessageID)
+        let encryptedURL = try await fileService.uploadFileData(encryptedPayload.encryptedData, path: newMessageID, fileExtension: "bin")
+        var message = MessageModel(
+            id: newMessageID,
+            senderUserID: uid,
+            content: encryptedURL,
+            timestamp: Timestamp(date: .now),
+            type: .file,
+            replyToMessageID: messageID,
+            attachmentFileName: fileURL.lastPathComponent
+        )
+        message.encryptedMessageKeys = encryptedPayload.encryptedMessageKeys
+        message.senderPublicKey = encryptedPayload.senderPublicKey
+        message.encryptionVersion = encryptedPayload.encryptionVersion
+        message.encryptionScheme = encryptedPayload.encryptionScheme
+        
+        let database = Firestore.firestore()
+        try await database.collection("chats")
+            .document(chatID)
+            .collection("messages")
+            .document(message.id)
+            .setData(message.dictionary)
+        try await database.collection("chats").document(chatID).updateData([
+            "lastMessageTimestamp": message.timestamp,
+            "lastMessageSenderUserID": message.senderUserID,
+            "lastMessage": "Adjunto cifrado",
+            "lastMessageType": message.type.rawValue
+        ])
     }
     
     
@@ -138,7 +177,7 @@ final class ChatFileViewModel {
     func validateFileSize(_ fileURL: URL) async throws {
         do {
             try await fileService.validateFileSize(fileURL)
-            print("Tamaño de archivo válido.")
+            AppLogger.debug("Tamaño de archivo válido.")
         } catch {
             isShowError = true
             errorTitleMessage = "Archivo demasiado grande"
@@ -152,12 +191,12 @@ final class ChatFileViewModel {
     func deleteFileFromStorage(_ storageURL: String) async throws {
         do {
             try await fileService.deleteFileFromStorage(storageURL)
-            print("Archivo eliminado correctamente del servidor.")
+            AppLogger.debug("Archivo eliminado del servidor.")
         } catch {
             isShowError = true
             errorTitleMessage = "Error al eliminar archivo"
             errorMessage = "No se pudo eliminar el archivo del servidor."
-            print("Error al eliminar archivo: \(error.localizedDescription)")
+            AppLogger.error("Error al eliminar archivo.")
             throw error
         }
     }
@@ -196,20 +235,33 @@ extension ChatFileViewModel {
     func previewsFile(_ message: String,isPreviewPresented: Binding<Bool>, previewedFileURL: Binding< URL?>, unsupportedExtension: Binding <String?>) async throws{
         do{
             let localURL = try await downloadAndSaveFile(from: message)
-            let ext = localURL.pathExtension.lowercased()
-            let allowedExtensions = ["pdf", "docx", "xlsx", "pptx", "txt", "rtf"]
-            
-            // Si el archivo es compatible, lo muestra; si no, guarda la extensión para mostrar aviso
-            if allowedExtensions.contains(ext){
-                previewedFileURL.wrappedValue = localURL
-                isPreviewPresented.wrappedValue = true
-            }else {
-                unsupportedExtension.wrappedValue = ext
-                isPreviewPresented.wrappedValue = true
-            }
+            showPreview(for: localURL, isPreviewPresented: isPreviewPresented, previewedFileURL: previewedFileURL, unsupportedExtension: unsupportedExtension)
         }catch {
-            print("Error al abrir archivo: \(error.localizedDescription)")
+            AppLogger.error("Error al abrir archivo.")
             throw error
+        }
+    }
+    
+    func previewsEncryptedFile(_ message: MessageModel, chatID: String, isPreviewPresented: Binding<Bool>, previewedFileURL: Binding< URL?>, unsupportedExtension: Binding <String?>) async throws {
+        do {
+            let localURL = try await downloadAndSaveEncryptedFile(message: message, chatID: chatID)
+            showPreview(for: localURL, isPreviewPresented: isPreviewPresented, previewedFileURL: previewedFileURL, unsupportedExtension: unsupportedExtension)
+        } catch {
+            AppLogger.error("Error al abrir archivo cifrado.")
+            throw error
+        }
+    }
+    
+    private func showPreview(for localURL: URL, isPreviewPresented: Binding<Bool>, previewedFileURL: Binding< URL?>, unsupportedExtension: Binding <String?>) {
+        let ext = localURL.pathExtension.lowercased()
+        let allowedExtensions = ["pdf", "docx", "xlsx", "pptx", "txt", "rtf"]
+        
+        if allowedExtensions.contains(ext){
+            previewedFileURL.wrappedValue = localURL
+            isPreviewPresented.wrappedValue = true
+        }else {
+            unsupportedExtension.wrappedValue = ext
+            isPreviewPresented.wrappedValue = true
         }
     }
     

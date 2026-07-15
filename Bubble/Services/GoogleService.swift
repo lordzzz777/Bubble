@@ -90,7 +90,7 @@ actor GoogleService {
         } catch {
             
             // Maneja y muestra cualquier error que ocurra al cerrar sesión.
-            print("Error signing out: \(error.localizedDescription)")
+            AppLogger.error("Error al cerrar sesión con Google.")
         }
     }
 }

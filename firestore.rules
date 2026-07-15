@@ -1,0 +1,195 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userID) {
+      return signedIn() && request.auth.uid == userID;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function isModerator() {
+      return isAdmin() || (signedIn() && request.auth.token.moderator == true);
+    }
+
+    function isChatParticipant(chatID) {
+      return signedIn()
+        && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatID)).data.participants;
+    }
+
+    function userIsNotBlockedByParticipants(chatID) {
+      let chat = get(/databases/$(database)/documents/chats/$(chatID)).data;
+      let participants = chat.participants;
+      return participants.size() <= 2
+        && !(
+          participants[0] != request.auth.uid
+          && request.auth.uid in get(/databases/$(database)/documents/users/$(participants[0])).data.blockedUsers
+        )
+        && !(
+          participants.size() > 1
+          && participants[1] != request.auth.uid
+          && request.auth.uid in get(/databases/$(database)/documents/users/$(participants[1])).data.blockedUsers
+        );
+    }
+
+    function ownsMessage() {
+      return signedIn() && resource.data.senderUserID == request.auth.uid;
+    }
+
+    function participantKeepsOrRemovesSelf() {
+      return request.auth.uid in resource.data.participants
+        && (
+          request.auth.uid in request.resource.data.participants
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(["participants", "lastMessageSenderUserID"])
+        );
+    }
+
+    function createsOwnMessage() {
+      return signedIn() && request.resource.data.senderUserID == request.auth.uid;
+    }
+
+    function isCommunityParticipant(communityID) {
+      let community = get(/databases/$(database)/documents/communities/$(communityID)).data;
+      return signedIn()
+        && (request.auth.uid in community.members || community.ownerUID == request.auth.uid)
+        && !(request.auth.uid in community.blockedUsers);
+    }
+
+    match /users/{userID} {
+      allow read: if signedIn() && resource.data.isDeleted != true;
+      allow create: if isSelf(userID) && request.resource.data.id == userID;
+      allow update: if isSelf(userID);
+      allow delete: if isSelf(userID) || isAdmin();
+    }
+
+    match /chats/{chatID} {
+      allow read: if signedIn() && request.auth.uid in resource.data.participants;
+      allow create: if signedIn()
+        && request.auth.uid in request.resource.data.participants
+        && request.resource.data.participants is list
+        && request.resource.data.participants.size() >= 1
+        && request.resource.data.participants.size() <= 50;
+      allow update: if signedIn() && participantKeepsOrRemovesSelf();
+      allow delete: if signedIn() && request.auth.uid in resource.data.participants;
+
+      match /messages/{messageID} {
+        allow read: if isChatParticipant(chatID);
+        allow create: if isChatParticipant(chatID)
+          && createsOwnMessage()
+          && userIsNotBlockedByParticipants(chatID);
+        allow update: if isChatParticipant(chatID) && ownsMessage();
+        allow delete: if isChatParticipant(chatID) && ownsMessage();
+      }
+
+      match /typing/{typingUserID} {
+        allow read: if isChatParticipant(chatID);
+        allow create, update, delete: if isChatParticipant(chatID)
+          && request.auth.uid == typingUserID;
+      }
+    }
+
+    match /public_chats/{chatID} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && chatID == "global_chat"
+        && request.auth.uid in request.resource.data.participants;
+      allow update: if signedIn()
+        && chatID == "global_chat"
+        && request.auth.uid in request.resource.data.participants;
+      allow delete: if isAdmin();
+
+      match /messages/{messageID} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && createsOwnMessage()
+          && request.resource.data.type in ["text", "image", "video", "audio", "file", "communityInvitation"];
+        allow update: if signedIn()
+          && (
+            ownsMessage()
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(["reactions"])
+          );
+        allow delete: if ownsMessage() || isAdmin();
+      }
+
+      match /typing/{typingUserID} {
+        allow read: if signedIn();
+        allow create, update, delete: if signedIn()
+          && request.auth.uid == typingUserID;
+      }
+    }
+
+    match /communities/{communityID} {
+      allow read: if signedIn()
+        && (request.auth.uid in resource.data.members || resource.data.ownerUID == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.ownerUID == request.auth.uid
+        && request.auth.uid in request.resource.data.members;
+      allow update: if signedIn()
+        && (resource.data.ownerUID == request.auth.uid || isAdmin());
+      allow update: if isCommunityParticipant(communityID)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "lastMessage",
+          "lastMessageTimestamp",
+          "lastMessageSenderUserID"
+        ]);
+      allow delete: if signedIn()
+        && (resource.data.ownerUID == request.auth.uid || isAdmin());
+
+      match /messages/{messageID} {
+        allow read: if isCommunityParticipant(communityID);
+        allow create: if isCommunityParticipant(communityID)
+          && createsOwnMessage()
+          && request.resource.data.type == "text";
+        allow update, delete: if isCommunityParticipant(communityID) && ownsMessage();
+      }
+    }
+
+    match /reports/{reportID} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          "id",
+          "reporterUserID",
+          "reportedUserID",
+          "messageID",
+          "chatID",
+          "isPublicChat",
+          "reason",
+          "details",
+          "timestamp",
+          "status"
+        ])
+        && request.resource.data.reporterUserID == request.auth.uid
+        && request.resource.data.reportedUserID != request.auth.uid
+        && request.resource.data.status == "open"
+        && request.resource.data.reason in [
+          "spam",
+          "harassment",
+          "sexualContent",
+          "violence",
+          "hate",
+          "other"
+        ];
+      allow read: if isModerator();
+      allow update: if isModerator()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "reviewedByUserID",
+          "reviewedAt",
+          "resolutionNote"
+        ])
+        && request.resource.data.status in ["reviewed", "dismissed", "actioned"]
+        && request.resource.data.reviewedByUserID == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -13,6 +13,7 @@ struct PrivateMessageBubbleView: View {
     @Environment(PrivateChatViewModel.self) private var privateChatViewModel
     @State private var chatFileViewModel = ChatFileViewModel()
     @State private var chatAudioViewModel = ChatAudioViewModel()
+    @State private var chatMediaViewModel = ChatMediaViewModel()
     @State private var bubbleShareViewModel = BubbleShareViewModel()
     @State private var forwardViewModel = ForwardViewModel()
     
@@ -26,6 +27,8 @@ struct PrivateMessageBubbleView: View {
     @State private var unsupportedExtension: String? = nil
     @State private var isPreviewPresented = false
     @State private var isDownloading = false
+    @State private var decryptedImage: UIImage? = nil
+    @State private var showReportSheet = false
     
     // Para renviar mensages
     @State private var isSelecting = false
@@ -162,10 +165,26 @@ struct PrivateMessageBubbleView: View {
                             AudioMessageView(
                                 audioURLString: message.content,
                                 duration: message.audioDuration ?? 0,
+                                message: message,
+                                chatID: chatID,
                                 chatAudioViewModel: chatAudioViewModel
                             )
                         case .image:
-                            if let url = URL(string: message.content){
+                            if message.encryptionVersion != nil {
+                                if let decryptedImage {
+                                    Image(uiImage: decryptedImage)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(maxWidth: 220, maxHeight: 220)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                } else {
+                                    ProgressView()
+                                        .frame(width: 120, height: 120)
+                                        .task(id: message.id) {
+                                            decryptedImage = try? await chatMediaViewModel.decryptedImage(for: message, chatID: chatID)
+                                        }
+                                }
+                            } else if let url = URL(string: message.content){
                                 KFImage(source: .network(url))
                                     .cacheOriginalImage()
                                     .placeholder { ProgressView() }
@@ -185,14 +204,18 @@ struct PrivateMessageBubbleView: View {
                             HStack(spacing: 10){
                                 SmartFileThumbnailView(fileURL: URL(string: message.content) ?? URL(fileURLWithPath: "/dev/null"))
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(URL(string: message.content)?.lastPathComponent ?? "Archivo")
+                                    Text(message.attachmentFileName ?? URL(string: message.content)?.lastPathComponent ?? "Archivo")
                                         .font(.caption)
                                         .lineLimit(1)
                                     
                                     Button {
                                         Task {
                                             isDownloading = true
-                                            try await chatFileViewModel.previewsFile(message.content, isPreviewPresented: $isPreviewPresented, previewedFileURL: $previewedFileURL, unsupportedExtension: $unsupportedExtension)
+                                            if message.encryptionVersion != nil {
+                                                try await chatFileViewModel.previewsEncryptedFile(message, chatID: chatID, isPreviewPresented: $isPreviewPresented, previewedFileURL: $previewedFileURL, unsupportedExtension: $unsupportedExtension)
+                                            } else {
+                                                try await chatFileViewModel.previewsFile(message.content, isPreviewPresented: $isPreviewPresented, previewedFileURL: $previewedFileURL, unsupportedExtension: $unsupportedExtension)
+                                            }
                                             isDownloading = false
                                         }
                                     } label: {
@@ -268,6 +291,7 @@ struct PrivateMessageBubbleView: View {
 
                     .onLongPressGesture{
                         withAnimation {
+                            forwardViewModel.sourceChatID = chatID
                             forwardViewModel.selecting = true
                             forwardViewModel.toggle(message)
                         }
@@ -275,6 +299,7 @@ struct PrivateMessageBubbleView: View {
                     .onTapGesture {
                         guard isSelecting else { return }
                         withAnimation {
+                            forwardViewModel.sourceChatID = chatID
                             forwardViewModel.toggle(message)   // helper que añada/quite
                         }
                     }
@@ -292,12 +317,13 @@ struct PrivateMessageBubbleView: View {
                             Button(role: .destructive) {
                                 Task {
                                     do {
+                                        if message.type == .image || message.type == .audio || message.type == .file {
+                                            try await chatFileViewModel.deleteFileFromStorage(message.content)
+                                        }
                                         try await privateChatViewModel.deleteMessageMark(chatsID: chatID,
                                                                                          messageID: message.id)
-                                        let fileURL = try await chatFileViewModel.downloadAndSaveFile(from: message.content)
-                                        try FileManager.default.removeItem(at: fileURL)
                                     } catch {
-                                        print("Error al eliminar archivo: \(error.localizedDescription)")
+                                        AppLogger.error("Error al eliminar mensaje privado.")
                                     }
                                 }
                             } label: {
@@ -310,11 +336,18 @@ struct PrivateMessageBubbleView: View {
                             }, label: {
                                 Label("Responder", systemImage: "arrowshape.turn.up.left")
                             })
+                            
+                            Button(role: .destructive) {
+                                showReportSheet = true
+                            } label: {
+                                Label("Reportar", systemImage: "flag")
+                            }
                         }
                         
                         // Boton de reeviar
                         Button(action:{
                             withAnimation {
+                                forwardViewModel.sourceChatID = chatID
                                 forwardViewModel.selecting = true
                                 forwardViewModel.toggle(message)
                             }
@@ -358,7 +391,26 @@ struct PrivateMessageBubbleView: View {
                         // boton de copiar al portapapeles
                         Button(action: {
                             Task{
-                                await  privateChatViewModel.privateCopyToClopboard(message.content, $showCopiedToast)
+                                if message.encryptionVersion != nil {
+                                    switch message.type {
+                                    case .image:
+                                        if let decryptedImage {
+                                            await privateChatViewModel.privateCopyToClopboard(decryptedImage, $showCopiedToast)
+                                        }
+                                    case .audio:
+                                        if let localURL = try? await chatAudioViewModel.downloadAndCacheEncryptedAudio(message: message, chatID: chatID) {
+                                            await privateChatViewModel.privateCopyToClopboard(localURL, $showCopiedToast)
+                                        }
+                                    case .file:
+                                        if let localURL = try? await chatFileViewModel.downloadAndSaveEncryptedFile(message: message, chatID: chatID) {
+                                            await privateChatViewModel.privateCopyToClopboard(localURL, $showCopiedToast)
+                                        }
+                                    default:
+                                        await privateChatViewModel.privateCopyToClopboard(message.content, $showCopiedToast)
+                                    }
+                                } else {
+                                    await privateChatViewModel.privateCopyToClopboard(message.content, $showCopiedToast)
+                                }
                             }
                         }, label: {
                             Text("Copiar")
@@ -401,6 +453,14 @@ struct PrivateMessageBubbleView: View {
                         .environment(forwardViewModel)
                         .presentationDetents([.medium, .large])
                 }
+                .sheet(isPresented: $showReportSheet) {
+                    ReportView(
+                        reportedUserID: message.senderUserID,
+                        messageID: message.id,
+                        chatID: chatID,
+                        isPublicChat: false
+                    )
+                }
                 .onChange(of: forwardViewModel.selecting) { _, selecting in
                     // Cuando la hoja se cierra (= envío terminado) el flag pasa a false
                     guard !selecting else { return }
@@ -419,7 +479,7 @@ struct PrivateMessageBubbleView: View {
 
                 .task {
                     await userProfileView.loadUserData()
-                    await bubbleShareViewModel.prepare(for: message)
+                    await bubbleShareViewModel.prepare(for: message, chatID: chatID)
                     
                 }
             }

@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import _AuthenticationServices_SwiftUI
+import AuthenticationServices
 
 struct WelcomeView: View {
     @State private var loginViewModel = LoginViewModel()
@@ -34,6 +34,11 @@ struct WelcomeView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(loginViewModel.errorMessage)
+        }
+        .alert("Error con Apple", isPresented: $appleServices.showError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(appleServices.errorMessage)
         }
     }
     

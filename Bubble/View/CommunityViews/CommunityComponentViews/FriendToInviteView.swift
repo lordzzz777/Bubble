@@ -10,9 +10,9 @@ import FirebaseCore
 import Kingfisher
 
 struct FriendToInviteView: View {
-    @State private var createCommunityViewModel: CreateCommunityViewModel = .init()
     var friend: UserModel
-    @State private var isFriendAdded: Bool = false
+    var isSelected: Bool
+    var onToggleSelection: () -> Void
     
     var body: some View {
         HStack {
@@ -41,23 +41,17 @@ struct FriendToInviteView: View {
             
             Button {
                 withAnimation(.bouncy(duration: 0.2)) {
-                    isFriendAdded.toggle()
-                    
-                    if !isFriendAdded {
-                        createCommunityViewModel.community.members.append(friend.id)
-                    } else {
-                        createCommunityViewModel.community.members.removeAll(where: {$0 == friend.id})
-                    }
+                    onToggleSelection()
                 }
             } label: {
-                Text(!isFriendAdded ? "Seleccionar" : "Cancelar")
+                Text(!isSelected ? "Seleccionar" : "Cancelar")
             }
-            .foregroundStyle(!isFriendAdded ? Color.white : Color.secondary)
+            .foregroundStyle(!isSelected ? Color.white : Color.secondary)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 50)
-                    .fill(!isFriendAdded ? Color.accentColor : Color.gray)
+                    .fill(!isSelected ? Color.accentColor : Color.gray)
             )
         }
         .padding(.horizontal, 10)
@@ -65,5 +59,9 @@ struct FriendToInviteView: View {
 }
 
 #Preview {
-    FriendToInviteView(friend: UserModel(id: "1UAaH1mnl6XOQbPJqNz6qnnN8ku1", nickname: "Yeikobu24", imgUrl: "https://firebasestorage.googleapis.com/v0/b/bubble-3080f.firebasestorage.app/o/avatars%2FBepWRX9L8BNGGLfnUmxehfpzB4c2.jpg?alt=media&token=b6079556-f774-4c8d-aed6-c6ddeeb05abc", lastConnectionTimeStamp: Timestamp.init(), isOnline: false, chats: [], friends: [], isDeleted: false))
+    FriendToInviteView(
+        friend: UserModel(id: "1UAaH1mnl6XOQbPJqNz6qnnN8ku1", nickname: "Yeikobu24", imgUrl: "https://firebasestorage.googleapis.com/v0/b/bubble-3080f.firebasestorage.app/o/avatars%2FBepWRX9L8BNGGLfnUmxehfpzB4c2.jpg?alt=media&token=b6079556-f774-4c8d-aed6-c6ddeeb05abc", lastConnectionTimeStamp: Timestamp.init(), isOnline: false, chats: [], friends: [], isDeleted: false),
+        isSelected: false,
+        onToggleSelection: {}
+    )
 }

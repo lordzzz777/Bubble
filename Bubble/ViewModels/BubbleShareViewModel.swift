@@ -12,6 +12,7 @@ import SwiftUI
 @Observable @MainActor
 final class BubbleShareViewModel {
     private let cache = FileCacheActor()
+    private let messageEncryptionService = MessageEncryptionService()
     
     // Estado por Buebuja (Cada instacia se vive detras de la vista)
     var localURL: URL? = nil
@@ -22,22 +23,29 @@ final class BubbleShareViewModel {
     
     
     /// Pre-descarga si es necesario. Se llama desde `.task` en la burbuja.
-    func prepare(for message: MessageModel) async {
-        guard message.type == .file || message.type == .audio else {return}
-        
-        guard let url = URL(string: message.content) else {return}
+    func prepare(for message: MessageModel, chatID: String? = nil) async {
+        guard message.type == .file || message.type == .audio || message.type == .image else { return }
+        guard let url = URL(string: message.content) else { return }
         
         isWorking = true
+        defer { isWorking = false }
         
-        do{
-            localURL = try await cache.localURL(for: url)
-        }catch{
-             isShowError = true
+        do {
+            if message.encryptionVersion != nil, let chatID {
+                let (encryptedData, _) = try await URLSession.shared.data(from: url)
+                let decryptedData = try await messageEncryptionService.decryptAttachmentData(encryptedData, message: message, chatID: chatID)
+                let localURL = temporaryShareURL(for: message)
+                try decryptedData.write(to: localURL)
+                try LocalFilePrivacyService.protectTemporaryFile(at: localURL)
+                self.localURL = localURL
+            } else if message.type == .file || message.type == .audio {
+                localURL = try await cache.localURL(for: url)
+            }
+        } catch {
+            isShowError = true
             errorTitleMessage = "No se puede descargar"
-            errorMessage = "No se pudo descargar para compartir."
+            errorMessage = "No se pudo preparar para compartir."
         }
-        
-        isWorking = false
     }
     
     /// Devuelve el `Transferable` listo para ShareLink o nil si aún no está.
@@ -46,12 +54,27 @@ final class BubbleShareViewModel {
         case .text:
             return message.content
         case .image:
-            return URL(string: message.content)
+            return message.encryptionVersion == nil ? URL(string: message.content) : localURL
         case .file, .audio:
             return localURL
         default:
             return nil
         }
+    }
+    
+    private func temporaryShareURL(for message: MessageModel) -> URL {
+        let filename: String
+        switch message.type {
+        case .image:
+            filename = "\(message.id).png"
+        case .audio:
+            filename = "\(message.id).m4a"
+        case .file:
+            filename = message.attachmentFileName ?? "\(message.id).bin"
+        default:
+            filename = "\(message.id).bin"
+        }
+        return FileManager.default.temporaryDirectory.appendingPathComponent(filename)
     }
     
     /// Opcional: icono SF Symbol según extensión (para SharePreview).

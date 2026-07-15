@@ -17,19 +17,17 @@ actor ChatAudioService {
     // MARK: - Grabación
     
     /// Inicia la grabación de audio y devuelve la URL local donde se está guardando el archivo.
-    func startRecording() throws -> URL {
+    func startRecording() async throws -> URL {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playAndRecord, mode: .default, options: .defaultToSpeaker)
         try session.setActive(true)
         
         // Validar permisos de micrófono
-        var permissionGranted = false
-        let semaphore = DispatchSemaphore(value: 0)
-        AVAudioApplication.requestRecordPermission { granted in
-            permissionGranted = granted
-            semaphore.signal()
+        let permissionGranted = await withCheckedContinuation { continuation in
+            AVAudioApplication.requestRecordPermission { granted in
+                continuation.resume(returning: granted)
+            }
         }
-        semaphore.wait()
         
         guard permissionGranted else {
             throw NSError(domain: "ChatAudioService", code: 1, userInfo: [
@@ -64,12 +62,13 @@ actor ChatAudioService {
     /// Detiene la grabación actual y devuelve la URL del archivo grabado.
     func stopRecording() -> URL? {
         guard let recorder = audioRecorder else {
-            print("Error: No hay grabadora activa.")
+            AppLogger.warning("No hay grabadora activa.")
             return nil
         }
         
         recorder.stop()
         let url = recorder.url
+        try? LocalFilePrivacyService.protectTemporaryFile(at: url)
         audioRecorder = nil // Limpieza
         return url
     }
@@ -79,10 +78,14 @@ actor ChatAudioService {
     /// Sube una nota de voz a Firebase Storage y devuelve su URL pública.
     func uploadVoiceNote(_ fileURL: URL, path: String = UUID().uuidString) async throws -> String {
         let audioData = try Data(contentsOf: fileURL)
-        let storageRef = Storage.storage().reference().child("voice_notes/\(path).m4a")
+        return try await uploadVoiceNoteData(audioData, path: path, fileExtension: "m4a")
+    }
+    
+    func uploadVoiceNoteData(_ data: Data, path: String = UUID().uuidString, fileExtension: String = "m4a") async throws -> String {
+        let storageRef = Storage.storage().reference().child("voice_notes/\(path).\(fileExtension)")
         
         return try await Task.detached(priority: .userInitiated) {
-            _ = try await storageRef.putDataAsync(audioData)
+            _ = try await storageRef.putDataAsync(data)
             let url = try await storageRef.downloadURL()
             return url.absoluteString
         }.value
@@ -93,9 +96,9 @@ actor ChatAudioService {
         do {
             let ref = Storage.storage().reference(forURL: storageURL)
             try await ref.delete()
-            print("Nota de voz eliminada del servidor.")
+            AppLogger.debug("Nota de voz eliminada del servidor.")
         } catch {
-            print("Error: No se pudo eliminar la nota de voz. \(error.localizedDescription)")
+            AppLogger.error("No se pudo eliminar la nota de voz.")
             throw error
         }
     }
@@ -115,6 +118,7 @@ actor ChatAudioService {
         let localURL = cachesDir.appendingPathComponent(filename)
         
         try data.write(to: localURL)
+        try LocalFilePrivacyService.protectCacheFile(at: localURL)
         return localURL
     }
     

@@ -44,7 +44,7 @@ actor PublicChatService {
                             
                             return message
                         } catch {
-                            print("Error al parsear mensaje:", error)
+                            AppLogger.error("Error al parsear mensaje público.")
                             return nil
                         }
                     }
@@ -66,7 +66,7 @@ actor PublicChatService {
     /// Actualiza el contenido de un mensaje específico por ID.
     func editMessage(messageID: String, newContent: String) async throws {
         let messageRef = chatsRef.collection("messages").document(messageID)
-        print("Editando mensaje con ID: \(messageID)")
+        AppLogger.debug("Editando mensaje público.")
         try await messageRef.updateData(["content": newContent])
     }
     
@@ -77,7 +77,7 @@ actor PublicChatService {
         do{
             try await messageRef.updateData(["content": "Mensaje eliminado"])
         }catch{
-            print("Mensaje del server -> Error, el mensaje no se ha actualizado")
+            AppLogger.error("El mensaje público no se ha actualizado.")
             throw error
         }
         
@@ -89,9 +89,9 @@ actor PublicChatService {
         
         do{
             try await messgeRef.delete()
-            print("Mensaje eliminado con exito")
+            AppLogger.info("Mensaje público eliminado.")
         }catch{
-            print("Mensaje del server -> Error al eliminar el mensaje")
+            AppLogger.error("Error al eliminar mensaje público.")
             throw error
         }
     }
@@ -111,7 +111,7 @@ actor PublicChatService {
                     participants.append(userID)
                     try await chatsRef.updateData(["participants": participants])
                 }else{
-                    print("Usuario \(userID) ya está en el chat público.")
+                    AppLogger.debug("El usuario ya está en el chat público.")
                 }
                 
             } else {
@@ -146,7 +146,7 @@ actor PublicChatService {
         do {
             try await messageRef.updateData(["reactions.\(userID)": emoji])
         } catch {
-            print("Error Server: no se guardó la reacción")
+            AppLogger.error("No se guardó la reacción pública.")
             throw error
         }
     }

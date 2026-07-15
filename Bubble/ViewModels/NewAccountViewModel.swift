@@ -43,7 +43,7 @@ final class NewAccountViewModel {
     func createUser(user: UserModel) async {
         
         guard let uid = Auth.auth().currentUser?.uid else {
-            print("Error : No hay usuarios autenticados")
+            AppLogger.warning("No hay usuario autenticado.")
             return
         }
         
@@ -56,7 +56,7 @@ final class NewAccountViewModel {
             errorTitle = "Error al crear usuario"
             errorDescription = "Hubo un error al crear el usuario. Inténtelo más tarde."
             showError = true
-            print("Ha ocurrido un error al crear el usuario: \(error)")
+            AppLogger.error("Ha ocurrido un error al crear el usuario.")
         }
     }
     
@@ -72,7 +72,7 @@ final class NewAccountViewModel {
             showError = true
             errorTitle = "Error al verificar nickname"
             errorDescription = "Hubo un error al comprobar el nickname. Inténtelo más tarde."
-            print("Error al comprobar el nombre de usuario: \(error)")
+            AppLogger.error("Error al comprobar el nombre de usuario.")
             return false
         }
     }
@@ -118,7 +118,7 @@ final class NewAccountViewModel {
             showError = true
             errorTitle = "Error al verificar nickname"
             errorDescription = "Hubo un error al comprobar el nickname. Inténtelo más tarde."
-            print("Error al comprobar el nombre de usuario: \(error)")
+            AppLogger.error("Error al comprobar el nombre de usuario.")
         }
     }
     
@@ -139,18 +139,22 @@ final class NewAccountViewModel {
             }
     }
     
-    /// Marca la cuenta del usuario como invisible en Firestore en lugar de eliminarla permanentemente.
-    ///
-    /// - Nota: Este método no elimina la cuenta, solo la oculta en la base de datos.
-    func deleteUserAccount() async {
+    /// Elimina la cuenta del usuario autenticado y sus datos personales asociados.
+    func deleteUserAccount() async -> Bool {
         do {
-            try await firestoreService.setUserInvisible()
-            print("Cuenta marcada como eliminada (invisible)")
+            try await firestoreService.deleteCurrentUserAccount()
+            return true
+        } catch FirestoreError.requiresRecentLogin {
+            showError = true
+            errorTitle = "Vuelve a iniciar sesión"
+            errorDescription = "Por seguridad, Firebase requiere una autenticación reciente antes de eliminar la cuenta. Cierra sesión, entra de nuevo y repite la eliminación."
+            return false
         } catch {
             showError = true
             errorTitle = "Error"
-            errorDescription = "No se pudo eliminar la cuenta"
-            print("Error al eliminar la cuenta: \(error)")
+            errorDescription = "No se pudo eliminar la cuenta. Inténtelo más tarde."
+            AppLogger.error("Error al eliminar la cuenta.")
+            return false
         }
     }
     
