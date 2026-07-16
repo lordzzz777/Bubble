@@ -56,30 +56,19 @@ struct PublicMessageBubbleView: View {
     
     var body: some View {
         if isEmojiPickerVisible {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(EmojiData.emojiCategories["Reacciones"] ?? [], id: \.self) { emoji in
-                        Button(action: {
-                            Task {
-                                if message.reactions?[Auth.auth().currentUser?.uid ?? ""] == emoji {
-                                    await publicChatViewModel.reacToMessageRemove(from: message.id)
-                                } else {
-                                    await publicChatViewModel.addReacToMessage(messageID: message.id, emoji: emoji, userID: message.senderUserID)
-                                }
-                                isEmojiPickerVisible = false
-                            }
-                        }) {
-                            Text(emoji).font(.largeTitle)
+            MessageReactionPicker(
+                selectedEmoji: message.reactions?[Auth.auth().currentUser?.uid ?? ""],
+                onSelect: { emoji in
+                    Task {
+                        if message.reactions?[Auth.auth().currentUser?.uid ?? ""] == emoji {
+                            await publicChatViewModel.reacToMessageRemove(from: message.id)
+                        } else {
+                            await publicChatViewModel.addReacToMessage(messageID: message.id, emoji: emoji, userID: message.senderUserID)
                         }
-                        
+                        isEmojiPickerVisible = false
                     }
-                }.background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(.gray.opacity(0.45))
-                        .stroke(Color.black.opacity(0.5), lineWidth: 1)
-                )
-                .padding(.horizontal)
-            }
+                }
+            )
             .transition(.opacity)
         }
         if message.isForwarded == true{
@@ -219,15 +208,8 @@ struct PublicMessageBubbleView: View {
                         }
                         
                         if let reactions = message.reactions, !reactions.isEmpty{
-                            HStack(spacing: 2){
-                                ForEach(Array(Set(reactions.values)), id:\.self){ emoji in
-                                    Text(emoji).font(.caption)
-                                        .padding(8)
-                                        .background(Color.gray.opacity(0.5))
-                                        .clipShape(Circle())
-                                        .shadow(radius: 2)
-                                }
-                            }.offset(x: 15)
+                            MessageReactionSummary(reactions: reactions)
+                                .offset(x: 12)
                         }
                         HStack {
                             Spacer()

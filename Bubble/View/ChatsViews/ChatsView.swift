@@ -15,7 +15,6 @@ struct ChatsView: View {
     @State private var chatsViewModel = PrivateChatViewModel()
     @State private var trashUserDefault = LoginViewModel()
     @State private var userViewModel = UserViewModel()
-    @State private var createCommunityViewModel = CreateCommunityViewModel()
     @State private var isMessageDestructive = false
     @State private var isShowingToggle = false
     @State private var showEmptyState = false
@@ -129,10 +128,6 @@ struct ChatsView: View {
                             chatsViewModel.showAddFriendView.toggle()
                         }
                         
-                        Button("Crear comunidad", systemImage: "person.2.badge.plus.fill") {
-                            createCommunityViewModel.showCreateNewCommunity.toggle()
-                        }
-                        
                         Button("Status de conexion", systemImage: isShowingToggle ? "eye" : "eye.slash") {
                             withAnimation(.easeInOut){
                                 isShowingToggle.toggle()
@@ -146,14 +141,6 @@ struct ChatsView: View {
             }
             .sheet(isPresented: $chatsViewModel.showAddFriendView) {
                 AddNewFriendView()
-            }
-            .sheet(isPresented: $createCommunityViewModel.showCreateNewCommunity, onDismiss: {
-                Task {
-                    await createCommunityViewModel.removeImageFromFirebaseStorage(imageURL: createCommunityViewModel.community.imgUrl)
-                    
-                }
-            }) {
-                CreateCommunityView(createCommunityViewModel: createCommunityViewModel)
             }
         }
     }

@@ -206,13 +206,19 @@ service cloud.firestore {
         allow read: if isCommunityParticipant(communityID);
         allow create: if isCommunityParticipant(communityID)
           && createsOwnMessage()
-          && request.resource.data.type == "text"
+          && request.resource.data.type in ["text", "image", "video", "audio", "file"]
           && protectsSensitiveMessageContent();
         allow update: if isCommunityParticipant(communityID)
-          && ownsMessage()
-          && protectsSensitiveMessageContent();
+          && ((ownsMessage() && protectsSensitiveMessageContent())
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(["reactions"]));
         allow delete: if isCommunityParticipant(communityID)
           && (ownsMessage() || isCommunityOwner(communityID));
+      }
+
+      match /typing/{typingUserID} {
+        allow read: if isCommunityParticipant(communityID);
+        allow create, update, delete: if isCommunityParticipant(communityID)
+          && request.auth.uid == typingUserID;
       }
     }
 

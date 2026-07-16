@@ -1,9 +1,11 @@
 import SwiftUI
 import Kingfisher
 import FirebaseAuth
+import FirebaseStorage
 
 struct CommunitiesView: View {
     @State private var viewModel = CommunityChatViewModel()
+    @State private var createCommunityViewModel = CreateCommunityViewModel()
     @State private var communityToDelete: CommunityModel?
 
     var body: some View {
@@ -29,8 +31,10 @@ struct CommunitiesView: View {
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             if community.ownerUID == Auth.auth().currentUser?.uid {
-                                Button("Eliminar", role: .destructive) {
+                                Button(role: .destructive) {
                                     communityToDelete = community
+                                } label: {
+                                    Label("Eliminar", systemImage: "trash.fill")
                                 }
                             }
                         }
@@ -42,6 +46,16 @@ struct CommunitiesView: View {
                 }
             }
             .navigationTitle("Comunidades")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        createCommunityViewModel.showCreateNewCommunity = true
+                    } label: {
+                        Image(systemName: "person.2.badge.plus.fill")
+                    }
+                    .accessibilityLabel("Crear comunidad")
+                }
+            }
             .task {
                 await viewModel.loadCommunities()
             }
@@ -70,6 +84,16 @@ struct CommunitiesView: View {
             } message: {
                 Text("Se eliminarán permanentemente la comunidad y todos sus mensajes.")
             }
+            .sheet(isPresented: $createCommunityViewModel.showCreateNewCommunity) {
+                CreateCommunityView(createCommunityViewModel: createCommunityViewModel)
+            }
+            .onChange(of: createCommunityViewModel.showCreateNewCommunity) { _, isPresented in
+                guard !isPresented else { return }
+                Task {
+                    await viewModel.loadCommunities()
+                    createCommunityViewModel = CreateCommunityViewModel()
+                }
+            }
         }
     }
 }
@@ -77,7 +101,6 @@ struct CommunitiesView: View {
 private struct CommunityRowView: View {
     let community: CommunityModel
     let unreadCount: Int
-    @State private var imageFailed = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -120,18 +143,45 @@ private struct CommunityRowView: View {
 
     @ViewBuilder
     private var communityImage: some View {
-        if let url = URL(string: community.imgUrl), !community.imgUrl.isEmpty, !imageFailed {
-            KFImage(url)
-                .placeholder { ProgressView() }
-                .onFailure { _ in imageFailed = true }
-                .resizable()
-                .scaledToFill()
+        if !community.imgUrl.isEmpty {
+            AuthenticatedCommunityImage(storageURL: community.imgUrl)
         } else {
             Image(systemName: "person.3.sequence.fill")
                 .font(.system(size: 28))
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(.secondary.opacity(0.12))
+        }
+    }
+}
+
+private struct AuthenticatedCommunityImage: View {
+    let storageURL: String
+    @State private var image: UIImage?
+    @State private var finished = false
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else if !finished {
+                ProgressView()
+            } else {
+                Image(systemName: "person.3.sequence.fill")
+                    .font(.system(size: 28))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.secondary.opacity(0.12))
+        .task(id: storageURL) {
+            image = nil
+            finished = false
+            defer { finished = true }
+            let reference = Storage.storage().reference(forURL: storageURL)
+            guard let data = try? await reference.data(maxSize: 5 * 1024 * 1024),
+                  let loadedImage = UIImage(data: data) else { return }
+            image = loadedImage
         }
     }
 }

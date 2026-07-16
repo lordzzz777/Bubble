@@ -77,32 +77,19 @@ struct PrivateMessageBubbleView: View {
         
         // Condicional para llasmar a las reaccione emojis
         if isEmojiPickerVisible{
-            ScrollView(.horizontal, showsIndicators: false){
-                HStack(spacing: 8){
-                    ForEach(EmojiData.emojiCategories["Reacciones"] ?? [], id: \.self) { emoji in
-                        
-                        Button(action: {
-                            Task{
-                                if message.reactions?[Auth.auth().currentUser?.uid ?? ""] == emoji{
-                                    await privateChatViewModel.reacToMessageRemove(from: chatID, messageID: message.id)
-                                }else{
-                                    
-                                    await  privateChatViewModel.addReacToMessage(chatsID: chatID,messageID: message.id, emoji: emoji, userID: message.senderUserID)
-                                }
-                                
-                                isEmojiPickerVisible = false
-                            }
-                        }){
-                            Text(emoji).font(.largeTitle)
+            MessageReactionPicker(
+                selectedEmoji: message.reactions?[Auth.auth().currentUser?.uid ?? ""],
+                onSelect: { emoji in
+                    Task {
+                        if message.reactions?[Auth.auth().currentUser?.uid ?? ""] == emoji {
+                            await privateChatViewModel.reacToMessageRemove(from: chatID, messageID: message.id)
+                        } else {
+                            await privateChatViewModel.addReacToMessage(chatsID: chatID, messageID: message.id, emoji: emoji, userID: message.senderUserID)
                         }
+                        isEmojiPickerVisible = false
                     }
-                }.background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(.gray.opacity(0.45))
-                        .stroke(Color.black.opacity(0.5), lineWidth: 1)
-                )
-                .padding(.horizontal)
-            }
+                }
+            )
             .transition(.opacity)
         }
         if message.isForwarded == true{
@@ -249,11 +236,8 @@ struct PrivateMessageBubbleView: View {
                         
                         // Aqui se pintan las reacciones emojis.
                         if let reactions = message.reactions, !reactions.isEmpty{
-                            HStack(spacing: 2){
-                                ForEach(Array(Set(reactions.values)), id:\.self){ emoji in
-                                    Text(emoji).font(.callout)
-                                }
-                            }.offset(x: 15, y: 10)
+                            MessageReactionSummary(reactions: reactions)
+                                .offset(x: 12, y: 9)
                         }
                         
                         HStack {

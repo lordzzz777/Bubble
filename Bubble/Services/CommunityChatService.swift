@@ -2,6 +2,7 @@ import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseStorage
+import UIKit
 
 private final class CommunityListenerBox: @unchecked Sendable {
     private let listener: ListenerRegistration
@@ -133,7 +134,12 @@ actor CommunityChatService {
         }
     }
 
-    func sendTextMessage(communityID: String, text: String) async throws {
+    func sendTextMessage(
+        communityID: String,
+        text: String,
+        replyTo repliedMessage: MessageModel? = nil,
+        replyingToNickname: String? = nil
+    ) async throws {
         let uid = try currentUserID()
         try await assertCurrentUserCanAccessCommunity(communityID: communityID)
 
@@ -142,7 +148,10 @@ actor CommunityChatService {
             senderUserID: uid,
             content: text,
             timestamp: Timestamp(date: .now),
-            type: .text
+            type: .text,
+            replyToMessageID: repliedMessage?.id,
+            replyingToText: repliedMessage?.content,
+            replyingToNickname: replyingToNickname
         )
 
         let communityRef = database.collection("communities").document(communityID)
@@ -153,6 +162,7 @@ actor CommunityChatService {
         let participantIDs = Array(Set(community.members + [community.ownerUID]))
         let payload = try await messageEncryptionService.encryptText(
             text,
+            replyingToText: message.replyingToText,
             chatID: communityID,
             messageID: message.id,
             participantIDs: participantIDs
@@ -161,6 +171,8 @@ actor CommunityChatService {
         var encryptedMessage = message
         encryptedMessage.content = "Mensaje cifrado"
         encryptedMessage.encryptedContent = payload.encryptedContent
+        encryptedMessage.encryptedReplyingToText = payload.encryptedReplyingToText
+        if payload.encryptedReplyingToText != nil { encryptedMessage.replyingToText = "Mensaje cifrado" }
         encryptedMessage.encryptedMessageKeys = payload.encryptedMessageKeys
         encryptedMessage.senderPublicKey = payload.senderPublicKey
         encryptedMessage.encryptionVersion = payload.encryptionVersion
@@ -179,8 +191,209 @@ actor CommunityChatService {
         )
     }
 
+    func sendImage(communityID: String, image: UIImage) async throws {
+        guard let data = image.jpegData(compressionQuality: 0.78) else { throw URLError(.cannotDecodeContentData) }
+        try await sendAttachment(communityID: communityID, data: data, type: .image, fileName: nil)
+    }
+
+    func sendFile(communityID: String, fileURL: URL) async throws {
+        let access = fileURL.startAccessingSecurityScopedResource()
+        defer { if access { fileURL.stopAccessingSecurityScopedResource() } }
+        let values = try fileURL.resourceValues(forKeys: [.fileSizeKey])
+        if (values.fileSize ?? 0) > 25 * 1024 * 1024 {
+            throw NSError(domain: "CommunityChat", code: 25, userInfo: [NSLocalizedDescriptionKey: "El archivo supera el límite de 25 MB."])
+        }
+        try await sendAttachment(
+            communityID: communityID,
+            data: Data(contentsOf: fileURL),
+            type: .file,
+            fileName: fileURL.lastPathComponent
+        )
+    }
+
+    func sendVoice(communityID: String, fileURL: URL, duration: Double) async throws {
+        try await sendAttachment(
+            communityID: communityID,
+            data: Data(contentsOf: fileURL),
+            type: .audio,
+            fileName: nil,
+            audioDuration: duration
+        )
+    }
+
+    private func sendAttachment(
+        communityID: String,
+        data: Data,
+        type: MessageType,
+        fileName: String?,
+        audioDuration: Double? = nil
+    ) async throws {
+        let uid = try currentUserID()
+        try await assertCurrentUserCanAccessCommunity(communityID: communityID)
+        let participants = try await participantIDs(communityID: communityID)
+        let messageID = UUID().uuidString
+        let payload = try await messageEncryptionService.encryptAttachmentData(
+            data, chatID: communityID, messageID: messageID, participantIDs: participants
+        )
+        let folder = type == .image ? "chat_images" : (type == .audio ? "voice_notes" : "shared_files")
+        let reference = Storage.storage().reference().child("\(folder)/\(messageID).bin")
+        let metadata = StorageMetadata()
+        metadata.contentType = "application/octet-stream"
+        metadata.customMetadata = ["ownerUID": uid]
+        _ = try await reference.putDataAsync(payload.encryptedData, metadata: metadata)
+        let url = try await reference.downloadURL().absoluteString
+        var message = MessageModel(
+            id: messageID, senderUserID: uid, content: url,
+            timestamp: Timestamp(date: .now), type: type,
+            audioDuration: audioDuration,
+            attachmentFileName: fileName
+        )
+        message.encryptedMessageKeys = payload.encryptedMessageKeys
+        message.senderPublicKey = payload.senderPublicKey
+        message.encryptionVersion = payload.encryptionVersion
+        message.encryptionScheme = payload.encryptionScheme
+        try await saveAdvancedMessage(communityID: communityID, message: message, participants: participants)
+    }
+
+    private func saveAdvancedMessage(communityID: String, message: MessageModel, participants: [String]) async throws {
+        let reference = database.collection("communities").document(communityID)
+        try await reference.collection("messages").document(message.id).setData(message.dictionary)
+        try await reference.updateData([
+            "lastMessage": message.type == .text ? "Mensaje cifrado" : "Adjunto cifrado",
+            "lastMessageTimestamp": message.timestamp,
+            "lastMessageSenderUserID": message.senderUserID
+        ])
+        try await readStateService.incrementCommunity(
+            communityID: communityID, senderID: message.senderUserID, participantIDs: participants
+        )
+    }
+
+    func decryptedAttachment(_ message: MessageModel, communityID: String) async throws -> Data {
+        guard let url = URL(string: message.content) else { throw URLError(.badURL) }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try await messageEncryptionService.decryptAttachmentData(data, message: message, chatID: communityID)
+    }
+
+    func react(communityID: String, messageID: String, emoji: String?) async throws {
+        let uid = try currentUserID()
+        try await assertCurrentUserCanAccessCommunity(communityID: communityID)
+        let value: Any = emoji ?? FieldValue.delete()
+        try await database.collection("communities").document(communityID)
+            .collection("messages").document(messageID).updateData(["reactions.\(uid)": value])
+    }
+
+    func editMessage(communityID: String, messageID: String, content: String) async throws {
+        let uid = try currentUserID()
+        let participants = try await participantIDs(communityID: communityID)
+        let payload = try await messageEncryptionService.encryptText(
+            content, chatID: communityID, messageID: messageID, participantIDs: participants
+        )
+        try await database.collection("communities").document(communityID)
+            .collection("messages").document(messageID).updateData([
+                "content": "Mensaje cifrado", "encryptedContent": payload.encryptedContent,
+                "encryptedMessageKeys": payload.encryptedMessageKeys,
+                "senderPublicKey": payload.senderPublicKey,
+                "encryptionVersion": payload.encryptionVersion,
+                "encryptionScheme": payload.encryptionScheme,
+                "senderUserID": uid
+            ])
+    }
+
+    func deleteMessage(communityID: String, messageID: String) async throws {
+        try await database.collection("communities").document(communityID)
+            .collection("messages").document(messageID).updateData([
+                "content": "Mensaje eliminado", "type": MessageType.text.rawValue,
+                "encryptedContent": FieldValue.delete(), "encryptedReplyingToText": FieldValue.delete(),
+                "encryptedMessageKeys": FieldValue.delete(), "senderPublicKey": FieldValue.delete(),
+                "encryptionVersion": FieldValue.delete(), "encryptionScheme": FieldValue.delete(),
+                "attachmentFileName": FieldValue.delete(), "reactions": FieldValue.delete()
+            ])
+    }
+
+    private func participantIDs(communityID: String) async throws -> [String] {
+        let document = try await database.collection("communities").document(communityID).getDocument()
+        guard let community = try? document.data(as: CommunityModel.self) else { throw CommunityChatError.communityNotFound }
+        return Array(Set(community.members + [community.ownerUID]))
+    }
+
     func markCommunityRead(communityID: String) async throws {
         try await readStateService.markCommunityRead(communityID: communityID)
+    }
+
+    func fetchInvitableFriends(for community: CommunityModel) async throws -> [UserModel] {
+        let uid = try currentUserID()
+        guard community.ownerUID == uid else { throw CommunityChatError.notOwner }
+        let ownerDocument = try await database.collection("users").document(uid).getDocument()
+        let friendIDs = Set(ownerDocument.data()?["friends"] as? [String] ?? [])
+        let existingIDs = Set(community.members + [community.ownerUID])
+        let snapshot = try await database.collection("users")
+            .whereField("isDeleted", isEqualTo: false)
+            .getDocuments()
+        let users = snapshot.documents.compactMap { document -> UserModel? in
+            guard !existingIDs.contains(document.documentID), document.documentID != uid,
+                  var user = try? document.data(as: UserModel.self) else { return nil }
+            user.id = document.documentID
+            return user
+        }
+        return users.sorted { lhs, rhs in
+            let lhsIsFriend = friendIDs.contains(lhs.id)
+            let rhsIsFriend = friendIDs.contains(rhs.id)
+            if lhsIsFriend != rhsIsFriend { return lhsIsFriend }
+            return lhs.nickname.localizedCaseInsensitiveCompare(rhs.nickname) == .orderedAscending
+        }
+    }
+
+    func addMember(communityID: String, userID: String, role: AdminRole?) async throws {
+        let uid = try currentUserID()
+        let reference = database.collection("communities").document(communityID)
+        let document = try await reference.getDocument()
+        guard var community = try? document.data(as: CommunityModel.self) else {
+            throw CommunityChatError.communityNotFound
+        }
+        guard community.ownerUID == uid else { throw CommunityChatError.notOwner }
+
+        if !community.members.contains(userID) { community.members.append(userID) }
+        community.admins.removeAll { $0.id == userID }
+        if let role {
+            community.admins.append(AdminModel(
+                id: userID,
+                role: role,
+                canRead: true,
+                canWrite: true,
+                canInvite: true,
+                canKick: role == .admin,
+                canMute: true,
+                canChangeRole: role == .admin
+            ))
+        }
+        try await reference.updateData([
+            "members": community.members,
+            "admins": community.admins.map(\.dictionary)
+        ])
+    }
+
+    func updateCommunityImage(communityID: String, image: UIImage) async throws -> String {
+        let uid = try currentUserID()
+        let communityRef = database.collection("communities").document(communityID)
+        let document = try await communityRef.getDocument()
+        guard let community = try? document.data(as: CommunityModel.self) else {
+            throw CommunityChatError.communityNotFound
+        }
+        guard community.ownerUID == uid else { throw CommunityChatError.notOwner }
+        guard let data = image.jpegData(compressionQuality: 0.72) else {
+            throw URLError(.cannotDecodeContentData)
+        }
+
+        // Una ruta nueva evita que imágenes antiguas sin ownerUID bloqueen el reemplazo.
+        let reference = Storage.storage().reference()
+            .child("communities/\(communityID)-\(UUID().uuidString).jpg")
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+        metadata.customMetadata = ["ownerUID": uid]
+        _ = try await reference.putDataAsync(data, metadata: metadata)
+        let url = try await reference.downloadURL().absoluteString
+        try await communityRef.updateData(["imgUrl": url])
+        return url
     }
 
     func deleteCommunity(communityID: String, imageURL: String) async throws {

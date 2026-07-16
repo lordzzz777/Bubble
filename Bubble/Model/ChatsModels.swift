@@ -98,6 +98,8 @@ struct MessageModel: Identifiable, Codable, Hashable {
         if let attachmentFileName = attachmentFileName {
             dict["attachmentFileName"] = attachmentFileName
         }
+        if let reactions { dict["reactions"] = reactions }
+        if let audioDuration { dict["audioDuration"] = audioDuration }
         if let encryptedContent = encryptedContent {
             dict["encryptedContent"] = encryptedContent
         }
