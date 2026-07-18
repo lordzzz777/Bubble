@@ -32,7 +32,7 @@ struct ComponetButtonView: View {
                         .scaledToFit()
                         .frame(width: 20)
                     Text(titleButtons).font(.title3.bold())
-                        .foregroundStyle(.black)
+                        .foregroundStyle(.primary)
                 }
             }
 
@@ -49,7 +49,7 @@ struct ComponetButtonView: View {
 }
 
 #Preview {
-    ComponetButtonView(titleButtons: "Inniciar con ...", nameIcons: "apple.logo",isSystemImage: true, width: 300,height: 50, color: Color.black, actions: {})
+    ComponetButtonView(titleButtons: "Inniciar con ...", nameIcons: "apple.logo",isSystemImage: true, width: 300,height: 50, color: .accentColor, actions: {})
 }
 
 #Preview {

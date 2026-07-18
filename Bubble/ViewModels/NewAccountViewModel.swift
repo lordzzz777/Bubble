@@ -219,7 +219,7 @@ final class NewAccountViewModel {
                     Image(systemName: "person.crop.circle.fill.badge.plus")
                         .resizable()
                         .scaledToFit()
-                        .foregroundStyle(.black)
+                        .foregroundStyle(.primary)
                         .frame(width: 180, height: 180)
                 }
             }

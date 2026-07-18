@@ -116,7 +116,7 @@ struct PublicMessageBubbleView: View {
                                     Text("\(replyNickname)")
                                         .font(.caption.bold())
                                     Rectangle()
-                                        .fill(.black.opacity(0.60))
+                                        .fill(.primary.opacity(0.60))
                                         .frame(width: 250, height: 1, alignment: .center)
                                         .padding(.vertical, 10)
                                     
@@ -129,7 +129,7 @@ struct PublicMessageBubbleView: View {
                             .background(
                                 RoundedRectangle(cornerRadius: 10)
                                     .fill(.white.opacity(0.35))
-                                    .stroke(Color.black.opacity(0.5), lineWidth: 1)
+                                    .stroke(Color.primary.opacity(0.5), lineWidth: 1)
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
