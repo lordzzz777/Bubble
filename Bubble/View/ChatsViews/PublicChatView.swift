@@ -42,10 +42,6 @@ struct PublicChatView: View {
     @State private var selectedImageURL: URL? = nil
     @State private var showImageOverlay = false
     
-    @State private var isDraggingLeft = false
-    @State private var dragOffset: CGSize = .zero
-    
-    @State private var draft = ""
     @FocusState private var isFocused: Bool
     
     var body: some View {

@@ -7,7 +7,6 @@
 
 import Foundation
 import SwiftUI
-import Firebase
 import FirebaseCore
 @preconcurrency import FirebaseAuth
 import CryptoKit
@@ -174,5 +173,4 @@ class AppleServices {
     }
 
 }
-
 

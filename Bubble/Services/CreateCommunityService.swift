@@ -7,7 +7,7 @@
 
 import Foundation
 import FirebaseCore
-import Firebase
+@preconcurrency import FirebaseFirestore
 import FirebaseAuth
 @preconcurrency import FirebaseStorage
 

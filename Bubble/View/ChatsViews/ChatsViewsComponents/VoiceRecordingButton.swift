@@ -8,8 +8,6 @@
 import SwiftUI
 
 struct VoiceRecordingButton: View {
-    @Environment(\.colorScheme) private var colorScheme
-    
     var onStart: () -> Void
     var onFinish: () -> Void
     var onCancel: () -> Void
@@ -79,4 +77,3 @@ struct VoiceRecordingButton: View {
         )
     }
 }
-

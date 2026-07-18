@@ -6,14 +6,10 @@
 //
 
 import SwiftUI
-import FirebaseFirestore
-import FirebaseCore
-import FirebaseAuth
 
 struct ChatsView: View {
     
     @State private var chatsViewModel = PrivateChatViewModel()
-    @State private var trashUserDefault = LoginViewModel()
     @State private var userViewModel = UserViewModel()
     @State private var isMessageDestructive = false
     @State private var isShowingToggle = false

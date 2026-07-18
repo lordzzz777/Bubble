@@ -9,7 +9,6 @@ import Foundation
 @preconcurrency import FirebaseFirestore
 import FirebaseAuth
 import FirebaseCore
-import Firebase
 
 private final class PrivateChatListenerBox: @unchecked Sendable {
     private let listener: ListenerRegistration

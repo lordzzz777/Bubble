@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import FirebaseCore
+import FirebaseFirestore
 
 struct UserModel: Codable, Identifiable, Hashable {
     var id: String
@@ -36,14 +36,4 @@ struct UserModel: Codable, Identifiable, Hashable {
         }
         return dict
     }
-}
-
-// Modelo temporal para la solicitud de amistad
-struct FriendRequest: Codable, Identifiable, Equatable {
-    var id: String
-    var senderID: String
-    var receiverID: String
-    var message: String
-    var timestamp: Timestamp
-
 }

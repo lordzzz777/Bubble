@@ -8,15 +8,8 @@
 import Foundation
 import FirebaseFirestore
 import FirebaseAuth
-import FirebaseCore
 import SwiftUI
 import UniformTypeIdentifiers
-import Kingfisher
-
-enum ChatParticipantRiole {
-    case me(UserModel)
-    case friend(UserModel)
-}
 
 @Observable @MainActor
 class PrivateChatViewModel {
@@ -52,7 +45,6 @@ class PrivateChatViewModel {
     
     // Tareas de escucha
     private var chatTask: Task<Void, Never>?
-    private var publicChatTask: Task<Void, Never>?
     private var userTask: Task<Void, Never>?
     
     /// Caché en memoria de los amigos ya descargados (clave = userID).

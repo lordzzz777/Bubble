@@ -9,7 +9,6 @@ import Foundation
 import FirebaseFirestore
 import FirebaseAuth
 import FirebaseCore
-import Firebase
 import FirebaseStorage
 
 

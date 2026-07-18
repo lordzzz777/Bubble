@@ -6,8 +6,6 @@
 //
 
 import SwiftUI
-import FirebaseCore
-import FirebaseAuth
 import Kingfisher
 
 struct ListChatRowView: View {
@@ -16,8 +14,6 @@ struct ListChatRowView: View {
     @State private var chatsPrivateViewModel = PrivateChatViewModel()
     @State private var addNewFriendViewModel = AddNewFriendViewModel()
     
-    
-    private let uid = Auth.auth().currentUser?.uid ?? ""
     
     var body: some View {
         VStack {

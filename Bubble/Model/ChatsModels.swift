@@ -35,25 +35,6 @@ struct ChatModel: Codable, Hashable {
     }
 }
 
-/// Modelo que representa un chat público donde múltiples usuarios pueden participar.
-struct PublicChatModel: Codable, Identifiable {
-    var id: String = ""
-    var participants: [String] // Lista de IDs de los usuarios en el chat
-    var lastMessage: String
-    var lastMessageTimestamp: Timestamp
-    var messages: [MessageModel]
-    
-    var dictionary: [String: Any] {
-        return [
-            "id": id,
-            "participants": participants,
-            "lastMessage": lastMessage,
-            "lastMessageTimestamp": lastMessageTimestamp,
-            "messages": messages.map { $0.dictionary }
-        ]
-    }
-}
-
 /// Modelo que representa un mensaje dentro de un chat.
 struct MessageModel: Identifiable, Codable, Hashable {
     var id: String = ""

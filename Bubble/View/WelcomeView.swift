@@ -11,8 +11,6 @@ import AuthenticationServices
 struct WelcomeView: View {
     @State private var loginViewModel = LoginViewModel()
     @State private var appleServices = AppleServices()
-    @State private var isSignInWithGoogleButtonPressed: Bool = false
-
     @AppStorage("LoginFlowState") private var loginFlowState = UserLoginState.loggedOut
     
     var body: some View {

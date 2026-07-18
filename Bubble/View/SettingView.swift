@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct SettingView: View {
-    @State var isShowEditUser: Bool = true
     @State private var isShowAlertWarning = false
     @State private var trashUserDefault = LoginViewModel()
     

@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Firebase
+import FirebaseCore
 import FirebaseCore
 import FirebaseAuth
 import GoogleSignIn

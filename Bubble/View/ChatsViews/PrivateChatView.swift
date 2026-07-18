@@ -47,7 +47,6 @@ struct PrivateChatView: View {
     @State private var replyingToText: String? = nil
     @State private var textFieldHeight: CGFloat = 40
     
-    @State private var draft = ""
     @FocusState private var isFocused: Bool
     
     
