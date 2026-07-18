@@ -1,130 +1,202 @@
 # Bubble
 
-## Descripción
-Bubble es una aplicación moderna y minimalista desarrollada en **SwiftUI**, diseñada para ofrecer una experiencia de comunicación rápida, segura y eficiente entre usuarios. La aplicación prioriza la simplicidad, el rendimiento y la privacidad.
+Bubble es una aplicación de mensajería para iOS desarrollada con SwiftUI y Firebase. Permite mantener conversaciones privadas, participar en un chat público y crear comunidades con miembros y roles, dentro de una interfaz adaptada a los modos claro y oscuro.
 
----
+El proyecto prioriza la privacidad, la comunicación en tiempo real y una experiencia coherente entre los distintos tipos de chat.
 
-## Características Principales
+## Funcionalidades
 
-- **Chats en tiempo real:** Mantén conversaciones rápidas y fluidas.
-- **Cifrado extremo a extremo:** Aseguramos la privacidad de tus mensajes.
-- **Notificaciones push:** Recibe alertas instantáneas de mensajes nuevos.
-- **Interfaz amigable:** Diseñada para ofrecer una experiencia intuitiva y agradable.
-- **Compatibilidad multimedia:** Envía y recibe imágenes, videos y archivos.
-- **Personalización:** Elige temas claros u oscuros.
+### Mensajería
 
----
+- Chats privados entre amigos.
+- Chat público compartido entre usuarios.
+- Chats de comunidad con propietarios, miembros y roles.
+- Mensajes de texto, imágenes, notas de voz y archivos.
+- Respuestas dentro de la conversación con una vista previa compacta del mensaje original.
+- Edición, reenvío, copia, compartición y eliminación de mensajes.
+- Reacciones con emojis y menús contextuales mediante pulsación prolongada.
+- Separadores por fecha, hora de envío, avatares y agrupación visual de mensajes consecutivos.
+- Animaciones de entrada y globos de conversación con una apariencia común en los tres tipos de chat.
 
-## Tecnologías Utilizadas
+### Comunidades
 
-- **SwiftUI:** Para la interfaz de usuario moderna y reactiva.
-- **Firebase:** Autenticación, base de datos y notificaciones push.
-  
----
+- Creación y edición de comunidades con imagen propia.
+- Carga y caché de imágenes mediante Kingfisher y Firebase Storage.
+- Invitación de amigos registrados.
+- Roles de miembro, moderador y administrador.
+- Gestión de permisos para invitar, expulsar, silenciar y cambiar roles.
+- Eliminación de comunidades reservada a su propietario.
 
-## Instalación y Configuración
+### Estado de lectura
 
-1. Clona este repositorio:
+- Indicadores visuales para mensajes pendientes.
+- Contadores por chat y por comunidad.
+- Marcado automático como leído al abrir una conversación.
+- Sincronización del estado de lectura entre dispositivos mediante Firestore.
+- Badge en el icono de la aplicación con el total de pendientes mientras la aplicación puede sincronizar los datos.
+
+> El badge se actualiza desde los listeners de Firestore. Para recibir nuevos valores con la aplicación completamente cerrada sería necesario añadir notificaciones remotas mediante APNs y Firebase Cloud Messaging.
+
+### Usuarios y seguridad
+
+- Inicio de sesión con Google y Sign in with Apple.
+- Creación y edición del perfil, avatar y nombre de usuario.
+- Solicitudes de amistad, aceptación, cancelación y eliminación de amigos.
+- Estado conectado/desconectado y última conexión.
+- Bloqueo de usuarios, denuncias y revisión de reportes.
+- Eliminación de cuenta.
+- Cifrado de mensajes y adjuntos antes de almacenarlos.
+- Firebase App Check para reducir el acceso desde clientes no autorizados.
+- Reglas específicas de privacidad para Cloud Firestore y Firebase Storage.
+
+## Tecnologías
+
+- Swift 6 y SwiftUI.
+- Firebase Authentication.
+- Cloud Firestore.
+- Firebase Storage.
+- Firebase App Check.
+- Google Sign-In.
+- AuthenticationServices para Sign in with Apple.
+- Kingfisher para descarga y caché de imágenes.
+- CryptoKit para cifrado.
+- AVFoundation para grabación y reproducción de audio.
+- PhotosUI, Quick Look y PDFKit para imágenes y archivos.
+
+El target enlaza únicamente los productos externos que utiliza la aplicación. Las demás entradas que Xcode muestra en Package Dependencies son dependencias transitivas requeridas por Firebase, Firestore o Google Sign-In.
+
+## Requisitos
+
+- macOS con Xcode 16.2 o posterior.
+- iOS 18.2 o posterior.
+- Una cuenta de Firebase.
+- Una aplicación iOS registrada en Firebase.
+- Configuración de Google Sign-In y Sign in with Apple para habilitar ambos proveedores.
+
+## Instalación
+
+1. Clona el repositorio:
+
    ```bash
    git clone https://github.com/lordzzz777/Bubble.git
+   cd Bubble
    ```
 
-2. Abre el proyecto en **Xcode**:
+2. Abre el proyecto:
+
    ```bash
-   cd Bubble
    open Bubble.xcodeproj
    ```
-   
-3. Configura las credenciales de Firebase:
-   - Ve a [Firebase Console](https://console.firebase.google.com/).
-   - Crea un nuevo proyecto o usa uno existente.
-   - Descarga el archivo `GoogleService-Info.plist` y agrégalo al proyecto.
 
-4. Ejecuta el proyecto en un simulador o dispositivo físico:
+3. Espera a que Swift Package Manager resuelva las dependencias.
+
+4. Compila el esquema `Bubble` desde Xcode o desde Terminal:
+
    ```bash
-   xcodebuild run
+   xcodebuild \
+     -project Bubble.xcodeproj \
+     -scheme Bubble \
+     -sdk iphonesimulator \
+     -configuration Debug \
+     build CODE_SIGNING_ALLOWED=NO
    ```
 
----
+## Configuración de Firebase
+
+### 1. Registrar la aplicación
+
+1. Crea o abre un proyecto en [Firebase Console](https://console.firebase.google.com/).
+2. Registra una aplicación iOS con el mismo Bundle Identifier configurado en Xcode.
+3. Descarga `GoogleService-Info.plist`.
+4. Añádelo al target `Bubble` sin publicar credenciales de un proyecto privado.
+
+### 2. Authentication
+
+Activa en Firebase Authentication los proveedores utilizados:
+
+- Google.
+- Apple.
+
+Para Apple también debes activar la capability **Sign in with Apple** para el identificador de la aplicación en tu cuenta de Apple Developer y en Xcode.
+
+### 3. Firestore y Storage
+
+Habilita Cloud Firestore y Firebase Storage. Las reglas versionadas del repositorio se encuentran en:
+
+- [`firestore.rules`](firestore.rules)
+- [`storage.rules`](storage.rules)
+
+Puedes desplegarlas con Firebase CLI después de seleccionar tu proyecto:
+
+```bash
+firebase login
+firebase use <firebase-project-id>
+firebase deploy --only firestore:rules,storage
+```
+
+No utilices reglas globales del tipo `request.auth != null` para toda la base de datos. Las reglas incluidas restringen el acceso según identidad, participación y propiedad de los recursos.
+
+### 4. App Check
+
+La aplicación utiliza el proveedor de depuración durante el desarrollo y el proveedor configurado para producción. Registra los tokens de depuración solamente en entornos de desarrollo y no los publiques en el repositorio.
+
+## Estructura del proyecto
+
+```text
+Bubble/
+├── Model/          Modelos de usuarios, chats, comunidades y moderación
+├── Services/       Firebase, cifrado, archivos, audio y estado de lectura
+├── View/           Pantallas y componentes SwiftUI
+├── ViewModels/     Estado y lógica de presentación
+└── Tools/          Utilidades, logging, red y componentes del sistema
+```
+
+La aplicación sigue una separación basada en vistas, ViewModels y servicios. Los listeners en tiempo real se encapsulan en servicios y se cancelan cuando dejan de ser necesarios.
+
+## Privacidad
+
+Bubble almacena en Firebase únicamente la información necesaria para prestar el servicio. Los mensajes y adjuntos compatibles se cifran antes de subirse, y las reglas de Firestore y Storage limitan el acceso a usuarios autenticados y participantes autorizados.
+
+El repositorio incluye [`PrivacyInfo.xcprivacy`](PrivacyInfo.xcprivacy). Antes de distribuir la aplicación, revisa también las declaraciones de privacidad de App Store Connect para que coincidan con los datos realmente tratados por tu despliegue.
+
+## Estado del proyecto
+
+Funciones completadas actualmente:
+
+- Registro, autenticación y flujo de creación de cuenta.
+- Perfiles, presencia y solicitudes de amistad.
+- Chat privado y chat público con operaciones completas sobre mensajes.
+- Comunidades, invitaciones, roles e imágenes.
+- Respuestas independientes dentro de cada conversación.
+- Imágenes, archivos y notas de voz.
+- Reacciones, reenvío y menús contextuales.
+- Cifrado de mensajes y adjuntos.
+- Estado de lectura y contadores sincronizados.
+- Moderación, bloqueo y denuncias.
+- Compatibilidad visual con modo claro y oscuro.
+- Limpieza de dependencias y código sin uso.
+
+## Capturas históricas
+
+<p>
+  <img width="120" alt="Inicio de sesión" src="https://github.com/user-attachments/assets/039ec655-a08c-49b9-bd82-44dc5cb38870" />
+  <img width="120" alt="Registro de usuario" src="https://github.com/user-attachments/assets/67a63285-05ce-4904-8e87-60fa455284a8" />
+  <img width="120" alt="Listado de chats" src="https://github.com/user-attachments/assets/239da25f-7cf1-4c8a-9a92-cc9e36a7cd3a" />
+  <img width="120" alt="Detalle de chat" src="https://github.com/user-attachments/assets/54b10476-ff57-4996-b418-029e3fa23730" />
+</p>
+
+<p>
+  <img width="120" alt="Conversación privada" src="https://github.com/user-attachments/assets/2f0cea5e-36d1-4928-a35e-5bd31c70316a" />
+  <img width="120" alt="Mensajes" src="https://github.com/user-attachments/assets/4b393b6d-021e-4479-9ae3-8fe519674d3f" />
+  <img width="120" alt="Vista de chat" src="https://github.com/user-attachments/assets/e85d6473-ff82-4832-bb00-e33581c2ff3d" />
+</p>
 
 ## Contribuidores
 
-- yeikobu, [Github](https://github.com/yeikobu) y [Linkedin](https://www.linkedin.com/in/jacob-aguilar-campos/overlay/about-this-profile/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base%3Bkqfp06aKQ92Qw9GLJqDagg%3D%3D)
-- lordzzz777, [Github](https://github.com/lordzzz777) y [Linkedin](https://www.linkedin.com/in/esteban-pérez-castillejo-a79476333/?midToken=AQFoUW3wQ6lhOw&midSig=00uIzmNbyL9HE1&eid=na0p6l-m6peu2ao-y8&otpToken=MTMwMTFlZTcxNzJiYzljY2IwMmIwZmViNDExZGVmYjI4ZmM2ZDk0MDljYWM4YzZlN2JkYTAxNjc0YTVmNWNmYmY0ZGRkNmU3MThlNWNmZjk0MGZhYzhiMDI4NTRjM2RmNTUyM2YzMTdiNTc0OWRlNzhlOTgyMTIwY2QsMSwx&originalSubdomain=es)
-- ManuelCBR, [Github](https://github.com/ManuelCBR)
-
----
+- [Esteban Pérez Castillejo (lordzzz777)](https://github.com/lordzzz777)
+- [Jacob Aguilar Campos (yeikobu)](https://github.com/yeikobu)
+- [ManuelCBR](https://github.com/ManuelCBR)
 
 ## Licencia
 
-Este proyecto está licenciado bajo la [MIT License](LICENSE).
-
----
-
-## Historial de procesos:
-
-- **Primer sprint, estatus: finalizado:**
-    - Crear login o registro,
-    - Crear nueva cuenta
-    - ## Capturas de Pantalla
-      <img width="90"  alt="login" src="https://github.com/user-attachments/assets/039ec655-a08c-49b9-bd82-44dc5cb38870" />
-      <img width="90"  alt="Registrar usuario" src="https://github.com/user-attachments/assets/67a63285-05ce-4904-8e87-60fa455284a8" />
----     
-- **Segundo sprint, estatus: finalizado:**
-    - Vista chats: Vistas de Listado de Chats,
-    - Vista chats: Eliminar chats con swipe hacia la izquierda,
-    - Vista de chats: Mostrar detalles en tarjetas de chat (Chat Card Details)
-    - ## Capturas de Pantalla
-      <img width="90"  alt="ChatsView" src="https://github.com/user-attachments/assets/239da25f-7cf1-4c8a-9a92-cc9e36a7cd3a" />
-      <img width="90" alt="listachat" src="https://github.com/user-attachments/assets/54b10476-ff57-4996-b418-029e3fa23730" />
----  
-- **Tercero sprint, estatus: finalizado:**
-    - Flujo de navegación según estado de registro,
-    - Solucionar typo del botón de Google,
-    - Eliminar chats con swipe hacia la izquierda,
-    - Solicitudes de amistad, Flujo de navegación según estado de registro
----      
-- **Cuarto sprint, estatus: finalizado :**
-    - Solucionar bug que te lleva a la pantalla de crear nueva cuenta con una cuenta ya creada,
-    - Solucionar bug que crashea la app al recibir una solicitud de amistad,
-    - Refactorizar alerts de la vista de chats y su respectivo viewmodel,
-    - Refactorizar alerts de la vista de chats y su respectivo viewmodel,
-    - Actualización Readme
----
-- **Quinto sprint, estatus: finalizado :**
-    - Solucionar bug aceptar solicitudes de amistad
-    - Edición de perfil
-    - Funcionalidad para enviar y recibir mensajes en la vista de un chat
-    - Actualización Readme
-    - ## Capturas de Pantalla
-      <img width="96" alt="Captura de pantalla 2025-03-05 a las 3 14 51" src="https://github.com/user-attachments/assets/2f0cea5e-36d1-4928-a35e-5bd31c70316a" />
-      <img width="94" alt="Captura de pantalla 2025-03-05 a las 3 21 22" src="https://github.com/user-attachments/assets/4b393b6d-021e-4479-9ae3-8fe519674d3f" />
-      <img width="94" alt="Captura de pantalla 2025-03-05 a las 3 31 16" src="https://github.com/user-attachments/assets/6a24d0c6-8971-45ca-a03b-a82062f382d3" />
----
-- **Sexto sprint, estatus: finalizado :**
-    - Eliminación de Cuenta en "Bubble"
-    - Agregar menu con opciones a la vista de Chat
-    - Vista chats: Cambiar Entre Chats Privados y Público
-    - Errores en la vista de chat privado
-    - Agregar funcionalidad de mostrar hora en cada mensaje y el chat
-    - ## Capturas de Pantalla
-      <img width="85" alt="Captura de pantalla 2025-03-24 a las 12 59 04" src="https://github.com/user-attachments/assets/e85d6473-ff82-4832-bb00-e33581c2ff3d" />
----
-- **Septimo sprint, estatus: finalizado :**
-    - Solucionar bug que no agrega el ID del amigo agregado al arreglo en firebase firestore
-    - Mejoras en la visualización de mensajes
-    - solucionar el desborde del botón de cerrar sesión en los iPhone pequeños
----     
-- **Octavo sprint, estatus: finalizado :**
-    - Refactorización general de Proyecto
-    - modificar de funciónalidad de agregar amigos
-    - CRUD de mensjes dentro chats publico
-    - Funcionalidad de actualizar estado conectado/desconectado
----
-- **Noveno sprint, estatus: En Proceso ... :**
-    - Responder a un usuario dentro del chat Publico
-    - Implementar funcionalidad para indicar mensajes no leídos
-    - CRUD de mensjes dentro chats Privados
-
----
+Este proyecto se distribuye bajo la [licencia MIT](LICENSE).
