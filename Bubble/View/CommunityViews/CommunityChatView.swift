@@ -19,6 +19,7 @@ struct CommunityChatView: View {
     @State private var editedText = ""
     @State private var showFileImporter = false
     @State private var showCamera = false
+    @State private var showPhotoLibrary = false
     @State private var audioViewModel = ChatAudioViewModel()
     @FocusState private var isInputFocused: Bool
     @Environment(\.dismiss) private var dismiss
@@ -56,6 +57,10 @@ struct CommunityChatView: View {
         }
         .task {
             await viewModel.openCommunity(community)
+            while !Task.isCancelled {
+                await viewModel.cleanUpDeletedMessages(olderThan: 60)
+                try? await Task.sleep(for: .seconds(10))
+            }
         }
         .onDisappear {
             viewModel.stopListening()
@@ -104,25 +109,48 @@ struct CommunityChatView: View {
                 LazyVStack(spacing: 10) {
                     ForEach(Array(viewModel.messages.enumerated()), id: \.element.id) { index, message in
                         let nextMessage = index + 1 < viewModel.messages.count ? viewModel.messages[index + 1] : nil
+
+                        if shouldShowDateSeparator(at: index) {
+                            CommunityDateSeparator(date: message.timestamp.dateValue())
+                        }
+
                         CommunityMessageBubbleView(
                             communityID: community.id,
                             message: message,
                             user: viewModel.member(for: message.senderUserID),
                             userColor: viewModel.colorForUser(userID: message.senderUserID),
                             isCurrentUser: viewModel.isCurrentUser(message.senderUserID),
+                            canModerate: community.ownerUID == Auth.auth().currentUser?.uid,
                             showAvatar: nextMessage?.senderUserID != message.senderUserID,
                             loadAttachment: { await viewModel.attachmentData(for: message) },
-                            onReply: { replyingTo = message; isInputFocused = true },
+                            onReply: {
+                                withAnimation(.easeOut(duration: 0.22)) {
+                                    replyingTo = message
+                                }
+                                isInputFocused = true
+                            },
                             onReact: { emoji in Task { await viewModel.react(to: message, emoji: emoji) } },
                             onEdit: {
                                 editingMessage = message
                                 editedText = message.content
                             },
-                            onDelete: { Task { await viewModel.delete(message) } }
+                            onDelete: {
+                                Task {
+                                    try? await viewModel.deleteMessageMark(messageID: message.id)
+                                }
+                            }
+                        )
+                        .transition(
+                            .scale(scale: 0.62, anchor: .center)
+                                .combined(with: .opacity)
                         )
                         .id(message.id)
                     }
                 }
+                .animation(
+                    .spring(response: 0.38, dampingFraction: 0.62, blendDuration: 0.08),
+                    value: viewModel.messages.map(\.id)
+                )
                 .padding(.horizontal, 12)
                 .padding(.vertical, 16)
             }
@@ -148,24 +176,34 @@ struct CommunityChatView: View {
             }
             if let replyingTo {
                 HStack {
-                    Image(systemName: "arrowshape.turn.up.left.fill")
+                    Rectangle().fill(.blue).frame(width: 3, height: 28)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Respondiendo a \(viewModel.member(for: replyingTo.senderUserID)?.nickname ?? "Usuario")")
-                            .font(.caption.bold())
-                        Text(replyingTo.content).font(.caption).lineLimit(1)
+                        Text(viewModel.member(for: replyingTo.senderUserID)?.nickname ?? "Usuario")
+                            .font(.caption.bold()).foregroundStyle(.blue)
+                        Text(replyingTo.content).font(.caption2).lineLimit(1).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button { self.replyingTo = nil } label: { Image(systemName: "xmark.circle.fill") }
+                    Button {
+                        withAnimation(.easeOut(duration: 0.22)) {
+                            self.replyingTo = nil
+                        }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.gray)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 12)
+                .padding(.horizontal)
+                .frame(height: 50)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                .padding(.horizontal)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             HStack(alignment: .bottom, spacing: 10) {
                 Menu {
                     Button { showCamera = true } label: {
                         Label("Cámara de fotos", systemImage: "camera")
                     }
-                    PhotosPicker(selection: $selectedChatImage, matching: .images) {
+                    Button { showPhotoLibrary = true } label: {
                         Label("Carrete de fotos", systemImage: "photo.on.rectangle")
                     }
                     Button { showFileImporter = true } label: {
@@ -178,27 +216,28 @@ struct CommunityChatView: View {
             TextField("Mensaje", text: $messageText, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(1...5)
+                .submitLabel(.send)
+                .onSubmit {
+                    sendTextMessage()
+                }
                 .focused($isInputFocused)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
                 .background(.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 16))
 
             Button {
-                Task {
-                    let sent = await viewModel.sendMessage(messageText, replyingTo: replyingTo)
-                    if sent {
-                        messageText = ""
-                        replyingTo = nil
-                        isInputFocused = false
-                    }
-                }
+                sendTextMessage()
             } label: {
                 Image(systemName: "paperplane.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 42, height: 42)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 36, height: 36)
+                    .background(Color.accentColor, in: Circle())
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
+            .opacity(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0 : 1)
             .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .animation(.easeInOut(duration: 0.15), value: messageText)
 
                 if messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     VoiceRecordingButton(
@@ -228,12 +267,28 @@ struct CommunityChatView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(.background)
+        .photosPicker(
+            isPresented: $showPhotoLibrary,
+            selection: $selectedChatImage,
+            matching: .images
+        )
         .onChange(of: selectedChatImage) { _, item in
             Task {
-                guard let data = try? await item?.loadTransferable(type: Data.self),
-                      let image = UIImage(data: data) else { return }
-                _ = await viewModel.sendImage(image)
-                selectedChatImage = nil
+                guard let item else { return }
+                defer { selectedChatImage = nil }
+
+                do {
+                    guard let data = try await item.loadTransferable(type: Data.self),
+                          let image = UIImage(data: data) else {
+                        throw CocoaError(.fileReadCorruptFile)
+                    }
+                    _ = await viewModel.sendImage(image)
+                } catch {
+                    viewModel.showError(
+                        title: "No se pudo abrir la foto",
+                        message: "No se pudo cargar la imagen seleccionada. Comprueba que esté descargada de iCloud e inténtalo de nuevo."
+                    )
+                }
             }
         }
         .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.data, .content], allowsMultipleSelection: false) { result in
@@ -261,6 +316,63 @@ struct CommunityChatView: View {
             }
         }
     }
+
+    private func sendTextMessage() {
+        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+        Task {
+            let sent = await viewModel.sendMessage(messageText, replyingTo: replyingTo)
+            if sent {
+                messageText = ""
+                withAnimation(.easeOut(duration: 0.22)) {
+                    replyingTo = nil
+                }
+                isInputFocused = false
+            }
+        }
+    }
+
+    private func shouldShowDateSeparator(at index: Int) -> Bool {
+        guard viewModel.messages.indices.contains(index) else { return false }
+        guard index > 0 else { return true }
+
+        let calendar = Calendar.autoupdatingCurrent
+        let currentDate = viewModel.messages[index].timestamp.dateValue()
+        let previousDate = viewModel.messages[index - 1].timestamp.dateValue()
+        return !calendar.isDate(currentDate, inSameDayAs: previousDate)
+    }
+}
+
+private struct CommunityDateSeparator: View {
+    let date: Date
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Divider()
+            Text(title)
+                .fixedSize()
+            Divider()
+        }
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var title: String {
+        let calendar = Calendar.autoupdatingCurrent
+        if calendar.isDateInToday(date) { return "Hoy" }
+        if calendar.isDateInYesterday(date) { return "Ayer" }
+
+        return date.formatted(
+            Date.FormatStyle()
+                .day(.twoDigits)
+                .month(.twoDigits)
+                .year()
+                .locale(Locale(identifier: "es_ES"))
+        )
+    }
 }
 
 private struct CommunityImageBadge: View, Sendable {
@@ -279,27 +391,28 @@ private struct CommunityImageBadge: View, Sendable {
 
 private struct CommunityHeaderImage: View {
     let storageURL: String
-    @State private var image: UIImage?
 
     var body: some View {
-        Group {
-            if let image {
-                Image(uiImage: image).resizable().scaledToFill()
-            } else {
-                Image(systemName: "person.3.sequence.fill")
-                    .font(.system(size: 34))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(.secondary.opacity(0.12))
-            }
+        if let url = URL(string: storageURL), !storageURL.isEmpty {
+            KFImage(url)
+                .placeholder {
+                    placeholder
+                }
+                .fade(duration: 0.2)
+                .cancelOnDisappear(true)
+                .resizable()
+                .scaledToFill()
+        } else {
+            placeholder
         }
-        .task(id: storageURL) {
-            image = nil
-            guard !storageURL.isEmpty else { return }
-            let reference = Storage.storage().reference(forURL: storageURL)
-            guard let data = try? await reference.data(maxSize: 5 * 1024 * 1024) else { return }
-            image = UIImage(data: data)
-        }
+    }
+
+    private var placeholder: some View {
+        Image(systemName: "person.3.sequence.fill")
+            .font(.system(size: 34))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(.secondary.opacity(0.12))
     }
 }
 
@@ -365,6 +478,7 @@ private struct CommunityMessageBubbleView: View {
     let user: UserModel?
     let userColor: Color
     let isCurrentUser: Bool
+    let canModerate: Bool
     let showAvatar: Bool
     let loadAttachment: () async -> Data?
     let onReply: () -> Void
@@ -373,7 +487,19 @@ private struct CommunityMessageBubbleView: View {
     let onDelete: () -> Void
 
     var body: some View {
-        VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 4) {
+        Group {
+        if message.content == "Mensaje eliminado" {
+            HStack {
+                Spacer()
+                Text("\(isCurrentUser ? "Tú" : (user?.nickname ?? "Usuario")) eliminó este mensaje")
+                    .italic()
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 8)
+                Spacer()
+            }
+            .transition(.opacity)
+        } else {
+            VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 4) {
             if showReactionPicker {
                 MessageReactionPicker(
                     selectedEmoji: message.reactions?[Auth.auth().currentUser?.uid ?? ""],
@@ -409,13 +535,14 @@ private struct CommunityMessageBubbleView: View {
 
                 if let nickname = message.replyingToNickname, let text = message.replyingToText {
                     HStack {
-                        Rectangle().fill(.orange).frame(width: 3, height: 55)
-                        VStack(alignment: .leading, spacing: 3) {
+                        Rectangle().fill(.blue).frame(width: 3, height: 28)
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(nickname).font(.caption.bold())
-                            Text(text).font(.caption2).lineLimit(2)
+                            Text(text).font(.caption2).lineLimit(1)
                         }
                     }
                     .padding(4)
+                    .frame(height: 50)
                     .background(.white.opacity(0.35), in: RoundedRectangle(cornerRadius: 10))
                 }
 
@@ -442,7 +569,8 @@ private struct CommunityMessageBubbleView: View {
                 .background {
                     CommunityChatBubbleBackground(
                         color: bubbleColor,
-                        isCurrentUser: isCurrentUser
+                        isCurrentUser: isCurrentUser,
+                        showsTail: showAvatar
                     )
                 }
                 .contentShape(Rectangle())
@@ -482,7 +610,13 @@ private struct CommunityMessageBubbleView: View {
                     }
                     if isCurrentUser && message.type == .text && message.content != "Mensaje eliminado" {
                         Button(action: onEdit) { Label("Editar", systemImage: "pencil") }
-                        Button(role: .destructive, action: onDelete) { Label("Eliminar", systemImage: "trash") }
+                    }
+                    if (isCurrentUser || canModerate) && message.content != "Mensaje eliminado" {
+                        Button(role: .destructive) {
+                            onDelete()
+                        } label: {
+                            Label("Eliminar", systemImage: "trash")
+                        }
                     }
                     if !isCurrentUser {
                         Button(role: .destructive) { showReportSheet = true } label: {
@@ -515,6 +649,8 @@ private struct CommunityMessageBubbleView: View {
             }
 
             if !isCurrentUser { Spacer(minLength: 48) }
+        }
+            }
         }
         }
         .frame(maxWidth: 300, alignment: isCurrentUser ? .trailing : .leading)
@@ -550,25 +686,29 @@ private struct CommunityMessageBubbleView: View {
 private struct CommunityChatBubbleBackground: View {
     let color: Color
     let isCurrentUser: Bool
+    let showsTail: Bool
 
     var body: some View {
         GeometryReader { geometry in
             let tailWidth: CGFloat = 10
-            let bodyX = isCurrentUser ? 0 : tailWidth
-            let bodyWidth = max(0, geometry.size.width - tailWidth)
+            let reservedTailWidth = showsTail ? tailWidth : 0
+            let bodyX = isCurrentUser ? 0 : reservedTailWidth
+            let bodyWidth = max(0, geometry.size.width - reservedTailWidth)
 
             RoundedRectangle(cornerRadius: 10)
                 .fill(color)
                 .frame(width: bodyWidth, height: geometry.size.height)
                 .offset(x: bodyX)
 
-            CommunityChatBubbleTail(isCurrentUser: isCurrentUser)
-                .fill(color)
-                .frame(width: 13, height: 18)
-                .position(
-                    x: isCurrentUser ? geometry.size.width - 6.5 : 6.5,
-                    y: geometry.size.height - 12
-                )
+            if showsTail {
+                CommunityChatBubbleTail(isCurrentUser: isCurrentUser)
+                    .fill(color)
+                    .frame(width: 13, height: 18)
+                    .position(
+                        x: isCurrentUser ? geometry.size.width - 6.5 : 6.5,
+                        y: geometry.size.height - 12
+                    )
+            }
         }
         .allowsHitTesting(false)
     }

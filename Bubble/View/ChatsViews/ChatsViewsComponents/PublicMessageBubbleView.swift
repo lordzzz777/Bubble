@@ -38,6 +38,7 @@ struct PublicMessageBubbleView: View {
     @Binding var editingMessageID: String?
     @Binding var replyingToMessageID: String?
     @Binding var replyingToNickname: String?
+    @Binding var replyingToText: String?
     
     
     
@@ -95,7 +96,7 @@ struct PublicMessageBubbleView: View {
                 
                 VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: showAvatarAndName ? 30 : -10) {
                     VStack(alignment: .leading) {
-                        Text(user?.nickname ?? "Usuario desconocido")
+                        Text(isCurrentUser ? "Yo" : (user?.nickname ?? "Usuario desconocido"))
                             .font(.footnote.bold())
                             .foregroundColor(.primary)
                             .padding(.horizontal, 10)
@@ -348,8 +349,11 @@ struct PublicMessageBubbleView: View {
                         } else {
                             
                             Button(action: {
-                                replyingToMessageID = message.id
-                                replyingToNickname = user?.nickname
+                                withAnimation(.easeOut(duration: 0.22)) {
+                                    replyingToMessageID = message.id
+                                    replyingToNickname = user?.nickname
+                                    replyingToText = message.content
+                                }
                             }, label: {
                                 Label("Responder", systemImage: "arrowshape.turn.up.left")
                             })

@@ -177,9 +177,15 @@ class PublicChatViewModel {
     func deleteMessage(messageID: String) async{
         do{
             try await publicChatService.deleteMessage(messageID: messageID)
+
+            // El aviso se mantiene brevemente para que todos los participantes
+            // vean la eliminación y después desaparece mediante el listener.
+            try? await Task.sleep(for: .seconds(8))
+            guard !Task.isCancelled else { return }
+            try await publicChatService.permanentlyDeleteMessage(messageID: messageID)
         }catch{
             errorTitle = "Error al eliminar"
-            errorMessage = "No se pudo marcar como eliminado."
+            errorMessage = "No se pudo eliminar el mensaje."
             showError = true
         }
     }

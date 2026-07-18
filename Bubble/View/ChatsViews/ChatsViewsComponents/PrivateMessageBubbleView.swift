@@ -48,7 +48,7 @@ struct PrivateMessageBubbleView: View {
     
     private var displayName: String {
         isCurrentUser
-        ? (currentUser?.nickname ?? "Yo")
+        ? "Yo"
         : (friendUser?.nickname  ?? "Usuario")
     }
     
@@ -69,6 +69,7 @@ struct PrivateMessageBubbleView: View {
     @Binding var editingMessageID: String?
     @Binding var replyingToMessageID: String?
     @Binding var replyingToNickname: String?
+    @Binding var replyingToText: String?
     @Binding var showCopiedToast: Bool
     @Bindable var userProfileView: NewAccountViewModel = .init()
     
@@ -304,11 +305,11 @@ struct PrivateMessageBubbleView: View {
                             Button(role: .destructive) {
                                 Task {
                                     do {
+                                        try await privateChatViewModel.deleteMessageMark(chatsID: chatID,
+                                                                                         messageID: message.id)
                                         if message.type == .image || message.type == .audio || message.type == .file {
                                             try await chatFileViewModel.deleteFileFromStorage(message.content)
                                         }
-                                        try await privateChatViewModel.deleteMessageMark(chatsID: chatID,
-                                                                                         messageID: message.id)
                                     } catch {
                                         AppLogger.error("Error al eliminar mensaje privado.")
                                     }
@@ -318,8 +319,11 @@ struct PrivateMessageBubbleView: View {
                             }
                         }else {
                             Button(action: {
-                                replyingToMessageID = message.id
-                                replyingToNickname = user?.nickname
+                                withAnimation(.easeOut(duration: 0.22)) {
+                                    replyingToMessageID = message.id
+                                    replyingToNickname = senderUser?.nickname ?? displayName
+                                    replyingToText = message.content
+                                }
                             }, label: {
                                 Label("Responder", systemImage: "arrowshape.turn.up.left")
                             })
@@ -492,10 +496,11 @@ struct PrivateMessageBubbleView: View {
     @Previewable @State var editingID: String? = nil
     @Previewable @State var replyID:   String? = nil
     @Previewable @State var replyName: String? = nil
+    @Previewable @State var replyText: String? = nil
     @Previewable @State var copied            = false
     let mock = Mock()
     
-    return PrivateMessageBubbleView(
+    PrivateMessageBubbleView(
         chatID:               "chat_mock",
         message:              mock.samplePDFMessage,
         currentUser:          mock.currentUser,
@@ -508,6 +513,7 @@ struct PrivateMessageBubbleView: View {
         editingMessageID:     $editingID,
         replyingToMessageID:  $replyID,
         replyingToNickname:   $replyName,
+        replyingToText:       $replyText,
         showCopiedToast:      $copied
     )
     .environment(PrivateChatViewModel())

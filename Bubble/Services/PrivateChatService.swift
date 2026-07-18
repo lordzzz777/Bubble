@@ -49,12 +49,19 @@ actor PrivateChatService {
     
     func checkIfFriend(friendID: String) async throws -> Bool {
         do {
-            let document = try await database.collection("users").document(uid).getDocument()
-            guard let userData = try? document.data(as: UserModel.self) else {
+            guard let currentUID = Auth.auth().currentUser?.uid else {
+                throw PrivateChatServiceError.fetchingMessagesFailed
+            }
+            async let currentDocument = database.collection("users").document(currentUID).getDocument()
+            async let friendDocument = database.collection("users").document(friendID).getDocument()
+            let (currentSnapshot, friendSnapshot) = try await (currentDocument, friendDocument)
+            guard let userData = try? currentSnapshot.data(as: UserModel.self) else {
                 fatalError("No se pudo obtener el usuario")
             }
+            let reciprocalFriendship = (try? friendSnapshot.data(as: UserModel.self))?
+                .friends.contains(currentUID) ?? false
             AppLogger.debug("Comprobación de amistad completada.")
-            return userData.friends.contains(friendID)
+            return userData.friends.contains(friendID) || reciprocalFriendship
         } catch {
             throw error
         }

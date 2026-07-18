@@ -27,6 +27,7 @@ struct PublicChatView: View {
     
     @State private var replyingToMessageID: String? = nil
     @State private var replyingToNickname: String? = nil
+    @State private var replyingToText: String? = nil
     @State private var messageText: String = ""
     @State private var textFieldHeight: CGFloat = 40
     @State private var isEditing: Bool = false
@@ -53,8 +54,7 @@ struct PublicChatView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack {
-                            ForEach(publicChatViewModel.messages.indices, id: \.self) { index in
-                                let message = publicChatViewModel.messages[index]
+                            ForEach(Array(publicChatViewModel.messages.enumerated()), id: \.element.id) { index, message in
                                 let nextMessage = index + 1 < publicChatViewModel.messages.count ? publicChatViewModel.messages[index + 1] : nil
                                 let showAvatarAndName = nextMessage?.senderUserID != message.senderUserID
                                 
@@ -65,6 +65,7 @@ struct PublicChatView: View {
                                         editingMessageID: $editingMessageID,
                                         replyingToMessageID: $replyingToMessageID,
                                         replyingToNickname: $replyingToNickname,
+                                        replyingToText: $replyingToText,
                                         message: message,
                                         user: user,
                                         userColor: publicChatViewModel.getColorForUser(userID: message.senderUserID),
@@ -77,9 +78,17 @@ struct PublicChatView: View {
                                         }
                                         
                                 )
+                                .transition(
+                                    .scale(scale: 0.62, anchor: .center)
+                                        .combined(with: .opacity)
+                                )
                                 .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
                                 .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
                             }
+                            .animation(
+                                .spring(response: 0.38, dampingFraction: 0.62, blendDuration: 0.08),
+                                value: publicChatViewModel.messages.map(\.id)
+                            )
                         }
                         .padding(.bottom, 20)
                         .onChange(of: publicChatViewModel.messages) { _,lastMessage in
@@ -108,21 +117,31 @@ struct PublicChatView: View {
                 }
 
                 
-                if let nickname = replyingToNickname {
+                if let nickname = replyingToNickname, let replyText = replyingToText {
                     HStack {
-                        Text("Respondiendo a \(nickname)")
-                            .font(.footnote)
-                            .foregroundStyle(.blue)
+                        Rectangle().fill(.blue).frame(width: 3, height: 28)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(nickname).font(.caption.bold()).foregroundStyle(.blue)
+                            Text(replyText).font(.caption2).lineLimit(1).foregroundStyle(.secondary)
+                        }
                         Spacer()
                         Button(action: {
-                            replyingToMessageID = nil
-                            replyingToNickname = nil
+                            withAnimation(.easeOut(duration: 0.22)) {
+                                replyingToMessageID = nil
+                                replyingToNickname = nil
+                                replyingToText = nil
+                            }
                         }) {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundColor(.gray)
                         }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal)
+                    .frame(height: 50)
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 
                 // Justo antes del HStack de entrada (el que contiene el TextField, botones, etc.)
@@ -234,9 +253,13 @@ struct PublicChatView: View {
                             )
                         }
                     }) {
-                        Image(systemName: isEditing ? "pencil.circle.fill" : "arrow.up.circle.fill")
-                            .font(.title2)
+                        Image(systemName: isEditing ? "pencil" : "paperplane.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 36, height: 36)
+                            .background(Color.accentColor, in: Circle())
                     }
+                    .buttonStyle(.plain)
                     .opacity(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0 : 1)
                     .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     .animation(.easeInOut(duration: 0.15), value: messageText)
@@ -250,6 +273,12 @@ struct PublicChatView: View {
                 .focused($isTextFieldFocused)
                 
                 
+            }
+            .onChange(of: replyingToMessageID) { _, id in
+                if id == nil {
+                    replyingToNickname = nil
+                    replyingToText = nil
+                }
             }
             .onTapGesture {
                 isTextFieldFocused = false

@@ -44,6 +44,7 @@ struct PrivateChatView: View {
     @State private var editingMessageID: String? = nil
     @State private var replyingToMessageID: String? = nil
     @State private var replyingToNickname: String? = nil
+    @State private var replyingToText: String? = nil
     @State private var textFieldHeight: CGFloat = 40
     
     @State private var draft = ""
@@ -53,6 +54,15 @@ struct PrivateChatView: View {
     // Datos del contexto
     var user: UserModel
     var chat: ChatModel
+
+    /// La relación puede estar disponible ya en cualquiera de los perfiles aunque
+    /// la comprobación asíncrona de Firestore aún no haya terminado.
+    private var canSendMessages: Bool {
+        guard let currentUID = Auth.auth().currentUser?.uid else { return false }
+        return privateChatViewModel.friendStatus == .accepted
+            || user.friends.contains(currentUID)
+            || privateChatViewModel.me?.friends.contains(user.id) == true
+    }
     
     var body: some View {
         if let user = chatsViewModel.user {
@@ -116,7 +126,12 @@ struct PrivateChatView: View {
                                             editingMessageID: $editingMessageID,
                                             replyingToMessageID: $replyingToMessageID,
                                             replyingToNickname: $replyingToNickname,
+                                            replyingToText: $replyingToText,
                                             showCopiedToast: $showCopiedToast
+                                        )
+                                        .transition(
+                                            .scale(scale: 0.62, anchor: .center)
+                                                .combined(with: .opacity)
                                         )
                                         .frame(maxWidth: .infinity, alignment: message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading)
                                         .padding(message.senderUserID == Auth.auth().currentUser?.uid ? .trailing : .leading, 10)
@@ -127,8 +142,12 @@ struct PrivateChatView: View {
                                     }
                                 }
                             }
+                            .animation(
+                                .spring(response: 0.38, dampingFraction: 0.62, blendDuration: 0.08),
+                                value: privateChatViewModel.messages.map(\.id)
+                            )
                             
-                            if privateChatViewModel.friendStatus == .none {
+                            if privateChatViewModel.isFriendStatusLoaded && !canSendMessages {
                                 Text("Tú y \(user.nickname) no son amigos")
                                     .foregroundStyle(.red)
                                     .italic()
@@ -161,21 +180,31 @@ struct PrivateChatView: View {
                     
                 }
                 
-                if let nickname = replyingToNickname {
+                if let nickname = replyingToNickname, let replyText = replyingToText {
                     HStack {
-                        Text("Respondiendo a \(nickname)")
-                            .font(.footnote)
-                            .foregroundStyle(.blue)
+                        Rectangle().fill(.blue).frame(width: 3, height: 28)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(nickname).font(.caption.bold()).foregroundStyle(.blue)
+                            Text(replyText).font(.caption2).lineLimit(1).foregroundStyle(.secondary)
+                        }
                         Spacer()
                         Button(action: {
-                            replyingToMessageID = nil
-                            replyingToNickname = nil
+                            withAnimation(.easeOut(duration: 0.22)) {
+                                replyingToMessageID = nil
+                                replyingToNickname = nil
+                                replyingToText = nil
+                            }
                         }) {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundColor(.gray)
                         }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal)
+                    .frame(height: 50)
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 
                 // Boton de audio
@@ -195,7 +224,7 @@ struct PrivateChatView: View {
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
                 
-                if privateChatViewModel.friendStatus == .accepted && moderationViewModel.isBlocked {
+                if canSendMessages && moderationViewModel.isBlocked {
                     HStack {
                         Image(systemName: "hand.raised.fill")
                             .foregroundStyle(.secondary)
@@ -204,7 +233,7 @@ struct PrivateChatView: View {
                             .foregroundStyle(.secondary)
                     }
                     .padding()
-                } else if privateChatViewModel.friendStatus == .accepted {
+                } else if canSendMessages {
                     ZStack(alignment: .bottomTrailing) {
                         HStack(spacing: 6){
                             Menu(content:{
@@ -281,10 +310,13 @@ struct PrivateChatView: View {
                             Button {
                                 awaitSendText()
                             } label: {
-                                Image( systemName: isEditing ?  "pencil.circle.fill" : "arrow.up.circle.fill")
-                                // .rotationEffect(.degrees(45))
-                                    .font(.title2)
+                                Image(systemName: isEditing ? "pencil" : "paperplane.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 36, height: 36)
+                                    .background(Color.accentColor, in: Circle())
                             }
+                            .buttonStyle(.plain)
                             .opacity(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0 : 1)
                             .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             .animation(.easeInOut(duration: 0.15), value: messageText)
@@ -423,6 +455,7 @@ struct PrivateChatView: View {
                 }
             }
             .task {
+                await privateChatViewModel.checkIfUserIsFriend(userID: user.id)
                 await privateChatViewModel.fetchMessages(chatID: chat.id)
                 if privateChatViewModel.showError {
                     AppLogger.error("Error mostrado por chat privado.")
@@ -504,6 +537,7 @@ struct PrivateChatView: View {
             editingMessageID    = nil
             replyingToMessageID = nil
             replyingToNickname  = nil
+            replyingToText      = nil
         }
     }
     
@@ -539,5 +573,3 @@ struct PrivateChatView: View {
             })
     }
 }
-
-

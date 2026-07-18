@@ -36,6 +36,9 @@ class PrivateChatViewModel {
     var showAddFriendView: Bool = false
     
     var friendStatus: FriendRequestStatus = .none
+    /// Evita interpretar `.none` como "no son amigos" mientras Firestore todavía
+    /// está comprobando la relación.
+    var isFriendStatusLoaded = false
     
     var searchQuery = "" // Variables para la búsqueda
     var errorTitle: String = ""
@@ -150,12 +153,12 @@ class PrivateChatViewModel {
     ///
     /// - Parameter userID: Identificador del posible amigo.
     func checkIfUserIsFriend(userID: String) async  {
+        isFriendStatusLoaded = false
+        defer { isFriendStatusLoaded = true }
         do {
             let areUserFriends = try await privateChatService.checkIfFriend(friendID: userID)
             AppLogger.debug("Comprobación de amistad en chat privado completada.")
-            if areUserFriends {
-                friendStatus = .accepted
-            }
+            friendStatus = areUserFriends ? .accepted : .none
         } catch {
             errorTitle = "Error"
             errorMessage = "Ocurrió un error al verificar si el usuario es amigo."
@@ -444,10 +447,18 @@ class PrivateChatViewModel {
         
         do{
             try await privateChatService.deleteMessage(chatID: chatsID, messageID: messageID)
-            
+
+            // Igual que en el chat público: mostramos el aviso brevemente y
+            // después el listener recibe la eliminación física.
+            try? await Task.sleep(for: .seconds(8))
+            guard !Task.isCancelled else { return }
+            try await privateChatService.permanentlyDeleteMessage(
+                chatID: chatsID,
+                messageID: messageID
+            )
         }catch{
-            errorTitle = "Error marcar eliminar"
-            errorMessage = "No se pudo marcar como eliminado."
+            errorTitle = "Error al eliminar"
+            errorMessage = "No se pudo eliminar el mensaje."
             showError = true
             
             AppLogger.error("No se pudo marcar el mensaje privado como eliminado.")

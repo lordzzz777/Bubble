@@ -108,7 +108,18 @@ actor PublicChatService {
         let messageRef = chatsRef.collection("messages").document(messageID)
         
         do{
-            try await messageRef.updateData(["content": "Mensaje eliminado"])
+            // Igual que en el chat privado: además del marcador hay que retirar
+            // el cifrado, o el listener descifra y vuelve a mostrar el texto original.
+            try await messageRef.updateData([
+                "content": "Mensaje eliminado",
+                "encryptedContent": FieldValue.delete(),
+                "encryptedReplyingToText": FieldValue.delete(),
+                "encryptedMessageKeys": FieldValue.delete(),
+                "attachmentFileName": FieldValue.delete(),
+                "senderPublicKey": FieldValue.delete(),
+                "encryptionVersion": FieldValue.delete(),
+                "encryptionScheme": FieldValue.delete()
+            ])
         }catch{
             AppLogger.error("El mensaje público no se ha actualizado.")
             throw error

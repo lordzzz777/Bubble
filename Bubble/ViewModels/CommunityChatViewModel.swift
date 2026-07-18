@@ -6,7 +6,6 @@ import SwiftUI
 final class CommunityChatViewModel {
     private let communityChatService = CommunityChatService()
     private var messagesTask: Task<Void, Never>?
-
     var communities: [CommunityModel] = []
     var selectedCommunity: CommunityModel?
     var messages: [MessageModel] = []
@@ -48,6 +47,7 @@ final class CommunityChatViewModel {
         messages = []
         members = []
         messagesTask?.cancel()
+        messagesTask = nil
 
         do {
             try await communityChatService.assertCurrentUserCanAccessCommunity(communityID: community.id)
@@ -154,10 +154,51 @@ final class CommunityChatViewModel {
         catch { showError(title: "No se pudo editar", message: error.localizedDescription); return false }
     }
 
-    func delete(_ message: MessageModel) async {
+    /// Marca el mensaje como eliminado y deja que el listener en tiempo real
+    /// actualice la colección, igual que en el chat privado.
+    func deleteMessageMark(messageID: String) async throws {
         guard let communityID = selectedCommunity?.id else { return }
-        do { try await communityChatService.deleteMessage(communityID: communityID, messageID: message.id) }
-        catch { showError(title: "No se pudo eliminar", message: error.localizedDescription) }
+        do {
+            try await communityChatService.deleteMessage(
+                communityID: communityID,
+                messageID: messageID
+            )
+
+            // Mismo tiempo de cortesía que los chats público y privado.
+            try? await Task.sleep(for: .seconds(8))
+            guard !Task.isCancelled else { return }
+            try await communityChatService.permanentlyDeleteMessage(
+                communityID: communityID,
+                messageID: messageID
+            )
+        } catch {
+            showError(title: "Error al eliminar", message: "No se pudo eliminar el mensaje.")
+            AppLogger.error("No se pudo eliminar el mensaje de comunidad.")
+            throw error
+        }
+    }
+
+    func cleanUpDeletedMessages(olderThan seconds: TimeInterval = 60) async {
+        guard let community = selectedCommunity,
+              let uid = Auth.auth().currentUser?.uid else { return }
+
+        let cutoffDate = Date().addingTimeInterval(-seconds)
+        let deletableMessages = messages.filter {
+            $0.content == "Mensaje eliminado"
+                && $0.timestamp.dateValue() < cutoffDate
+                && ($0.senderUserID == uid || community.ownerUID == uid)
+        }
+
+        for message in deletableMessages {
+            do {
+                try await communityChatService.permanentlyDeleteMessage(
+                    communityID: community.id,
+                    messageID: message.id
+                )
+            } catch {
+                AppLogger.error("No se pudo eliminar permanentemente el mensaje de comunidad.")
+            }
+        }
     }
 
     func deleteCommunity(_ community: CommunityModel) async -> Bool {
@@ -177,6 +218,33 @@ final class CommunityChatViewModel {
                 title: "No se pudo eliminar",
                 message: error.localizedDescription
             )
+            return false
+        }
+    }
+
+    func updateCommunity(_ community: CommunityModel, name: String, image: UIImage?) async -> Bool {
+        do {
+            let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            try await communityChatService.updateCommunityName(
+                communityID: community.id,
+                name: trimmedName
+            )
+
+            var imageURL = community.imgUrl
+            if let image {
+                imageURL = try await communityChatService.updateCommunityImage(
+                    communityID: community.id,
+                    image: image
+                )
+            }
+
+            if let index = communities.firstIndex(where: { $0.id == community.id }) {
+                communities[index].name = trimmedName
+                communities[index].imgUrl = imageURL
+            }
+            return true
+        } catch {
+            showError(title: "No se pudo editar la comunidad", message: error.localizedDescription)
             return false
         }
     }
@@ -221,9 +289,9 @@ final class CommunityChatViewModel {
     private func listenMessages(communityID: String) {
         messagesTask = Task { [weak self] in
             guard let self else { return }
-
             do {
                 for try await messages in await communityChatService.listenMessages(communityID: communityID) {
+                    guard !Task.isCancelled else { return }
                     self.messages = messages
                     self.isLoadingMessages = false
                 }
@@ -244,7 +312,7 @@ final class CommunityChatViewModel {
         }
     }
 
-    private func showError(title: String, message: String) {
+    func showError(title: String, message: String) {
         errorTitle = title
         errorMessage = message
         showError = true

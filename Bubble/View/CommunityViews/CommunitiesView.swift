@@ -2,11 +2,13 @@ import SwiftUI
 import Kingfisher
 import FirebaseAuth
 import FirebaseStorage
+import PhotosUI
 
 struct CommunitiesView: View {
     @State private var viewModel = CommunityChatViewModel()
     @State private var createCommunityViewModel = CreateCommunityViewModel()
     @State private var communityToDelete: CommunityModel?
+    @State private var communityToEdit: CommunityModel?
 
     var body: some View {
         NavigationStack {
@@ -29,8 +31,28 @@ struct CommunitiesView: View {
                                 unreadCount: viewModel.unreadCount(for: community)
                             )
                         }
+                        .contextMenu {
+                            if community.ownerUID == Auth.auth().currentUser?.uid {
+                                Button {
+                                    communityToEdit = community
+                                } label: {
+                                    Label("Editar", systemImage: "pencil")
+                                }
+                                Button(role: .destructive) {
+                                    communityToDelete = community
+                                } label: {
+                                    Label("Eliminar", systemImage: "trash")
+                                }
+                            }
+                        }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             if community.ownerUID == Auth.auth().currentUser?.uid {
+                                Button {
+                                    communityToEdit = community
+                                } label: {
+                                    Label("Editar", systemImage: "pencil")
+                                }
+                                .tint(.blue)
                                 Button(role: .destructive) {
                                     communityToDelete = community
                                 } label: {
@@ -87,6 +109,11 @@ struct CommunitiesView: View {
             .sheet(isPresented: $createCommunityViewModel.showCreateNewCommunity) {
                 CreateCommunityView(createCommunityViewModel: createCommunityViewModel)
             }
+            .sheet(item: $communityToEdit) { community in
+                EditCommunityView(community: community) { name, image in
+                    await viewModel.updateCommunity(community, name: name, image: image)
+                }
+            }
             .onChange(of: createCommunityViewModel.showCreateNewCommunity) { _, isPresented in
                 guard !isPresented else { return }
                 Task {
@@ -95,6 +122,88 @@ struct CommunitiesView: View {
                 }
             }
         }
+    }
+}
+
+private struct EditCommunityView: View {
+    let community: CommunityModel
+    let onSave: (String, UIImage?) async -> Bool
+
+    @State private var name: String
+    @State private var selectedItem: PhotosPickerItem?
+    @State private var selectedImage: UIImage?
+    @State private var isSaving = false
+    @Environment(\.dismiss) private var dismiss
+
+    init(community: CommunityModel, onSave: @escaping (String, UIImage?) async -> Bool) {
+        self.community = community
+        self.onSave = onSave
+        _name = State(initialValue: community.name)
+    }
+
+    var body: some View {
+        let previewImage = selectedImage
+        NavigationStack {
+            Form {
+                Section("Imagen de la comunidad") {
+                    PhotosPicker(selection: $selectedItem, matching: .images) {
+                        Group {
+                            if let previewImage {
+                                Image(uiImage: previewImage)
+                                    .resizable()
+                                    .scaledToFill()
+                            } else if !community.imgUrl.isEmpty {
+                                AuthenticatedCommunityImage(storageURL: community.imgUrl)
+                            } else {
+                                Image(systemName: "person.3.sequence.fill")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .padding(28)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .frame(width: 120, height: 120)
+                        .clipShape(Circle())
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+
+                Section("Nombre") {
+                    TextField("Nombre de la comunidad", text: $name)
+                        .textInputAutocapitalization(.words)
+                }
+            }
+            .navigationTitle("Editar comunidad")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { dismiss() }
+                        .disabled(isSaving)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Button("Guardar") {
+                            Task {
+                                isSaving = true
+                                if await onSave(name, selectedImage) { dismiss() }
+                                isSaving = false
+                            }
+                        }
+                        .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).count < 2)
+                    }
+                }
+            }
+            .onChange(of: selectedItem) { _, item in
+                Task {
+                    guard let data = try? await item?.loadTransferable(type: Data.self),
+                          let image = UIImage(data: data) else { return }
+                    selectedImage = image
+                }
+            }
+        }
+        .interactiveDismissDisabled(isSaving)
     }
 }
 

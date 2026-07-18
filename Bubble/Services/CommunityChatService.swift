@@ -4,7 +4,7 @@ import FirebaseFirestore
 import FirebaseStorage
 import UIKit
 
-private final class CommunityListenerBox: @unchecked Sendable {
+final class CommunityListenerBox: @unchecked Sendable {
     private let listener: ListenerRegistration
 
     init(_ listener: ListenerRegistration) {
@@ -14,6 +14,14 @@ private final class CommunityListenerBox: @unchecked Sendable {
     func remove() {
         listener.remove()
     }
+}
+
+private final class CommunitySnapshotGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var generation = 0
+
+    func next() -> Int { lock.withLock { generation += 1; return generation } }
+    func isLatest(_ value: Int) -> Bool { lock.withLock { value == generation } }
 }
 
 actor CommunityChatService {
@@ -92,6 +100,7 @@ actor CommunityChatService {
         encryptionService: MessageEncryptionService
     ) -> AsyncThrowingStream<[MessageModel], Error> {
         AsyncThrowingStream { continuation in
+            let gate = CommunitySnapshotGate()
             let listener = Firestore.firestore().collection("communities")
                 .document(communityID)
                 .collection("messages")
@@ -102,6 +111,7 @@ actor CommunityChatService {
                         return
                     }
 
+                    let generation = gate.next()
                     Task {
                         var messages: [MessageModel] = []
                         for document in snapshot?.documents ?? [] {
@@ -123,6 +133,7 @@ actor CommunityChatService {
                             }
                         }
 
+                        guard gate.isLatest(generation) else { return }
                         continuation.yield(messages)
                     }
                 }
@@ -300,14 +311,47 @@ actor CommunityChatService {
     }
 
     func deleteMessage(communityID: String, messageID: String) async throws {
-        try await database.collection("communities").document(communityID)
-            .collection("messages").document(messageID).updateData([
-                "content": "Mensaje eliminado", "type": MessageType.text.rawValue,
-                "encryptedContent": FieldValue.delete(), "encryptedReplyingToText": FieldValue.delete(),
-                "encryptedMessageKeys": FieldValue.delete(), "senderPublicKey": FieldValue.delete(),
-                "encryptionVersion": FieldValue.delete(), "encryptionScheme": FieldValue.delete(),
-                "attachmentFileName": FieldValue.delete(), "reactions": FieldValue.delete()
+        guard !messageID.isEmpty, !communityID.isEmpty else {
+            throw CommunityChatError.communityNotFound
+        }
+
+        let messageRef = database.collection("communities").document(communityID)
+            .collection("messages").document(messageID)
+
+        do {
+            try await messageRef.updateData([
+                "content": "Mensaje eliminado",
+                "encryptedContent": FieldValue.delete(),
+                "encryptedReplyingToText": FieldValue.delete(),
+                "encryptedMessageKeys": FieldValue.delete(),
+                "attachmentFileName": FieldValue.delete(),
+                "senderPublicKey": FieldValue.delete(),
+                "encryptionVersion": FieldValue.delete(),
+                "encryptionScheme": FieldValue.delete()
             ])
+        } catch {
+            AppLogger.error("El mensaje de comunidad no se ha actualizado.")
+            throw error
+        }
+    }
+
+    func permanentlyDeleteMessage(communityID: String, messageID: String) async throws {
+        let uid = try currentUserID()
+        let communityRef = database.collection("communities").document(communityID)
+        let messageRef = communityRef.collection("messages").document(messageID)
+        let communityDocument = try await communityRef.getDocument()
+        let messageDocument = try await messageRef.getDocument()
+
+        guard let community = try? communityDocument.data(as: CommunityModel.self) else {
+            throw CommunityChatError.communityNotFound
+        }
+        guard let message = try? messageDocument.data(as: MessageModel.self) else { return }
+        guard message.senderUserID == uid || community.ownerUID == uid else {
+            throw CommunityChatError.notOwner
+        }
+        guard message.content == "Mensaje eliminado" || community.ownerUID == uid else { return }
+
+        try await messageRef.delete()
     }
 
     private func participantIDs(communityID: String) async throws -> [String] {
@@ -394,6 +438,26 @@ actor CommunityChatService {
         let url = try await reference.downloadURL().absoluteString
         try await communityRef.updateData(["imgUrl": url])
         return url
+    }
+
+    func updateCommunityName(communityID: String, name: String) async throws {
+        let uid = try currentUserID()
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (2...50).contains(trimmedName.count) else {
+            throw NSError(
+                domain: "CommunityChat",
+                code: 26,
+                userInfo: [NSLocalizedDescriptionKey: "El nombre debe tener entre 2 y 50 caracteres."]
+            )
+        }
+
+        let communityRef = database.collection("communities").document(communityID)
+        let document = try await communityRef.getDocument()
+        guard let community = try? document.data(as: CommunityModel.self) else {
+            throw CommunityChatError.communityNotFound
+        }
+        guard community.ownerUID == uid else { throw CommunityChatError.notOwner }
+        try await communityRef.updateData(["name": trimmedName])
     }
 
     func deleteCommunity(communityID: String, imageURL: String) async throws {

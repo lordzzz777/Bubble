@@ -210,6 +210,14 @@ service cloud.firestore {
           && protectsSensitiveMessageContent();
         allow update: if isCommunityParticipant(communityID)
           && ((ownsMessage() && protectsSensitiveMessageContent())
+            || (isCommunityOwner(communityID)
+              && isDeletedMessageMarker()
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                "content", "type", "encryptedContent", "encryptedReplyingToText",
+                "encryptedMessageKeys", "senderPublicKey", "encryptionVersion",
+                "encryptionScheme", "attachmentFileName", "audioDuration",
+                "replyToMessageID", "replyingToText", "replyingToNickname", "reactions"
+              ]))
             || request.resource.data.diff(resource.data).affectedKeys().hasOnly(["reactions"]));
         allow delete: if isCommunityParticipant(communityID)
           && (ownsMessage() || isCommunityOwner(communityID));
