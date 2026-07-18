@@ -84,12 +84,12 @@ struct WelcomeView: View {
                         .scaledToFit()
                         .frame(width: 20)
                     Text("Sign in with Google").font(.title3.bold())
-                        .foregroundStyle(.black)
+                        .foregroundStyle(.primary)
                 })
                 .background{
                     RoundedRectangle(cornerRadius: 5, style: .continuous)
                         .stroke(Color.primary, lineWidth: 2)
-                        .fill(.white)
+                        .fill(.background)
                         .frame(width: 300, height: 45)
                     
                     

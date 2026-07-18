@@ -171,7 +171,7 @@ struct CreateCommunityView: View {
                     Image(systemName: "photo.circle.fill")
                         .resizable()
                         .scaledToFit()
-                        .foregroundStyle(.black)
+                        .foregroundStyle(.primary)
                         .frame(width: 180, height: 180)
                 }
             }

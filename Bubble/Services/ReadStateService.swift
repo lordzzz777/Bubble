@@ -2,6 +2,7 @@ import Foundation
 @preconcurrency import FirebaseFirestore
 import FirebaseAuth
 import Observation
+import UserNotifications
 
 private final class ReadStateListenerBox: @unchecked Sendable {
     private let listeners: [ListenerRegistration]
@@ -151,17 +152,24 @@ final class NotificationBadgeViewModel {
 
     var chatCount = 0
     var communityCount = 0
+    var publicCount = 0
     var showError = false
     var errorMessage = ""
 
+    var totalCount: Int {
+        max(0, chatCount) + max(0, communityCount) + max(0, publicCount)
+    }
+
     func start() {
         task?.cancel()
+        Task { await prepareAppIconBadge() }
         task = Task { [weak self] in
             guard let self else { return }
             do {
                 for try await counts in await readStateService.badgeCounts() {
                     chatCount = counts.chats
                     communityCount = counts.communities
+                    await updateAppIconBadge()
                 }
             } catch {
                 errorMessage = "No se pudieron sincronizar los indicadores pendientes."
@@ -173,5 +181,28 @@ final class NotificationBadgeViewModel {
     func stop() {
         task?.cancel()
         task = nil
+        chatCount = 0
+        communityCount = 0
+        publicCount = 0
+        Task { try? await UNUserNotificationCenter.current().setBadgeCount(0) }
+    }
+
+    func updatePublicCount(_ count: Int) {
+        publicCount = max(0, count)
+        Task { await updateAppIconBadge() }
+    }
+
+    private func prepareAppIconBadge() async {
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+
+        if settings.authorizationStatus == .notDetermined {
+            _ = try? await center.requestAuthorization(options: [.badge])
+        }
+        await updateAppIconBadge()
+    }
+
+    private func updateAppIconBadge() async {
+        try? await UNUserNotificationCenter.current().setBadgeCount(totalCount)
     }
 }

@@ -50,6 +50,9 @@ struct ContentView: View {
         .environment(publicChatViewModel)
         .task { badgeViewModel.start() }
         .onDisappear { badgeViewModel.stop() }
+        .onChange(of: publicChatViewModel.replyNotificationsCount) { _, count in
+            badgeViewModel.updatePublicCount(count)
+        }
         .onChange(of: scenePhase) { newPhase,_ in
             guard newPhase != previousPhase else {return}
             
